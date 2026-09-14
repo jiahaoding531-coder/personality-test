@@ -4,6 +4,7 @@ import com.example.personality.dto.LoginRequest;
 import com.example.personality.dto.RegisterRequest;
 import com.example.personality.dto.UserResponse;
 import com.example.personality.entity.User;
+import com.example.personality.security.LoginRateLimiter;
 import com.example.personality.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,15 +43,18 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
+    private final LoginRateLimiter loginRateLimiter;
 
     public AuthController(UserService userService,
                           AuthenticationManager authenticationManager,
                           SecurityContextRepository securityContextRepository,
-                          SessionAuthenticationStrategy sessionAuthenticationStrategy) {
+                          SessionAuthenticationStrategy sessionAuthenticationStrategy,
+                          LoginRateLimiter loginRateLimiter) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
         this.securityContextRepository = securityContextRepository;
         this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
+        this.loginRateLimiter = loginRateLimiter;
     }
 
     /**
@@ -63,7 +68,17 @@ public class AuthController {
      */
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse register(@Valid @RequestBody RegisterRequest request) {
+    public UserResponse register(@Valid @RequestBody RegisterRequest request,
+                                 HttpServletRequest httpRequest) {
+        String clientIp = httpRequest.getRemoteAddr();
+
+        // 按 IP 限流，防批量刷账号。
+        // 注意记账的是**全部尝试**而不是失败——注册成功本身就是要防的行为。
+        // 计数在校验之前就加上，这样即使注册因为用户名重复而失败，
+        // 攻击者也不能靠"用重复用户名"来免费探测。
+        loginRateLimiter.checkRegistrationAllowed(clientIp);
+        loginRateLimiter.recordRegistration(clientIp);
+
         User user = userService.register(request.username(), request.password());
         return UserResponse.from(user);
     }
@@ -95,21 +110,40 @@ public class AuthController {
                               HttpServletRequest httpRequest,
                               HttpServletResponse httpResponse) {
 
-        // 1. 校验凭证。用 unauthenticated(...) 明确表示"这是一个尚未认证的令牌"，
-        //    比直接 new 更清楚地表达意图。
-        Authentication authentication = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(
-                        request.username(), request.password()));
+        String clientIp = httpRequest.getRemoteAddr();
 
-        // 2. 会话固定攻击防护：换新的会话 ID
+        // 1. 先检查限流。⚠️ 顺序很重要：必须在密码校验**之前**。
+        //    反过来的话，攻击者即使最终被拦，也已经让服务端跑了好几次
+        //    BCrypt（每次约 100ms），等于免费拿到了一个资源耗尽的手段。
+        loginRateLimiter.checkAllowed(clientIp, request.username());
+
+        Authentication authentication;
+        try {
+            // 2. 校验凭证。用 unauthenticated(...) 明确表示
+            //    "这是一个尚未认证的令牌"，比直接 new 更清楚地表达意图。
+            authentication = authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated(
+                            request.username(), request.password()));
+        } catch (AuthenticationException e) {
+            // 3. 失败才计数。放在 catch 里而不是外面，是因为成功不该被计数。
+            loginRateLimiter.recordFailure(clientIp, request.username());
+            throw e;
+        }
+
+        // 4. 成功则清除该账号的失败计数——用户想起来正确密码后，
+        //    不该继续背着之前打错的那几次。
+        //    （只清用户名那套，IP 那套不清，原因见 LoginRateLimiter 的注释。）
+        loginRateLimiter.recordSuccess(request.username());
+
+        // 5. 会话固定攻击防护：换新的会话 ID
         sessionAuthenticationStrategy.onAuthentication(authentication, httpRequest, httpResponse);
 
-        // 3. 建立安全上下文
+        // 6. 建立安全上下文
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
 
-        // 4. 持久化到会话，让后续请求能识别身份
+        // 7. 持久化到会话，让后续请求能识别身份
         securityContextRepository.saveContext(context, httpRequest, httpResponse);
 
         return UserResponse.from(userService.requireByUsername(authentication.getName()));

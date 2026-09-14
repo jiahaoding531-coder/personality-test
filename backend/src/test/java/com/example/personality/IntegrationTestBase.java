@@ -1,5 +1,6 @@
 package com.example.personality;
 
+import com.example.personality.security.LoginRateLimiter;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 // ⚠️ Spring Boot 4 把测试自动配置的包路径改了：
@@ -63,12 +64,29 @@ public abstract class IntegrationTestBase {
     @Autowired
     protected ObjectMapper objectMapper;
 
+    @Autowired
+    protected LoginRateLimiter loginRateLimiter;
+
     /** 每个测试用的用户名都不同，避免唯一约束冲突（虽然事务会回滚，但保险起见）。 */
     protected static int userCounter = 0;
 
+    /**
+     * 每个测试前重置状态。
+     *
+     * <p><b>⚠️ 限流器的计数必须手动清空——{@code @Transactional} 回滚不了它。</b>
+     *
+     * <p>事务回滚只对**数据库**生效。限流器的计数器存在内存的
+     * {@code ConcurrentHashMap} 里，是进程级的单例状态，
+     * 测试之间会互相污染：A 测试故意连错 5 次密码触发限流，
+     * B 测试接着登录就会莫名收到 429。
+     *
+     * <p>这类"测试之间有隐式依赖"的问题最难查，因为单独跑每个测试类都过，
+     * 一起跑就随机失败。<b>凡是跨测试共享的可变状态，都要显式重置。</b>
+     */
     @BeforeEach
-    void resetCounter() {
+    void resetSharedState() {
         userCounter++;
+        loginRateLimiter.clearAll();
     }
 
     // ==========================================================

@@ -64,12 +64,12 @@ V0.1 的目标**不是**做出完整产品，而是用最小成本让这条链�
 cd backend && ./mvnw test
 ```
 
-期望：`Tests run: 56, Failures: 0, Errors: 0, Skipped: 0`
+期望：`Tests run: 66, Failures: 0, Errors: 0, Skipped: 0`
 
 | 层 | 数量 | 需要数据库 | 覆盖 |
 |---|---|---|---|
 | 纯逻辑单元测试 | 19 | ❌ | 计分算法、提示词约束 |
-| 集成测试 | 37 | ✅ | HTTP 契约、安全规则、事务、用户隔离 |
+| 集成测试 | 47 | ✅ | HTTP 契约、安全规则、事务、用户隔离 |
 
 集成测试需要一个测试库（`personality_mvp_test`），
 表结构由 Flyway 在测试启动时自动创建。详见 `CONTRIBUTING.md`。
@@ -115,7 +115,7 @@ cd backend && ./mvnw test
 
 `DeepSeekAiReportGenerator` 已实现并通过真实 API 验证。
 
-**做法回顾**（详细设计见 `docs/CODE_GUIDE.md` 第 11 节）：
+**做法回顾**（详细设计见 `docs/CODE_GUIDE.md` 第 9 节）：
 
 - 提示词抽成独立的 `AiPromptBuilder`——**纯逻辑类，可单测，不联网不花钱**
 - 两个实现用 `app.ai.enabled` 的**正反条件**互斥装配，保证容器里恰好有一个

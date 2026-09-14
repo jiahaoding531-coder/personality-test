@@ -4,6 +4,7 @@ import com.example.personality.dto.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -159,6 +160,31 @@ public class GlobalExceptionHandler {
                 message,
                 request.getRequestURI()
         ));
+    }
+
+    /**
+     * 触发限流，映射为 429。
+     *
+     * <p>比 {@link BusinessException} 的通用处理器更具体，所以会被优先选中。
+     *
+     * <p>它比通用处理器多做一件事：<b>往响应里塞一个 {@code Retry-After} 头</b>。
+     * 这是 HTTP 规范为 429 定义的标准头，客户端可以据此显示
+     * 「请 X 秒后重试」的倒计时，而不是干等或者盲目重试。
+     * 把"要等多久"放在标准头里，也方便反向代理、CDN 这些中间层识别和处理。
+     */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleRateLimitExceeded(
+            RateLimitExceededException ex, HttpServletRequest request) {
+
+        log.warn("触发限流 path={} message={}", request.getRequestURI(), ex.getMessage());
+
+        return ResponseEntity.status(ex.status())
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(ApiErrorResponse.of(
+                        ex.status().value(),
+                        ex.status().getReasonPhrase(),
+                        ex.getMessage(),
+                        request.getRequestURI()));
     }
 
     /**

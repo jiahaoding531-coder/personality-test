@@ -1,7 +1,8 @@
 # personality-test
 
 > 一个人的**人格测试 → 5 维画像 → AI 个性化反馈**闭环。
-> V0.1 完成的是后端主干链路：答题、计分、存画像、查结果。
+> 完整可跑：答题、计分、存画像、AI 解读、用户体系、测试历史，
+> 两套前端（零构建静态页 + React），66 个自动化测试，CI 全绿。
 
 [![CI](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml/badge.svg)](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
@@ -24,8 +25,11 @@
 它基于一个简化的 5 因子模型，20 道题、固定权重，没有经过心理测量学验证（信效度检验）。
 请勿用于任何临床、招聘、评估他人的用途。
 
-同样地，本项目**不实现**：用户注册登录、社交、支付、推荐算法、模型训练、微服务。
-这些不是遗漏，是 V0.1 刻意排除的范围。
+同样地，本项目**不实现**：社交、支付、推荐算法、模型训练、微服务。
+这些不是遗漏，是刻意排除的范围——**先证明核心价值，再扩大技术复杂度**。
+
+**已有的**：匿名/登录两种模式并存的测试流程、基于 DeepSeek 的个性化解读、
+Session Cookie 认证、测试历史、速率限制。详见下方「路线图」。
 
 ---
 
@@ -41,7 +45,8 @@
 | 构建 | Maven Wrapper | **无需单独安装 Maven** |
 | AI | DeepSeek（OpenAI 兼容协议） | 可选启用，默认关闭时用桩实现 |
 | 前端 | React 19 + TypeScript + Vite | 独立目录 `frontend/`，另有一个零构建的静态页 |
-| 测试 | JUnit 5 | 纯单元测试，不依赖数据库和网络 |
+| 测试 | JUnit 5 + MockMvc | 66 个：19 个纯逻辑单测 + 47 个集成测试 |
+| CI | GitHub Actions | push/PR 自动跑测试 + 类型检查 |
 
 ---
 
@@ -359,12 +364,12 @@ personality-test/
 ## 测试
 
 ```bash
-cd backend && ./mvnw test        # 56 个测试
+cd backend && ./mvnw test        # 66 个测试
 cd frontend && npm run typecheck # 类型检查（前端还没有单测，见路线图）
 ```
 
 ```
-Tests run: 56, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 66, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 分成两层，**各自解决不同的问题**：
@@ -458,14 +463,21 @@ psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 - [x] 历史数据隔离测试（防越权访问）
 - [x] GitHub Actions：push/PR 自动跑测试 + 前端类型检查和构建
 
-### V0.6 计划中
+### V0.6 ✅ 速率限制
+
+- [x] 登录限流：按用户名 5 次/15 分钟 + 按 IP 20 次/15 分钟，双维度独立生效
+- [x] 注册限流：按 IP 10 次/小时
+- [x] 滑动窗口算法、`Retry-After` 响应头、内存自动清理
+- [x] 10 个集成测试覆盖（含"换 IP 不能绕过"和"正常用户不被误伤"）
+
+### V0.7 计划中
 
 - [ ] 多次结果对比（历史页并排两张画像，看变化）
 - [ ] 让 `rawScore` / `itemCount` 返回真实值（目前是 `-1` 占位）
-- [ ] 登录接口速率限制（目前唯一真实的安全缺口）
 - [ ] 前端单元测试（Vitest + Testing Library）
-- [ ] Docker 化
+- [ ] Docker 化（让别人一条命令跑起来）
 - [ ] 历史记录分页（目前最多返回 100 条）
+- [ ] 限流阈值改成可配置（目前是 `LoginRateLimiter` 里的常量）
 
 ### V1.0
 
