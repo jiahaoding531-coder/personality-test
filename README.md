@@ -3,6 +3,7 @@
 > 一个人的**人格测试 → 5 维画像 → AI 个性化反馈**闭环。
 > V0.1 完成的是后端主干链路：答题、计分、存画像、查结果。
 
+[![CI](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml/badge.svg)](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue)](https://www.postgresql.org/)
