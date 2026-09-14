@@ -1,0 +1,19 @@
+# 依赖 —— 容器里会 npm ci 重新装。
+# 这个目录有 900 多个文件、70 多 MB，带进构建上下文会严重拖慢构建。
+node_modules/
+
+# 构建产物 —— 容器里会重新构建
+dist/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 日志
+*.log
+npm-debug.log*

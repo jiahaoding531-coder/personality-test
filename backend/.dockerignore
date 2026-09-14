@@ -1,0 +1,33 @@
+# 构建产物 —— 容器里会重新编译，带进去只会拖慢构建、污染缓存
+target/
+
+# Git 相关
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# 本地配置与密钥 —— 绝不进镜像
+application-local.yml
+application-local.properties
+.env
+*.key
+*.pem
+
+# 文档
+docs/
+*.md
+!README.md
+
+# 调试文件
+api.http
+
+# 日志
+*.log
+logs/

@@ -1,0 +1,90 @@
+# ============================================================
+# 一条命令跑起整个项目
+# ============================================================
+#   docker compose up
+#
+# 起来之后：
+#   http://localhost:3000   ← React 前端（从这里进）
+#   http://localhost:8080   ← 后端 API（也托管着一个零构建的静态页）
+#
+# 想启用 AI 解读：
+#   DEEPSEEK_API_KEY=sk-xxx AI_ENABLED=true docker compose up
+#   （Windows PowerShell 里先 $env:DEEPSEEK_API_KEY = "sk-xxx"）
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # 数据库
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: personality_mvp
+    volumes:
+      # 具名卷：容器删了数据还在。
+      # 不加这个的话，docker compose down 一执行，用户所有测试记录就没了。
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # ⚠️ 健康检查不是可选项。
+      # 容器"启动了"不等于"能接受连接"——PostgreSQL 初始化要几秒。
+      # 没有健康检查的话，后端会在数据库还没 ready 时启动并连不上，
+      # 然后因为重试耗尽而退出。表现为"第一次 up 总是失败，再 up 一次就好了"，
+      # 非常难排查。
+      test: ["CMD-SHELL", "pg_isready -U postgres -d personality_mvp"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    # 默认不把端口暴露到宿主机——只有后端需要连它。
+    # 想用本机工具连进去看数据的话，取消下面两行的注释。
+    # ports:
+    #   - "5432:5432"
+
+  # ----------------------------------------------------------
+  # 后端
+  # ----------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+    environment:
+      # 用服务名而不是 localhost——容器里的 localhost 是它自己
+      DB_URL: jdbc:postgresql://postgres:5432/personality_mvp
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      # AI 默认关闭。不给 key 也能跑，只是「生成 AI 解读」返回 501。
+      AI_ENABLED: ${AI_ENABLED:-false}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    depends_on:
+      postgres:
+        # 等到健康检查通过再启动，而不是"容器起来了就启动"
+        condition: service_healthy
+    ports:
+      # 暴露出来主要是方便用 curl 调接口、或看那个零构建的静态页。
+      # 前端走的是容器内部网络（nginx 代理），不经过这里。
+      - "${API_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # 前端
+  # ----------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # 国内构建慢的话改成：
+        #   docker compose build --build-arg NPM_REGISTRY=https://registry.npmmirror.com
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+    depends_on:
+      # 注意这里是 service_started 而不是 service_healthy——
+      # 后端没配健康检查。nginx 启动时后端还没 ready 也没关系：
+      # 它只在有请求时才去连后端，而用户点进页面还需要几秒。
+      - backend
+    ports:
+      # 用 3000 而不是 80：Windows 上 80 端口经常被 IIS、
+      # 或者某些代理软件占用，撞上了报错信息还很难懂。
+      - "${WEB_PORT:-3000}:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

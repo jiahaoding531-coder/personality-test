@@ -52,13 +52,45 @@ Session Cookie 认证、测试历史、速率限制。详见下方「路线图�
 
 ## 快速开始
 
-### 前置要求
+### 方式一：Docker（一条命令）
+
+装好 [Docker Desktop](https://www.docker.com/products/docker-desktop/) 后，在项目根目录：
+
+```bash
+docker compose up
+```
+
+起来之后：
+
+| 地址 | 是什么 |
+|---|---|
+| **<http://localhost:3000>** | **React 前端**（从这里进） |
+| <http://localhost:8080> | 后端 API，同时托管着一个零构建的静态页 |
+
+**不需要装 JDK、PostgreSQL、Node** —— 全在容器里。
+数据库数据存在具名卷里，`docker compose down` 不会丢，
+想彻底清空用 `docker compose down -v`。
+
+想启用 AI 解读：
+
+```bash
+DEEPSEEK_API_KEY=sk-xxx AI_ENABLED=true docker compose up
+```
+
+> **国内提示**：Docker Hub 拉镜像很慢甚至超时，建议先配镜像加速源。
+> npm 也慢的话：`docker compose build --build-arg NPM_REGISTRY=https://registry.npmmirror.com`
+
+---
+
+### 方式二：本地直接跑
+
+#### 前置要求
 
 - **JDK 17 或更高** —— `java -version` 能打出来即可
 - **PostgreSQL 17** —— 见下方安装步骤
 - **Maven 不需要装** —— 项目自带 `mvnw`
 
-### 第 1 步：安装并启动 PostgreSQL
+#### 第 1 步：安装并启动 PostgreSQL
 
 Windows（推荐用 winget）：
 
@@ -80,7 +112,7 @@ Linux（Debian/Ubuntu）：
 sudo apt install postgresql-17 && sudo systemctl start postgresql
 ```
 
-### 第 2 步：创建数据库
+#### 第 2 步：创建数据库
 
 ```bash
 # Windows（注意路径，psql 不在 PATH 里的话用全路径）
@@ -90,7 +122,7 @@ sudo apt install postgresql-17 && sudo systemctl start postgresql
 会提示输入第 1 步设置的密码。**表结构不用手动建** —— 应用启动时 Flyway 会自动执行
 `src/main/resources/db/migration/` 下的脚本。
 
-### 第 3 步：配置数据库密码
+#### 第 3 步：配置数据库密码
 
 应用通过环境变量 `DB_PASSWORD` 读取密码。**不要**把密码直接写进 `application.yml`
 （那个文件要提交到 Git）。
@@ -107,7 +139,7 @@ macOS / Linux：
 export DB_PASSWORD="你的密码"
 ```
 
-### 第 4 步：启动
+#### 第 4 步：启动
 
 ```bash
 cd backend
@@ -121,7 +153,7 @@ cd backend
 Started PersonalityApplication in X.XXX seconds
 ```
 
-### 第 5 步：验证
+#### 第 5 步：验证
 
 ```bash
 curl http://localhost:8080/api/health
@@ -137,7 +169,7 @@ curl http://localhost:8080/api/health
 }
 ```
 
-### 第 6 步：打开页面
+#### 第 6 步：打开页面
 
 浏览器访问 **<http://localhost:8080>**，就能看到完整界面：
 
@@ -152,7 +184,7 @@ curl http://localhost:8080/api/health
 > 由 Spring Boot 直接托管，**不需要 npm、不需要构建步骤**。
 > 把它留着是有意为之：clone 仓库的人不装 Node 也能立刻跑起来看效果。
 
-### 第 6b 步（可选）：React 前端
+#### 第 6b 步（可选）：React 前端
 
 想要 TypeScript 版本：
 
@@ -171,7 +203,7 @@ dev server 代理转发 `/api` 请求到 8080，所以开发时不需要处理�
 | `npm run build` | 类型检查 + 生产构建，产物在 `frontend/dist/` |
 | `npm run typecheck` | 只做类型检查，不产出文件 |
 
-### 关于登录（可选）
+#### 关于登录（可选）
 
 **不登录也能完整使用**——做测试、看结果、生成 AI 解读都不需要账号。
 
@@ -195,7 +227,7 @@ dev server 代理转发 `/api` 请求到 8080，所以开发时不需要处理�
 也可以用 IntelliJ IDEA 打开 `backend/api.http`，每个请求左边有绿色 ▶ 按钮，
 按顺序点一遍就能在纯接口层面跑完整个流程。
 
-### 第 7 步（可选）：启用 AI 解读
+#### 第 7 步（可选）：启用 AI 解读
 
 结果页底部的「生成 AI 解读」需要一个 DeepSeek API Key。**不配也能跑**——
 这时接口返回 501，页面上会显示明确的失败原因，其余功能完全不受影响。
@@ -320,6 +352,7 @@ personality-test/
 ├── LICENSE
 ├── CONTRIBUTING.md
 ├── CODE_OF_CONDUCT.md
+├── docker-compose.yml          ★ 一条命令跑起全部三个服务
 ├── docs/
 │   ├── CODE_GUIDE.md           ★ 代码导读：Spring 概念 ↔ 已有 Java 知识
 │   ├── FRONTEND_GUIDE.md       ★ React 版导读：与静态页的对照
@@ -327,6 +360,8 @@ personality-test/
 │   └── MVP.md                  功能边界与验收标准
 │
 ├── backend/                    ── Spring Boot 后端 ──
+│   ├── Dockerfile              多阶段构建（Maven 构建 → JRE 运行）
+│   ├── .dockerignore
 │   ├── pom.xml                 Maven 依赖清单（≈ pyproject.toml）
 │   ├── mvnw / mvnw.cmd         包装器，无需全局安装 Maven
 │   ├── api.http                ★ IntelliJ HTTP Client 调试文件
@@ -351,6 +386,9 @@ personality-test/
 │           └── ai/AiPromptBuilderTest.java        6 个提示词约束断言
 │
 └── frontend/                   ── React + TypeScript 前端 ──
+    ├── Dockerfile              多阶段构建（Vite 构建 → nginx 托管）
+    ├── nginx.conf              静态托管 + /api 反向代理
+    ├── .dockerignore
     ├── vite.config.ts          含 /api 开发代理
     └── src/
         ├── types.ts            后端 DTO 的类型映射
@@ -498,12 +536,25 @@ psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 > 根因是把 `permitAll` 当成了访问控制——**认证不等于授权**。
 > 详见 [`docs/CODE_GUIDE.md`](docs/CODE_GUIDE.md) 第 10.7 节。
 
-### V0.7 计划中
+### V0.7 ✅ Docker 化
+
+- [x] 后端多阶段构建（Maven 构建 → JRE 运行，非 root 用户）
+- [x] 前端多阶段构建（Vite 构建 → nginx 托管 + `/api` 反向代理）
+- [x] `docker compose up` 一条命令跑起 postgres + backend + frontend
+- [x] 数据库具名卷（`docker compose down` 不丢数据）
+- [x] 健康检查与启动依赖（等数据库 ready 再启动后端）
+
+**自建镜像体积**：后端 219MB、前端 28.9MB（都是内容大小，不含基础层）。
+
+> 前端镜像只有 28.9MB，因为运行阶段**只用 nginx**——
+> 编译完之后 Node 就没用了，留在镜像里纯属浪费。
+
+### V0.8 计划中
 
 - [ ] 多次结果对比（历史页并排两张画像，看变化）
 - [ ] 让 `rawScore` / `itemCount` 返回真实值（目前是 `-1` 占位）
 - [ ] 前端单元测试（Vitest + Testing Library）
-- [ ] Docker 化（让别人一条命令跑起来）
+- [ ] CI 里加 Docker 构建检查
 - [ ] 历史记录分页（目前最多返回 100 条）
 - [ ] 限流阈值改成可配置（目前是 `LoginRateLimiter` 里的常量）
 

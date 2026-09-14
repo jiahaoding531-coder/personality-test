@@ -26,7 +26,12 @@ spring:
   #      [Environment]::SetEnvironmentVariable("DB_PASSWORD", "你的密码", "User")
   # ----------------------------------------------------------
   datasource:
-    url: jdbc:postgresql://localhost:5432/personality_mvp
+    # 地址也走环境变量，默认值是本地开发用的 localhost。
+    #
+    # ⚠️ 容器里 **localhost 指向容器自己**，不是宿主机、更不是数据库容器。
+    #    跑 docker compose 时要用 DB_URL 覆盖成服务名：
+    #      DB_URL=jdbc:postgresql://postgres:5432/personality_mvp
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/personality_mvp}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
 
