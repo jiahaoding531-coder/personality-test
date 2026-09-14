@@ -751,7 +751,64 @@ Long userId = principal.getId();
 这叫 **IDOR**（不安全的直接对象引用），是 OWASP Top 10 常客。
 **用 `/me` 从 URL 里彻底消除了这个参数，也就消除了整类漏洞——能不给的参数就不要给。**
 
-### 10.7 不要给实体直接返回
+### 10.7 认证 ≠ 授权：一个真实修过的越权漏洞
+
+**认证（Authentication）**回答「你是谁」，**授权（Authorization）**回答「你能做什么」。
+Spring Security 把前者做得很好——配上 `@EnableWebSecurity`，
+未登录的请求根本进不来。但**它不会替你判断"这个资源是不是你的"**。
+
+本项目就踩了这个坑，而且是实测确认过的：
+
+```
+① 匿名 GET  /api/test-sessions/24/result   → 200，读到了别人的画像
+② 匿名 POST /api/test-sessions/22/answers  → 200，写进了别人未提交的会话
+```
+
+**根因**：为了让「不登录也能做测试」，这些端点设成了 `permitAll`，
+并隐含假设「知道 sessionId 就等于拥有它」。但 `sessionId` 是
+**数据库自增的连续整数**——从 1 数到 N 就拿到了全站数据。
+
+这叫 **IDOR**（不安全的直接对象引用），OWASP Top 10 的 A01 类，
+是 Web 应用最常见的漏洞之一。
+
+**修法：能力式访问控制（capability-based access control）**
+
+给每个会话发一个随机 UUID 作为令牌，**持有令牌 = 拥有访问权**：
+
+```java
+// 两条放行规则，满足其一即可
+if (token != null && session.matchesToken(token)) return session;          // 匿名用户凭令牌
+if (principal != null && Objects.equals(session.getUserId(), principal.getId()))
+    return session;                                                        // 登录用户凭身份
+throw notFound(sessionId);                                                 // 其余一律拒绝
+```
+
+为什么这个方案对：**id 能不能猜到不重要，令牌猜不到就行。**
+128 位随机 UUID 的暴力枚举空间是 2¹²⁸，而自增整数的"枚举空间"就是数据条数。
+
+**三个容易漏掉的细节**：
+
+1. **拒绝时返回 404 而不是 403。** 403 等于告诉攻击者
+   「这个资源存在，只是你没权限」——那依然能用来枚举哪些 id 是有效的。
+   GitHub 对私有仓库也返回 404，是同一个道理。
+
+2. **令牌格式非法也要返回 404，不能是 400。** 如果格式错给 400、
+   格式对但不存在给 404，攻击者就能靠状态码差异区分"格式对不对"。
+   所以 `SessionAccessGuard.parseToken()` 把非法输入统一转成 null。
+
+3. **`user_id` 为 null 的匿名会话，不等于"谁都能看"。**
+   判断"是不是本人"时必须先确认 `session.getUserId() != null`，
+   否则 `null.equals(...)` 这种写法会让任何登录用户都能访问所有匿名会话。
+
+**这条经验可以推广**：任何「客户端传 id，服务端据此取数据」的地方，
+都要问一句——**这个 id 猜得到吗？我校验它属于调用方了吗？**
+凡是路径里出现资源 id 的接口，都是 IDOR 的候选点。
+
+> 本项目还用了一个更省事的做法来规避同类问题：
+> 「我的数据」接口用 `/api/me/...` 而不是 `/api/users/{id}/...`。
+> **URL 里根本没有 id 参数，也就没有"改个 id 试试"的可能。**
+
+### 10.8 不要给实体直接返回
 
 `UserResponse` 里**没有** `passwordHash`：
 

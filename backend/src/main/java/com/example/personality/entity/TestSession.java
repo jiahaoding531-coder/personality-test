@@ -11,6 +11,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * 一次人格测试会话，对应 test_sessions 表。
@@ -43,6 +44,22 @@ public class TestSession {
     @Column(name = "user_id")
     private Long userId;
 
+    /**
+     * 会话访问令牌——持有它即可访问这个会话。
+     *
+     * <p><b>为什么需要它：</b>支持「不登录也能做测试」意味着这些端点必须匿名可访问，
+     * 而会话 id 是自增的连续整数，猜起来毫无难度。没有令牌的话，
+     * 任何人遍历 id 就能读到全站人的测试结果、甚至改写别人没提交的答案
+     * （IDOR，OWASP A01）。
+     *
+     * <p>令牌是 128 位随机 UUID，猜不到。**知道 id 不重要，拿到令牌才算数。**
+     *
+     * <p>这个字段会返回给会话的创建者，但**不会**出现在任何列表接口里——
+     * 历史记录只返回 {@code sessionId}，不返回令牌（自己的会话本来就凭登录身份访问）。
+     */
+    @Column(name = "access_token", nullable = false, unique = true)
+    private UUID accessToken;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private SessionStatus status = SessionStatus.IN_PROGRESS;
@@ -56,12 +73,26 @@ public class TestSession {
     protected TestSession() {
     }
 
-    /** 开启一次新会话。 */
+    /** 开启一次新会话，同时生成一个随机的访问令牌。 */
     public static TestSession start(Long userId) {
         TestSession session = new TestSession();
         session.userId = userId;
         session.status = SessionStatus.IN_PROGRESS;
+        // 用 UUID.randomUUID() 而不是自增或时间戳：
+        // 它基于密码学安全的随机数生成器，128 位空间，猜中概率可以忽略。
+        session.accessToken = UUID.randomUUID();
         return session;
+    }
+
+    /**
+     * 校验令牌是否匹配。
+     *
+     * <p>用 {@link UUID#equals} 而不是字符串比较——UUID 类型本身就能
+     * 挡住格式非法的输入（比如攻击者传个空串或超长串），
+     * 不需要额外做参数校验。
+     */
+    public boolean matchesToken(UUID candidate) {
+        return accessToken != null && accessToken.equals(candidate);
     }
 
     @PrePersist
@@ -93,6 +124,10 @@ public class TestSession {
 
     public Long getUserId() {
         return userId;
+    }
+
+    public UUID getAccessToken() {
+        return accessToken;
     }
 
     public SessionStatus getStatus() {

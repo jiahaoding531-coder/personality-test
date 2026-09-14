@@ -23,6 +23,13 @@ type Screen = 'home' | 'loading' | 'test' | 'result' | 'error' | 'auth' | 'histo
 /** 一次测试流程中的全部数据。 */
 interface Flow {
   sessionId: number | null
+  /**
+   * 会话访问令牌。匿名测试时必须带着它才能答题、提交、查结果。
+   *
+   * `sessionId` 是自增整数（猜得到），令牌是随机 UUID（猜不到）——
+   * 只有令牌能证明"这个会话是我建的"。
+   */
+  accessToken: string | null
   questions: Question[]
   options: ScaleOption[]
   /** questionId → 用户选的分值 */
@@ -32,6 +39,7 @@ interface Flow {
 
 const EMPTY_FLOW: Flow = {
   sessionId: null,
+  accessToken: null,
   questions: [],
   options: [],
   answers: {},
@@ -105,6 +113,7 @@ export default function App() {
       const [session, bank] = await Promise.all([api.createSession(), api.getQuestions()])
       setFlow({
         sessionId: session.sessionId,
+        accessToken: session.accessToken,
         questions: bank.questions,
         options: bank.options,
         answers: {},
@@ -118,15 +127,16 @@ export default function App() {
 
   /** 提交并计分。 */
   const finishTest = useCallback(async () => {
-    const { sessionId, questions, answers } = flow
+    const { sessionId, accessToken, questions, answers } = flow
     if (sessionId === null) return
 
     setLoadingText('正在计算结果…')
     setScreen('loading')
     try {
       const payload = questions.map((q) => ({ questionId: q.id, score: answers[q.id] ?? 0 }))
-      await api.saveAnswers(sessionId, payload)
-      const result = await api.submit(sessionId)
+      // 带上令牌——匿名测试时服务端只认它
+      await api.saveAnswers(sessionId, payload, accessToken ?? undefined)
+      const result = await api.submit(sessionId, accessToken ?? undefined)
       setFlow((f) => ({ ...f, result }))
       setScreen('result')
     } catch (e: unknown) {
@@ -222,7 +232,11 @@ export default function App() {
       )}
 
       {screen === 'result' && flow.result && (
-        <ResultScreen result={flow.result} onRestart={restart} />
+        <ResultScreen
+          result={flow.result}
+          onRestart={restart}
+          sessionToken={flow.accessToken ?? undefined}
+        />
       )}
 
       {screen === 'error' && error && (

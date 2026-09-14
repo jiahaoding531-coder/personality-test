@@ -6,6 +6,7 @@ import com.example.personality.dto.SessionResultResponse;
 import com.example.personality.dto.SubmitAnswersRequest;
 import com.example.personality.entity.TestSession;
 import com.example.personality.security.AppUserPrincipal;
+import com.example.personality.security.SessionAccessGuard;
 import com.example.personality.service.ProfileQueryService;
 import com.example.personality.service.TestSessionService;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,11 +40,25 @@ public class TestSessionController {
 
     private final TestSessionService testSessionService;
     private final ProfileQueryService profileQueryService;
+    private final SessionAccessGuard accessGuard;
 
     public TestSessionController(TestSessionService testSessionService,
-                                 ProfileQueryService profileQueryService) {
+                                 ProfileQueryService profileQueryService,
+                                 SessionAccessGuard accessGuard) {
         this.testSessionService = testSessionService;
         this.profileQueryService = profileQueryService;
+        this.accessGuard = accessGuard;
+    }
+
+    /**
+     * 校验调用方有权访问这个会话，没权限就抛 404。
+     *
+     * <p>每个会话相关的端点都要先调它。放在 Controller 层而不是 Service 层，
+     * 是因为这属于「HTTP 请求的身份」问题——Service 不该知道
+     * 请求头长什么样、当前登录的是谁。
+     */
+    private void checkAccess(Long sessionId, String rawToken, AppUserPrincipal principal) {
+        accessGuard.requireAccess(sessionId, SessionAccessGuard.parseToken(rawToken), principal);
     }
 
     /**
@@ -83,8 +99,14 @@ public class TestSessionController {
      * 返回 400，不需要你写转换代码。
      */
     @PostMapping("/{sessionId}/answers")
-    public AnswersSavedResponse saveAnswers(@PathVariable Long sessionId,
-                                            @Valid @RequestBody SubmitAnswersRequest request) {
+    public AnswersSavedResponse saveAnswers(
+            @PathVariable Long sessionId,
+            // 匿名用户靠它证明所有权；登录用户访问自己的会话可以不带
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @AuthenticationPrincipal AppUserPrincipal principal,
+            @Valid @RequestBody SubmitAnswersRequest request) {
+
+        checkAccess(sessionId, sessionToken, principal);
         int savedCount = testSessionService.saveAnswers(sessionId, request.answers());
         return new AnswersSavedResponse(sessionId, savedCount);
     }
@@ -102,7 +124,12 @@ public class TestSessionController {
      * 就得把这两步合并进同一个事务。
      */
     @PostMapping("/{sessionId}/submit")
-    public SessionResultResponse submit(@PathVariable Long sessionId) {
+    public SessionResultResponse submit(
+            @PathVariable Long sessionId,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @AuthenticationPrincipal AppUserPrincipal principal) {
+
+        checkAccess(sessionId, sessionToken, principal);
         testSessionService.submit(sessionId);
         return profileQueryService.buildResult(sessionId);
     }
@@ -115,7 +142,12 @@ public class TestSessionController {
      * 如果会话还没提交过，会返回 404（由 ProfileQueryService 抛出）。
      */
     @GetMapping("/{sessionId}/result")
-    public SessionResultResponse getResult(@PathVariable Long sessionId) {
+    public SessionResultResponse getResult(
+            @PathVariable Long sessionId,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @AuthenticationPrincipal AppUserPrincipal principal) {
+
+        checkAccess(sessionId, sessionToken, principal);
         return profileQueryService.buildResult(sessionId);
     }
 }

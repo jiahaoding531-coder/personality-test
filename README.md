@@ -2,7 +2,7 @@
 
 > 一个人的**人格测试 → 5 维画像 → AI 个性化反馈**闭环。
 > 完整可跑：答题、计分、存画像、AI 解读、用户体系、测试历史，
-> 两套前端（零构建静态页 + React），66 个自动化测试，CI 全绿。
+> 两套前端（零构建静态页 + React），79 个自动化测试，CI 全绿。
 
 [![CI](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml/badge.svg)](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
@@ -45,7 +45,7 @@ Session Cookie 认证、测试历史、速率限制。详见下方「路线图�
 | 构建 | Maven Wrapper | **无需单独安装 Maven** |
 | AI | DeepSeek（OpenAI 兼容协议） | 可选启用，默认关闭时用桩实现 |
 | 前端 | React 19 + TypeScript + Vite | 独立目录 `frontend/`，另有一个零构建的静态页 |
-| 测试 | JUnit 5 + MockMvc | 66 个：19 个纯逻辑单测 + 47 个集成测试 |
+| 测试 | JUnit 5 + MockMvc | 79 个：19 个纯逻辑单测 + 60 个集成测试 |
 | CI | GitHub Actions | push/PR 自动跑测试 + 类型检查 |
 
 ---
@@ -243,29 +243,42 @@ cd backend && ./mvnw spring-boot:run
 | `POST` | `/api/auth/logout` | 注销（销毁会话） |
 | `GET` | `/api/auth/me` | 当前登录用户（未登录返回 200 空体） |
 | `GET` | `/api/me/test-sessions` | 🔒 我的测试历史 |
-| `POST` | `/api/test-sessions` | 创建测试会话，返回 `sessionId` |
-| `POST` | `/api/test-sessions/{id}/answers` | 批量保存作答（可多次提交，支持中断续答） |
-| `POST` | `/api/test-sessions/{id}/submit` | 提交并计分，返回画像 |
-| `GET` | `/api/test-sessions/{id}/result` | 查询已生成的画像 |
-| `POST` | `/api/test-sessions/{id}/ai-report` | AI 个性化反馈（需配置 API Key，否则返回 501） |
+| `POST` | `/api/test-sessions` | 创建测试会话，返回 `sessionId` + `accessToken` |
+| `POST` | `/api/test-sessions/{id}/answers` | 🔑 批量保存作答（可多次提交，支持中断续答） |
+| `POST` | `/api/test-sessions/{id}/submit` | 🔑 提交并计分，返回画像 |
+| `GET` | `/api/test-sessions/{id}/result` | 🔑 查询已生成的画像 |
+| `POST` | `/api/test-sessions/{id}/ai-report` | 🔑 AI 个性化反馈（需配置 API Key，否则返回 501） |
+
+> 🔑 = 需要在 `X-Session-Token` 请求头里带上创建会话时拿到的令牌，
+> 或者是该会话的登录所有者。详见 [`docs/api.md`](docs/api.md)。
 
 ### 最小调用示例
 
 ```bash
-# 1. 创建会话
-curl -X POST http://localhost:8080/api/test-sessions -H "Content-Type: application/json" -d '{}'
-# → {"sessionId":1,"status":"IN_PROGRESS","createdAt":"..."}
+# 0. 先拿 CSRF 令牌（详见 docs/api.md）
+JAR=/tmp/cookies.txt
+curl -s -c $JAR -b $JAR http://localhost:8080/api/auth/me
+CSRF=$(grep XSRF-TOKEN $JAR | awk '{print $NF}')
 
-# 2. 提交答案
-curl -X POST http://localhost:8080/api/test-sessions/1/answers \
-  -H "Content-Type: application/json" \
+# 1. 创建会话 —— 拿到 sessionId 和 accessToken
+RESP=$(curl -s -X POST http://localhost:8080/api/test-sessions \
+  -H "Content-Type: application/json" -H "X-XSRF-TOKEN: $CSRF" -c $JAR -b $JAR)
+SID=$(echo "$RESP" | jq -r .sessionId)
+TOKEN=$(echo "$RESP" | jq -r .accessToken)
+# → {"sessionId":1,"accessToken":"b3993532-...","status":"IN_PROGRESS"}
+
+# 2. 提交答案（每次都要带 sessionToken）
+curl -X POST "http://localhost:8080/api/test-sessions/$SID/answers" \
+  -H "Content-Type: application/json" -H "X-XSRF-TOKEN: $CSRF" -H "X-Session-Token: $TOKEN" \
+  -c $JAR -b $JAR \
   -d '{"answers":[{"questionId":1,"score":5},{"questionId":2,"score":4}]}'
 
 # 3. 提交计分  ← 闭环收口
-curl -X POST http://localhost:8080/api/test-sessions/1/submit
+curl -X POST "http://localhost:8080/api/test-sessions/$SID/submit" \
+  -H "X-XSRF-TOKEN: $CSRF" -H "X-Session-Token: $TOKEN" -c $JAR -b $JAR
 
 # 4. 查询结果
-curl http://localhost:8080/api/test-sessions/1/result
+curl "http://localhost:8080/api/test-sessions/$SID/result" -H "X-Session-Token: $TOKEN"
 ```
 
 ---
@@ -364,12 +377,12 @@ personality-test/
 ## 测试
 
 ```bash
-cd backend && ./mvnw test        # 66 个测试
+cd backend && ./mvnw test        # 79 个测试
 cd frontend && npm run typecheck # 类型检查（前端还没有单测，见路线图）
 ```
 
 ```
-Tests run: 66, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 79, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 分成两层，**各自解决不同的问题**：
@@ -469,6 +482,21 @@ psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 - [x] 注册限流：按 IP 10 次/小时
 - [x] 滑动窗口算法、`Retry-After` 响应头、内存自动清理
 - [x] 10 个集成测试覆盖（含"换 IP 不能绕过"和"正常用户不被误伤"）
+
+### V0.6.1 ✅ 修复越权漏洞（IDOR）
+
+- [x] 给会话加随机 UUID 访问令牌（V5 迁移，历史数据自动回填）
+- [x] 四个会话端点校验：令牌匹配 **或** 是登录用户本人的会话
+- [x] 拒绝时返回 404 而非 403（不泄露会话是否存在）
+- [x] 13 个回归测试，把实测确认过的两条攻击路径钉死
+
+> **修复前**实测能成功、**修复后**返回 404 的两条攻击：
+> ```
+> ① 匿名 GET  /api/test-sessions/24/result   → 读到别人的画像
+> ② 匿名 POST /api/test-sessions/22/answers  → 写进别人未提交的会话
+> ```
+> 根因是把 `permitAll` 当成了访问控制——**认证不等于授权**。
+> 详见 [`docs/CODE_GUIDE.md`](docs/CODE_GUIDE.md) 第 10.7 节。
 
 ### V0.7 计划中
 

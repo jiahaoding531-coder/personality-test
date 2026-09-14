@@ -59,7 +59,7 @@ npm run dev                            # → http://localhost:5173
 ## 提交前必做
 
 ```bash
-cd backend  && ./mvnw test        # 66 个测试必须全绿
+cd backend  && ./mvnw test        # 79 个测试必须全绿
 cd frontend && npm run typecheck  # 类型检查必须无错误
 ```
 
@@ -68,7 +68,7 @@ cd frontend && npm run typecheck  # 类型检查必须无错误
 ### 集成测试需要一个测试库
 
 `backend` 的测试分两层：19 个纯逻辑单元测试不依赖任何外部环境，
-另外 47 个集成测试要连数据库。**先建一次测试库**（和开发库分开，避免互相污染）：
+另外 60 个集成测试要连数据库。**先建一次测试库**（和开发库分开，避免互相污染）：
 
 ```bash
 psql -U postgres -c "CREATE DATABASE personality_mvp_test;"

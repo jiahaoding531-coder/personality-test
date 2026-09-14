@@ -21,13 +21,20 @@ type State =
  * 联合类型让**每个状态各自携带它需要的数据**，编译器会强制你在
  * switch/条件分支里处理全部情况，漏掉一个 `kind` 就编译不过。
  */
-export function AiPanel({ sessionId }: { sessionId: number }) {
+export function AiPanel({
+  sessionId,
+  sessionToken,
+}: {
+  sessionId: number
+  /** 匿名测试时需要带上，否则服务端返回 404（无权访问该会话） */
+  sessionToken?: string
+}) {
   const [state, setState] = useState<State>({ kind: 'idle' })
 
   async function load(regenerate: boolean) {
     setState({ kind: 'loading' })
     try {
-      const report = await api.generateAiReport(sessionId, regenerate)
+      const report = await api.generateAiReport(sessionId, regenerate, sessionToken)
       setState({ kind: 'done', report })
     } catch (e) {
       setState({ kind: 'error', message: e instanceof Error ? e.message : String(e) })

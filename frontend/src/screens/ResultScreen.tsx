@@ -7,9 +7,15 @@ import type { SessionResultResponse } from '../types'
 export function ResultScreen({
   result,
   onRestart,
+  sessionToken,
 }: {
   result: SessionResultResponse
   onRestart: () => void
+  /**
+   * 会话访问令牌。只有**匿名测试**刚做完时才需要——
+   * 从历史记录点进来的（已登录，是自己的会话）不传也能用。
+   */
+  sessionToken?: string
 }) {
   const [showTable, setShowTable] = useState(false)
 
@@ -71,7 +77,7 @@ export function ResultScreen({
         ))}
       </div>
 
-      <AiPanel sessionId={result.sessionId} />
+      <AiPanel sessionId={result.sessionId} sessionToken={sessionToken} />
 
       <div className="disclaimer">{result.disclaimer}</div>
 

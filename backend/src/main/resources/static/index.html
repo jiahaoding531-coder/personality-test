@@ -551,11 +551,27 @@ const API = "";                       // 同源部署，静态页由 Spring Boot
 
 const state = {
   sessionId: null,
+  // 会话访问令牌。sessionId 是自增整数（猜得到），令牌是随机 UUID（猜不到）——
+  // 只有令牌能证明"这个会话是我建的"。匿名测试时服务端只认它。
+  accessToken: null,
   questions: [],
   answers: {},                        // questionId -> score
   index: 0,
   result: null,
 };
+
+/**
+ * 给请求头加上会话令牌。
+ *
+ * 只在有令牌时加——登录用户访问自己的会话凭身份即可，不带也能过。
+ */
+function sessionHeaders(extra) {
+  const headers = Object.assign({}, extra);
+  if (state.accessToken) {
+    headers["X-Session-Token"] = state.accessToken;
+  }
+  return headers;
+}
 
 /* ---------- 屏幕切换 ---------- */
 function show(id) {
@@ -590,9 +606,17 @@ async function api(path, options) {
   return body;
 }
 
-const postJSON = (path, payload) => api(path, {
+/**
+ * POST 请求。
+ *
+ * @param withToken 是否带上会话访问令牌。只有操作「某个会话」的接口需要
+ *                  （答题、提交、AI 报告）；注册登录之类的不用。
+ */
+const postJSON = (path, payload, withToken) => api(path, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: withToken
+    ? sessionHeaders({ "Content-Type": "application/json" })
+    : { "Content-Type": "application/json" },
   body: JSON.stringify(payload === undefined ? {} : payload),
 });
 
@@ -607,6 +631,7 @@ async function startTest() {
       api("/api/questions"),
     ]);
     state.sessionId = session.sessionId;
+    state.accessToken = session.accessToken;   // ← 后续操作都要带上它
     state.questions = bank.questions;
     state.options = bank.options;
     state.answers = {};
@@ -770,10 +795,10 @@ async function submitTest() {
       questionId: q.id,
       score: state.answers[q.id],
     }));
-    await postJSON("/api/test-sessions/" + state.sessionId + "/answers", { answers });
+    await postJSON("/api/test-sessions/" + state.sessionId + "/answers", { answers }, true);
 
     document.getElementById("loadingText").textContent = "正在生成画像…";
-    state.result = await postJSON("/api/test-sessions/" + state.sessionId + "/submit");
+    state.result = await postJSON("/api/test-sessions/" + state.sessionId + "/submit", undefined, true);
 
     renderResult();
     show("screen-result");
@@ -975,7 +1000,7 @@ async function loadAiReport(regenerate) {
   try {
     const path = "/api/test-sessions/" + sid + "/ai-report"
       + (regenerate ? "?regenerate=true" : "");
-    renderAiDone(await postJSON(path));
+    renderAiDone(await postJSON(path, undefined, true));
   } catch (e) {
     renderAiError(e.message);
   }

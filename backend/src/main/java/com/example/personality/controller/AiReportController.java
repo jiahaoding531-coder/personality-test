@@ -1,9 +1,13 @@
 package com.example.personality.controller;
 
 import com.example.personality.dto.AiReportResponse;
+import com.example.personality.security.AppUserPrincipal;
+import com.example.personality.security.SessionAccessGuard;
 import com.example.personality.service.AiReportService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,9 +30,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AiReportController {
 
     private final AiReportService aiReportService;
+    private final SessionAccessGuard accessGuard;
 
-    public AiReportController(AiReportService aiReportService) {
+    public AiReportController(AiReportService aiReportService,
+                              SessionAccessGuard accessGuard) {
         this.aiReportService = aiReportService;
+        this.accessGuard = accessGuard;
     }
 
     /**
@@ -41,9 +48,17 @@ public class AiReportController {
     @PostMapping("/{sessionId}/ai-report")
     public AiReportResponse generateReport(
             @PathVariable Long sessionId,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @AuthenticationPrincipal AppUserPrincipal principal,
             // 默认 false：已经生成过就直接返回旧的，不重复消耗 token。
             // 前端加个「重新生成」按钮，带上 ?regenerate=true 就能强制重跑。
             @RequestParam(defaultValue = "false") boolean regenerate) {
+
+        // ⚠️ 这个校验在这里尤其重要：AI 调用是要花钱的。
+        // 少了它，任何人都能遍历 sessionId 把别人的 AI 报告跑一遍，
+        // 账单算在你头上。
+        accessGuard.requireAccess(sessionId, SessionAccessGuard.parseToken(sessionToken), principal);
+
         return aiReportService.generate(sessionId, regenerate);
     }
 }

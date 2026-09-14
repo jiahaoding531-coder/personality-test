@@ -64,12 +64,12 @@ V0.1 的目标**不是**做出完整产品，而是用最小成本让这条链�
 cd backend && ./mvnw test
 ```
 
-期望：`Tests run: 66, Failures: 0, Errors: 0, Skipped: 0`
+期望：`Tests run: 79, Failures: 0, Errors: 0, Skipped: 0`
 
 | 层 | 数量 | 需要数据库 | 覆盖 |
 |---|---|---|---|
 | 纯逻辑单元测试 | 19 | ❌ | 计分算法、提示词约束 |
-| 集成测试 | 47 | ✅ | HTTP 契约、安全规则、事务、用户隔离 |
+| 集成测试 | 60 | ✅ | HTTP 契约、安全规则、事务、用户隔离 |
 
 集成测试需要一个测试库（`personality_mvp_test`），
 表结构由 Flyway 在测试启动时自动创建。详见 `CONTRIBUTING.md`。

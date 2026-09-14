@@ -237,6 +237,77 @@ Retry-After: 847
 >
 > 阈值定义在 `LoginRateLimiter` 的常量里，需要调整改那里。
 
+### ⚠️ 会话访问令牌（会话相关端点必读）
+
+操作**某个具体会话**的四个端点都需要在 `X-Session-Token` 请求头里带上令牌：
+
+```
+POST /api/test-sessions/{id}/answers
+POST /api/test-sessions/{id}/submit
+GET  /api/test-sessions/{id}/result
+POST /api/test-sessions/{id}/ai-report
+```
+
+令牌在**创建会话时返回一次**，之后拿不到第二次：
+
+```json
+{ "sessionId": 26, "accessToken": "b3993532-1350-4d6d-b600-1d5c7a030538", "status": "IN_PROGRESS" }
+```
+
+**两种放行方式（满足其一即可）**：
+
+| 方式 | 何时用 | 怎么带 |
+|---|---|---|
+| **令牌匹配** | 匿名测试 | `X-Session-Token: <uuid>` |
+| **是登录用户本人的会话** | 从历史记录点进来 | 不用带，凭 Cookie 里的会话身份 |
+
+#### 为什么需要它
+
+`sessionId` 是数据库自增的**连续整数**，从 1 数到 N 就能遍历全站。
+如果只用它判断所有权，会有一个严重的越权漏洞（IDOR，OWASP A01）——
+修复前实测确认过两条攻击路径：
+
+```
+① 匿名 GET  /api/test-sessions/24/result   → 200，读到了别人的画像
+② 匿名 POST /api/test-sessions/22/answers  → 200，写进了别人未提交的会话
+```
+
+令牌是 128 位随机 UUID，猜不到。**知道 id 不重要，拿到令牌才算数。**
+
+#### 拒绝时返回 404 而不是 403
+
+这是刻意的。403 等于告诉攻击者「这个会话存在，只是你没权限」——
+那依然能被用来枚举出哪些 id 是有效的。404 让「不存在」和「没权限」
+看起来完全一样。
+
+同理，**令牌格式非法也返回 404 而不是 400**：如果格式错返回 400、
+格式对但不存在返回 404，两者的差异本身就是信息泄露。
+
+#### curl 示例
+
+```bash
+JAR=/tmp/cookies.txt
+curl -s -c $JAR -b $JAR http://localhost:8080/api/auth/me          # 拿 CSRF 令牌
+CSRF=$(grep XSRF-TOKEN $JAR | awk '{print $NF}')
+
+# 建会话，同时拿到 accessToken
+RESP=$(curl -s -X POST http://localhost:8080/api/test-sessions \
+  -H "Content-Type: application/json" -H "X-XSRF-TOKEN: $CSRF" -c $JAR -b $JAR)
+SID=$(echo "$RESP" | jq -r .sessionId)
+TOKEN=$(echo "$RESP" | jq -r .accessToken)
+
+# 后续操作都带上令牌
+curl -X POST "http://localhost:8080/api/test-sessions/$SID/answers" \
+  -H "Content-Type: application/json" \
+  -H "X-XSRF-TOKEN: $CSRF" \
+  -H "X-Session-Token: $TOKEN" \
+  -c $JAR -b $JAR \
+  -d '{"answers":[{"questionId":1,"score":5}]}'
+```
+
+> **令牌不会出现在历史记录等任何列表接口里。** 那些场景靠登录身份鉴权，
+> 多返回一个凭证只会增加泄露面（被浏览器缓存、被日志记录、被前端存到 localStorage）。
+
 ### `POST /api/auth/logout`
 
 无请求体。**204 No Content**，服务端销毁会话。

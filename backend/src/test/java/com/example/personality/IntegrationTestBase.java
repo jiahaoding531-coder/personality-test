@@ -14,10 +14,18 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -133,5 +141,83 @@ public abstract class IntegrationTestBase {
 
     /** 用于构造注册/登录请求体。 */
     protected record Credentials(String username, String password) {
+    }
+
+    // ==========================================================
+    // 测试会话（id + 访问令牌）
+    // ==========================================================
+
+    /**
+     * 一个测试会话的引用。
+     *
+     * <p>带上令牌是必须的：修复 IDOR 之后，匿名访问会话需要凭
+     * {@code X-Session-Token} 请求头里的令牌。登录用户访问自己的会话
+     * 则不需要（凭身份放行），但测试里统一带着更省心。
+     */
+    protected record TestSessionRef(long id, String token) {
+    }
+
+    protected static final String SESSION_TOKEN_HEADER = "X-Session-Token";
+
+    /** 给请求带上会话令牌。 */
+    protected static MockHttpServletRequestBuilder withToken(
+            MockHttpServletRequestBuilder builder, TestSessionRef ref) {
+        return builder.header(SESSION_TOKEN_HEADER, ref.token());
+    }
+
+    /**
+     * 建一个测试会话。
+     *
+     * @param loginSession 传 null 表示匿名创建
+     */
+    protected TestSessionRef createTestSession(MockHttpSession loginSession) throws Exception {
+        var request = post("/api/test-sessions").with(csrf());
+        if (loginSession != null) {
+            request = request.session(loginSession);
+        }
+        MvcResult result = mockMvc.perform(request)
+                .andExpect(status().isCreated())
+                .andReturn();
+        JsonNode body = objectMapper.readTree(
+                new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8));
+        return new TestSessionRef(body.get("sessionId").asLong(), body.get("accessToken").asString());
+    }
+
+    /** 取题库里的全部题目 ID。 */
+    protected List<Long> fetchQuestionIds() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/questions"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode questions = objectMapper.readTree(
+                        new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8))
+                .get("questions");
+        List<Long> ids = new ArrayList<>();
+        questions.forEach(q -> ids.add(q.get("id").asLong()));
+        return ids;
+    }
+
+    /** 把全部题目都答成同一个分值。 */
+    protected void answerAllQuestions(TestSessionRef ref, int score, MockHttpSession loginSession)
+            throws Exception {
+        List<Map<String, Object>> answers = new ArrayList<>();
+        for (Long qid : fetchQuestionIds()) {
+            answers.add(Map.of("questionId", qid, "score", score));
+        }
+        var request = withToken(post("/api/test-sessions/{id}/answers", ref.id()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(Map.of("answers", answers))), ref);
+        if (loginSession != null) {
+            request = request.session(loginSession);
+        }
+        mockMvc.perform(request).andExpect(status().isOk());
+    }
+
+    /** 取结果 JSON。 */
+    protected JsonNode fetchResultJson(TestSessionRef ref) throws Exception {
+        MvcResult result = mockMvc.perform(withToken(get("/api/test-sessions/{id}/result", ref.id()), ref))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(
+                new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8));
     }
 }

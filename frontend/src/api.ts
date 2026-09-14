@@ -170,28 +170,58 @@ export const api = {
   createSession: () => request<SessionResponse>('/api/test-sessions', emptyJsonPost()),
 
   /** 批量保存作答。已答过的题会被更新而不是重复插入，可以放心重复调用 */
-  saveAnswers: (sessionId: number, answers: { questionId: number; score: number }[]) =>
-    request<AnswersSavedResponse>(`/api/test-sessions/${sessionId}/answers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers }),
-    }),
+  saveAnswers: (sessionId: number, answers: { questionId: number; score: number }[], sessionToken?: string) =>
+    request<AnswersSavedResponse>(
+      `/api/test-sessions/${sessionId}/answers`,
+      withSessionToken(
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers }),
+        },
+        sessionToken,
+      ),
+    ),
 
   /** 提交并计分。**闭环收口点**，重复提交会返回 409 */
-  submit: (sessionId: number) =>
-    request<SessionResultResponse>(`/api/test-sessions/${sessionId}/submit`, { method: 'POST' }),
+  submit: (sessionId: number, sessionToken?: string) =>
+    request<SessionResultResponse>(
+      `/api/test-sessions/${sessionId}/submit`,
+      withSessionToken({ method: 'POST' }, sessionToken),
+    ),
 
-  /** 查询已生成的画像 */
-  getResult: (sessionId: number) =>
-    request<SessionResultResponse>(`/api/test-sessions/${sessionId}/result`),
+  /**
+   * 查询已生成的画像。
+   *
+   * `sessionToken` 只在**匿名测试**时传——登录用户访问自己的会话
+   * 凭身份即可，不带令牌也能过。
+   */
+  getResult: (sessionId: number, sessionToken?: string) =>
+    request<SessionResultResponse>(
+      `/api/test-sessions/${sessionId}/result`,
+      withSessionToken({}, sessionToken),
+    ),
 
   /**
    * 生成 AI 解读。
    * @param regenerate false 时已有报告直接返回旧结果，不重复消耗 token
    */
-  generateAiReport: (sessionId: number, regenerate = false) =>
+  generateAiReport: (sessionId: number, regenerate = false, sessionToken?: string) =>
     request<AiReportResponse>(
       `/api/test-sessions/${sessionId}/ai-report${regenerate ? '?regenerate=true' : ''}`,
-      { method: 'POST' },
+      withSessionToken({ method: 'POST' }, sessionToken),
     ),
+}
+
+/**
+ * 需要时给请求加上会话令牌头。
+ *
+ * 不传就原样返回，所以登录用户走"凭身份放行"那条路时不需要关心它。
+ */
+function withSessionToken(init: RequestInit, sessionToken?: string): RequestInit {
+  if (!sessionToken) return init
+  return {
+    ...init,
+    headers: { ...(init.headers as Record<string, string>), 'X-Session-Token': sessionToken },
+  }
 }

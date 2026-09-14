@@ -42,6 +42,18 @@ export type SessionStatus = 'IN_PROGRESS' | 'SUBMITTED'
 
 export interface SessionResponse {
   sessionId: number
+  /**
+   * 会话访问令牌，**只在创建会话时返回这一次**。
+   *
+   * 后续对这个会话的所有操作（答题、提交、查结果、生成 AI 解读）
+   * 都要在 `X-Session-Token` 请求头里带上它。
+   *
+   * 为什么要它：`sessionId` 是自增的连续整数，猜得到；令牌是随机 UUID，猜不到。
+   * 没有令牌的话，任何人遍历 id 就能读到所有人的测试结果（IDOR）。
+   *
+   * 前端存内存里就行，不需要持久化——测试做完就不用了。
+   */
+  accessToken: string
   status: SessionStatus
   createdAt: string
 }
