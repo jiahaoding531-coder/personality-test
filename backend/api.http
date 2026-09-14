@@ -1,0 +1,153 @@
+### ============================================================
+### 接口调试文件（IntelliJ IDEA 内置 HTTP Client）
+### ============================================================
+### 用法：在 IntelliJ 里打开本文件，每个请求左边会出现一个绿色 ▶ 按钮，
+###       点一下就能发请求，结果显示在下方窗口。
+###       比手动敲 curl 方便得多，也不用装 Postman。
+###
+### 执行顺序：从上往下依次点。③ 创建会话后把返回的 sessionId 填到
+###           下面 ④⑤⑥⑦ 的 URL 里（默认按 1 处理，第一次跑就是 1）。
+###
+### ⚠️ 关于 CSRF：项目启用了 CSRF 防护，所有 POST 都需要 X-XSRF-TOKEN 头。
+###    IntelliJ 的 HTTP Client 自带 Cookie 管理，但不会自动把令牌放进请求头。
+###    所以下面的 POST 请求在这个文件里直接点会返回 403 —— 这是**预期行为**，
+###    说明防护生效了。
+###
+###    想在这里跑通 POST，需要先用 curl 拿令牌（见 README 的「关于登录」一节），
+###    或者直接用浏览器打开前端页面点着走。
+###    下面的 GET 请求不受影响，可以直接点。
+### ============================================================
+
+
+### ① 健康检查 —— 应该返回 status=UP，且 questionCount=20（GET，不需要令牌）
+GET http://localhost:8080/api/health
+
+
+### ============================================================
+### 认证（用 curl 更方便，见 README）
+### ============================================================
+
+### 当前登录用户 —— 未登录返回 200 + 空体
+GET http://localhost:8080/api/auth/me
+
+### 注册 —— ⚠️ 直接点会 403（缺 CSRF 令牌）
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "password123"
+}
+
+### 登录 —— ⚠️ 同上
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "password123"
+}
+
+### 我的测试历史 —— 未登录返回 401
+GET http://localhost:8080/api/me/test-sessions
+
+
+### ② 获取题库 —— 20 道题 + 5 个量表选项
+GET http://localhost:8080/api/questions
+
+
+### ③ 创建测试会话 —— 返回 sessionId，后续请求都要用
+POST http://localhost:8080/api/test-sessions
+Content-Type: application/json
+
+{}
+
+
+### ④ 保存作答（全部 20 题）
+### 分值含义：1=非常不同意 2=比较不同意 3=说不好 4=比较同意 5=非常同意
+### 这组答案故意答得比较"外向、开放、稳定"，方便肉眼核对分数
+POST http://localhost:8080/api/test-sessions/1/answers
+Content-Type: application/json
+
+{
+  "answers": [
+    { "questionId": 1,  "score": 5 },
+    { "questionId": 2,  "score": 5 },
+    { "questionId": 3,  "score": 3 },
+    { "questionId": 4,  "score": 4 },
+    { "questionId": 5,  "score": 5 },
+    { "questionId": 6,  "score": 5 },
+    { "questionId": 7,  "score": 4 },
+    { "questionId": 8,  "score": 3 },
+    { "questionId": 9,  "score": 4 },
+    { "questionId": 10, "score": 5 },
+    { "questionId": 11, "score": 1 },
+    { "questionId": 12, "score": 2 },
+    { "questionId": 13, "score": 2 },
+    { "questionId": 14, "score": 4 },
+    { "questionId": 15, "score": 2 },
+    { "questionId": 16, "score": 1 },
+    { "questionId": 17, "score": 2 },
+    { "questionId": 18, "score": 3 },
+    { "questionId": 19, "score": 2 },
+    { "questionId": 20, "score": 1 }
+  ]
+}
+
+
+### ⑤ 提交并计分 —— 闭环收口。返回 5 个维度的分数
+POST http://localhost:8080/api/test-sessions/1/submit
+
+
+### ⑥ 查询结果 —— 与 ⑤ 返回内容一致
+GET http://localhost:8080/api/test-sessions/1/result
+
+
+### ⑦ AI 个性化解读
+### 未配置 API Key 时返回 501；已配置（AI_ENABLED=true）时返回生成结果。
+### 真实调用大模型需要 3~30 秒，IDEA 里可能要等一下
+POST http://localhost:8080/api/test-sessions/1/ai-report
+
+
+### ⑦b 强制重新生成
+### 不带参数时，已有报告会直接返回旧结果、不重复消耗 token。
+### 加 ?regenerate=true 才会真的重新调用一次（内容通常会不同）。
+POST http://localhost:8080/api/test-sessions/1/ai-report?regenerate=true
+
+
+### ============================================================
+### 以下是错误路径，用来验证异常处理是否正确
+### ============================================================
+
+### ⑧ 会话不存在 → 期望 404
+GET http://localhost:8080/api/test-sessions/999999/result
+
+### ⑨ 重复提交 → 期望 409（幂等性）
+POST http://localhost:8080/api/test-sessions/1/submit
+
+### ⑩ 分值越界 → 期望 400，且 fieldErrors 里指出 score 不合法
+POST http://localhost:8080/api/test-sessions/1/answers
+Content-Type: application/json
+
+{
+  "answers": [
+    { "questionId": 1, "score": 99 }
+  ]
+}
+
+### ⑪ 空答案列表 → 期望 400
+POST http://localhost:8080/api/test-sessions/1/answers
+Content-Type: application/json
+
+{
+  "answers": []
+}
+
+### ⑫ 请求体不是合法 JSON → 期望 400（不是 500）
+POST http://localhost:8080/api/test-sessions/1/answers
+Content-Type: application/json
+
+{ bad json
+
+### ⑬ 路径变量不是数字 → 期望 400（不是 500）
+GET http://localhost:8080/api/test-sessions/abc/result

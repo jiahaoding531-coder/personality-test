@@ -1,0 +1,31 @@
+# ============================================================
+# 换行符与文件类型规范
+# ============================================================
+# 没有这个文件会发生什么：
+#   Windows 上 Git 默认把仓库里的 LF 换行改写成 CRLF（core.autocrlf=true）。
+#   于是"我只改了一行"，diff 却显示整个文件都变了——因为每一行的行尾都不同。
+#   别人在 macOS/Linux 上 clone 后看到的内容又和你不一样，Review 时全是噪音。
+#
+# 下面的规则让**仓库里存的永远是 LF**，checkout 时按文件类型决定行尾。
+# ============================================================
+
+# 默认所有文本文件：仓库里存 LF，工作区也用 LF
+* text=auto eol=lf
+
+# ---- 例外 ----
+# Windows 批处理脚本必须以 CRLF 结尾。用 LF 的话，
+# cmd.exe 解析某些语法（尤其是 goto/label）会出错。
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# ---- 二进制文件：不做任何换行转换 ----
+# 少了这几行，Git 可能把二进制内容里的 0x0D 0x0A 当成换行改写，直接损坏文件。
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.jar  binary
+*.zip  binary
+*.docx binary
+*.xlsx binary

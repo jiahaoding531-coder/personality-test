@@ -1,0 +1,151 @@
+# ============================================================
+# 应用配置
+# ============================================================
+# 相当于 Python 项目里的 pyproject.toml + .env 合体。
+# Spring Boot 启动时会自动读取 classpath 下的 application.yml。
+#
+# 语法要点：
+#   缩进表示层级（和 Python 一样，不能用 Tab，只能用空格）
+#   ${VAR:default} 表示"读环境变量 VAR，读不到就用 default"
+# ============================================================
+
+spring:
+  application:
+    name: personality-test
+
+  # ----------------------------------------------------------
+  # 数据库连接
+  # ----------------------------------------------------------
+  # ⚠️ 安装 PostgreSQL 时你设的密码，需要填到 DB_PASSWORD 里。
+  #    推荐做法是设成环境变量，而不是直接写在这里——
+  #    这个文件是要提交到 GitHub 的，写死密码等于公开泄露。
+  #
+  #    Windows PowerShell 里设置（当前窗口有效）：
+  #      $env:DB_PASSWORD = "你的密码"
+  #    永久生效：
+  #      [Environment]::SetEnvironmentVariable("DB_PASSWORD", "你的密码", "User")
+  # ----------------------------------------------------------
+  datasource:
+    url: jdbc:postgresql://localhost:5432/personality_mvp
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+    # HikariCP 是 Spring Boot 默认的连接池，性能最好的 Java 连接池之一。
+    # 你写 JdbcCrud.java 时每次操作都新建连接（DriverManager.getConnection），
+    # 那个开销很大；连接池会复用连接，这是最重要的性能优化之一。
+    hikari:
+      maximum-pool-size: 10          # 最大连接数。超过这个数的请求会排队等待
+      minimum-idle: 2                # 保持的最小空闲连接
+      connection-timeout: 30000      # 等待连接的超时时间（毫秒）
+      pool-name: PersonalityHikariPool
+
+  # ----------------------------------------------------------
+  # JPA / Hibernate
+  # ----------------------------------------------------------
+  jpa:
+    hibernate:
+      # ⚠️ 必须是 validate，不能是 update 或 create。
+      #
+      # validate   = 启动时检查实体和数据库表对不对得上，对不上就启动失败（✅ 我们要的）
+      # update     = Hibernate 自动改表结构（❌ 危险：会和 Flyway 抢管理权，
+      #              最终没人知道表到底是谁建的，生产环境绝对禁止）
+      # create-drop= 每次启动删表重建（❌ 会把数据清空）
+      #
+      # 表结构的唯一管理者是 Flyway。Hibernate 只有"检查"的权限，没有"修改"的权限。
+      ddl-auto: validate
+
+    # ⚠️ 必须关掉，默认是 true。
+    #
+    # open-in-view = true 会让 Hibernate 在整个 HTTP 请求期间都持有数据库连接，
+    # 好处是能在 Controller 里偷懒访问懒加载字段，坏处是连接被白白占着，
+    # 高并发下连接池迅速耗尽。
+    #
+    # Spring Boot 官方从 3.x 起就建议关掉它。关掉之后所有数据访问
+    # 都必须在 Service 层（事务内）完成，会逼着你把边界划清楚。
+    open-in-view: false
+
+    properties:
+      hibernate:
+        format_sql: true             # 日志里的 SQL 自动换行缩进，方便阅读
+
+    # 把执行的 SQL 打到控制台。
+    # 学习阶段强烈建议开着——你能直观看到 JPA 到底生成了什么 SQL，
+    # 避免把它当成魔法。上线时改成 false（否则日志量巨大且影响性能）。
+    show-sql: true
+
+  # ----------------------------------------------------------
+  # Flyway 数据库迁移
+  # ----------------------------------------------------------
+  flyway:
+    enabled: true
+    locations: classpath:db/migration   # 对应 src/main/resources/db/migration/
+    # 让 Flyway 按版本号顺序执行 V1__xxx.sql、V2__xxx.sql。
+    # 执行过的脚本会记录在 flyway_schema_history 表里，不会重复执行。
+    # 改了已执行过的脚本会导致校验失败——这是特性不是 bug，
+    # 保证任何一台机器上跑出来的表结构都完全一致。
+
+# ============================================================
+# AI 配置
+# ============================================================
+# 对应 Java 侧的 AiProperties（@ConfigurationProperties(prefix = "app.ai")）。
+# 字段名用中划线风格，Spring 会自动做宽松绑定（base-url ↔ baseUrl）。
+# ============================================================
+app:
+  ai:
+    # 是否启用真实的大模型调用。
+    #
+    # false（默认）→ 装配 StubAiReportGenerator，接口返回 501
+    # true         → 装配 DeepSeekAiReportGenerator，真实调用 API
+    #
+    # 默认关掉是刻意的：别人 clone 仓库时手上多半没有 API Key，
+    # 默认开启会让他一启动就报错，还得先读代码才知道要关什么。
+    enabled: ${AI_ENABLED:false}
+
+    # DeepSeek 的 OpenAI 兼容端点。换成通义、智谱、Kimi 多数也兼容这个协议，
+    # 只要改这里和 model，Java 代码一行不用动。
+    base-url: ${AI_BASE_URL:https://api.deepseek.com/v1}
+
+    # deepseek-chat 是通用对话模型，做人格解读够用，比 reasoner 快且便宜。
+    model: ${AI_MODEL:deepseek-chat}
+
+    # ⚠️ API Key 只从环境变量读，绝对不要在这里写明文。
+    #    这个文件要提交到 Git，一旦推上去，即使马上删除，
+    #    历史提交里依然查得到，爬虫会在几分钟内扫到并盗用额度。
+    #
+    #    Windows PowerShell（当前窗口有效）：
+    #      $env:DEEPSEEK_API_KEY = "sk-你的key"
+    #    永久生效：
+    #      [Environment]::SetEnvironmentVariable("DEEPSEEK_API_KEY","sk-你的key","User")
+    #
+    #    冒号后留空 = 读不到环境变量时用空字符串，而不是启动失败。
+    #    真正的"缺 Key"检查在 DeepSeekAiReportGenerator 的构造器里做——
+    #    只有真的启用了 AI 才需要 Key。
+    api-key: ${DEEPSEEK_API_KEY:}
+
+    # 单次请求超时。大模型偶尔会慢，30 秒是够用的上限。
+    # 不设超时的话，上游卡住会一直占着请求线程，并发一上来整个服务失去响应。
+    timeout: 30s
+
+    # 生成的最大 token 数。400~600 中文字约 800~1200 token。
+    max-tokens: 1200
+
+    # 采样温度。人格解读属于创作类任务，用厂商默认值即可。
+    # 调低会让每次输出趋同，调高会开始跑题。
+    temperature: 1.0
+
+# ============================================================
+# 服务器
+# ============================================================
+server:
+  port: 8080
+
+# ============================================================
+# 日志
+# ============================================================
+logging:
+  level:
+    root: INFO
+    # 本项目自己的日志开 DEBUG，方便看到业务流转
+    com.example.personality: DEBUG
+    # 想看 Hibernate 绑定了什么参数就打开下面这行（很啰嗦，默认关掉）
+    # org.hibernate.orm.jdbc.bind: TRACE

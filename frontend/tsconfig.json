@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    /* ---- 语言与运行环境 ---- */
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "useDefineForClassFields": true,
+
+    /* ---- 类型检查的严格程度 ----
+       严格模式全开。TypeScript 的价值几乎都在 strict 里——
+       关掉它就退化成了「带类型的 JavaScript」，只能提示你补类型，
+       但拦不住 null、拦不住拼写错误、拦不住漏掉的 case。 */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+
+    /* ---- 打包相关 ---- */
+    // Vite 负责转译，tsc 只做类型检查，不产出文件
+    "noEmit": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": ["src", "vite.config.ts"]
+}

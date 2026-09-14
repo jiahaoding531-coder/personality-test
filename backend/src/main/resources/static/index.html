@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>人格测试 · 5 维画像</title>
+<style>
+/* ============================================================
+   调色板令牌
+   ============================================================
+   颜色全部走 CSS 变量，深浅两套值在同一声明处切换。
+   深色不是"浅色自动反转"，而是从同一组色阶里重新挑的步进值
+   （#2a78d6 → #3987e5），并且单独跑过对比度校验。
+   ============================================================ */
+.viz-root {
+  color-scheme: light;
+  --page:            #f9f9f7;
+  --surface-1:       #fcfcfb;
+  --text-primary:    #0b0b0b;
+  --text-secondary:  #52514e;
+  --text-muted:      #898781;
+  --grid:            #e1e0d9;
+  --axis:            #c3c2b7;
+  --series-1:        #2a78d6;
+  --border:          rgba(11, 11, 11, 0.10);
+  --hover-wash:      rgba(42, 120, 214, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --page:           #0d0d0d;
+    --surface-1:      #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --grid:           #2c2c2a;
+    --axis:           #383835;
+    --series-1:       #3987e5;
+    --border:         rgba(255, 255, 255, 0.10);
+    --hover-wash:     rgba(57, 135, 229, 0.10);
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --page:           #0d0d0d;
+  --surface-1:      #1a1a19;
+  --text-primary:   #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted:     #898781;
+  --grid:           #2c2c2a;
+  --axis:           #383835;
+  --series-1:       #3987e5;
+  --border:         rgba(255, 255, 255, 0.10);
+  --hover-wash:     rgba(57, 135, 229, 0.10);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: var(--page);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; }
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 32px;
+}
+.brand { font-size: 15px; font-weight: 600; letter-spacing: .01em; }
+.brand span { color: var(--text-muted); font-weight: 400; margin-left: 8px; }
+
+.theme-btn {
+  background: var(--surface-1); color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 12px; font-size: 13px; cursor: pointer;
+  font-family: inherit;
+}
+.theme-btn:hover { color: var(--text-primary); }
+
+/* ---------- 屏幕切换 ---------- */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+}
+
+/* ---------- 首页 ---------- */
+h1 { font-size: 28px; line-height: 1.35; margin: 0 0 12px; font-weight: 650; letter-spacing: -.01em; }
+h2 { font-size: 19px; margin: 0 0 4px; font-weight: 600; }
+.lede { color: var(--text-secondary); font-size: 15px; margin: 0 0 24px; }
+
+.dims { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.dim-chip {
+  font-size: 13px; color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.btn {
+  font-family: inherit; font-size: 15px; font-weight: 550;
+  border-radius: 10px; padding: 12px 24px; cursor: pointer;
+  border: 1px solid transparent; transition: opacity .15s;
+}
+.btn-primary { background: var(--series-1); color: #fff; }
+.btn-primary:hover { opacity: .88; }
+.btn-ghost {
+  background: transparent; color: var(--text-secondary);
+  border-color: var(--border);
+}
+.btn-ghost:hover { color: var(--text-primary); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.note {
+  font-size: 13px; color: var(--text-muted);
+  margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);
+}
+
+/* ---------- 测试页 ---------- */
+.progress-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 13px; color: var(--text-muted); margin-bottom: 10px;
+}
+.progress-track {
+  height: 4px; background: var(--grid); border-radius: 2px;
+  overflow: hidden; margin-bottom: 32px;
+}
+.progress-fill {
+  height: 100%; background: var(--series-1); border-radius: 2px;
+  width: 0; transition: width .25s ease;
+}
+
+.q-text { font-size: 20px; font-weight: 550; line-height: 1.5; margin: 0 0 24px; }
+
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt {
+  display: flex; align-items: center; gap: 12px;
+  background: transparent; color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; cursor: pointer; text-align: left;
+  font-family: inherit; font-size: 15px;
+  transition: background .12s, border-color .12s;
+}
+.opt:hover { background: var(--hover-wash); }
+.opt .dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--axis); flex-shrink: 0;
+  transition: border-color .12s, background .12s;
+}
+.opt:hover .dot { border-color: var(--series-1); }
+.opt.chosen { border-color: var(--series-1); background: var(--hover-wash); }
+.opt.chosen .dot { border-color: var(--series-1); background: var(--series-1); }
+
+.nav-row { display: flex; gap: 10px; margin-top: 24px; align-items: center; }
+.nav-row #submitBtn { margin-left: auto; }
+
+/* 提示条：告诉用户还差几题 */
+.hint {
+  margin-top: 20px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--hover-wash);
+  font-size: 13px; color: var(--text-secondary);
+}
+.hint strong { color: var(--text-primary); font-weight: 600; }
+
+/* 答题卡 */
+.dots-head {
+  margin-top: 28px; padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.dots { display: flex; flex-wrap: wrap; gap: 6px; }
+.dot-item {
+  width: 30px; height: 30px; border-radius: 7px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-muted);
+  font-family: inherit; font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.dot-item:hover { border-color: var(--series-1); color: var(--text-primary); }
+.dot-item.answered {
+  background: var(--series-1); border-color: var(--series-1); color: #fff;
+}
+/* 当前题：外圈用表面色的环隔开，再套一圈主色，和填充态区分得开 */
+.dot-item.current {
+  box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--series-1);
+  color: var(--text-primary);
+}
+.dot-item.answered.current { color: #fff; }
+
+.kbd-hint {
+  margin-top: 14px; font-size: 12px; color: var(--text-muted);
+}
+kbd {
+  display: inline-block; padding: 1px 5px; margin: 0 1px;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--page);
+  font-family: inherit; font-size: 11px; color: var(--text-secondary);
+}
+
+/* ---------- 结果页 ---------- */
+.result-head { margin-bottom: 28px; }
+.result-head .sub { font-size: 14px; color: var(--text-secondary); }
+
+/* 图表 */
+.chart { margin: 0 0 8px; position: relative; }
+
+.plot { display: flex; flex-direction: column; gap: 14px; }
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 4.25rem 3rem;
+  align-items: center;
+  gap: 12px;
+  cursor: default;
+}
+.bar-row .dim-name {
+  font-size: 13px; color: var(--text-secondary);
+  text-align: right; white-space: nowrap;
+}
+.bar-row .track {
+  position: relative;
+  height: 14px;                       /* ≤24px，细马克 */
+  border-radius: 2px;
+}
+/* 网格线：1px 实线发丝，比表面深一档，不用虚线 */
+.bar-row .track::before {
+  content: ""; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid) 1px, transparent 1px);
+  background-size: 25% 100%;
+  background-position: 25% 0, 50% 0, 75% 0, 100% 0;
+  background-repeat: no-repeat;
+}
+/* 基线：0 位置，比网格线深一档 */
+.bar-row .track::after {
+  content: ""; position: absolute; left: 0; top: -3px; bottom: -3px;
+  width: 1px; background: var(--axis);
+}
+/* 宽度走 CSS 变量 + @keyframes，而不是 JS 设 inline width 再靠 transition 过渡。
+   原因：transition 依赖主线程在"设定值之后"再推一帧，无头浏览器 / 虚拟时钟 /
+   快速截图这些场景下抓到的可能仍是起始的 0% 状态。用 keyframes 则无论动画
+   有没有跑，元素最终都会落到 --w 这个静态值上——正确性不依赖时序。 */
+.bar {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: var(--series-1);
+  border-radius: 0 4px 4px 0;        /* 基线端方角，数据端 4px 圆角 */
+  width: var(--w, 0%);
+  animation: bar-grow .45s cubic-bezier(.22,.61,.36,1) both;
+}
+@keyframes bar-grow {
+  from { width: 0%; }
+  to   { width: var(--w, 0%); }
+}
+.bar-row .val {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  font-variant-numeric: tabular-nums; text-align: right;
+}
+.bar-row .lvl {
+  font-size: 12px; color: var(--text-muted); white-space: nowrap;
+}
+
+/* 轴刻度 */
+.axis-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 4.25rem 3rem;
+  gap: 12px; margin-top: 10px;
+}
+.axis-ticks {
+  grid-column: 2;
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 悬停提示 */
+.tip {
+  position: fixed; z-index: 20; pointer-events: none;
+  background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 12px; font-size: 12px; line-height: 1.5;
+  box-shadow: 0 4px 16px rgba(0,0,0,.10);
+  opacity: 0; transition: opacity .12s;
+  white-space: nowrap;
+}
+.tip.on { opacity: 1; }
+.tip b { font-weight: 600; }
+
+/* 表格视图（图表的无障碍孪生体） */
+.table-toggle {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 12px; font-family: inherit;
+  padding: 4px 0; margin-top: 4px; text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.table-toggle:hover { color: var(--text-primary); }
+table.data {
+  width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px;
+}
+table.data th, table.data td {
+  text-align: left; padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+table.data th {
+  color: var(--text-muted); font-weight: 500; font-size: 12px;
+}
+table.data td.num {
+  text-align: right; font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.hidden { display: none; }
+
+/* 解读卡片 */
+.readings { margin-top: 32px; display: flex; flex-direction: column; gap: 2px; }
+.reading {
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+}
+.reading:first-child { border-top: none; }
+.reading .head {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px;
+}
+.reading .head .nm { font-size: 15px; font-weight: 600; }
+.reading .head .sc {
+  font-size: 13px; color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.reading p { margin: 0; font-size: 14px; color: var(--text-secondary); }
+
+.disclaimer {
+  margin-top: 32px; padding: 16px 18px;
+  background: var(--page); border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px; color: var(--text-muted); line-height: 1.65;
+}
+
+/* ---------- AI 解读 ---------- */
+.ai-block {
+  margin-top: 32px; padding-top: 26px;
+  border-top: 1px solid var(--border);
+}
+.ai-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.ai-title { font-size: 15px; font-weight: 600; }
+.ai-meta { font-size: 12px; color: var(--text-muted); text-align: right; }
+.ai-lead { font-size: 14px; color: var(--text-secondary); margin: 0 0 18px; }
+
+/* 正文行高放宽到 1.85——几百字的连续中文段落，密排会很累眼 */
+.ai-text { font-size: 14.5px; line-height: 1.85; color: var(--text-primary); }
+.ai-text p { margin: 0 0 14px; }
+.ai-text p:last-child { margin-bottom: 0; }
+
+.ai-actions { display: flex; gap: 10px; align-items: center; margin-top: 20px; }
+
+.ai-error {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.65;
+  background: var(--page); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;
+}
+.ai-error strong { color: var(--text-primary); font-weight: 600; }
+
+.ai-loading {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--text-secondary); font-size: 14px; padding: 8px 0;
+}
+.spinner-sm {
+  width: 16px; height: 16px; flex-shrink: 0;
+  border: 2px solid var(--grid); border-top-color: var(--series-1);
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+
+/* ---------- 状态 ---------- */
+.loading, .error-box {
+  text-align: center; padding: 48px 24px; color: var(--text-secondary);
+  font-size: 15px;
+}
+.error-box { color: var(--text-primary); }
+.error-box .msg {
+  font-size: 14px; color: var(--text-secondary); margin: 8px 0 20px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  background: var(--page); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px; text-align: left;
+  white-space: pre-wrap; word-break: break-word;
+}
+.spinner {
+  width: 22px; height: 22px; margin: 0 auto 14px;
+  border: 2px solid var(--grid); border-top-color: var(--series-1);
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body data-palette="#2a78d6,#3987e5">
+<div class="viz-root">
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">人格测试<span>5 维画像 · V0.1</span></div>
+    <button class="theme-btn" id="themeBtn" type="button">切换主题</button>
+  </div>
+
+  <!-- ================= 首页 ================= -->
+  <section class="screen active" id="screen-home">
+    <div class="card">
+      <h1>用 20 道题，看看你现在的样子</h1>
+      <p class="lede">
+        答完 20 道题，系统会算出你在 5 个人格维度上的分数，
+        并给出一份解读。大约需要 3 分钟。
+      </p>
+
+      <div class="dims">
+        <span class="dim-chip">开放性</span>
+        <span class="dim-chip">外向性</span>
+        <span class="dim-chip">责任心</span>
+        <span class="dim-chip">宜人性</span>
+        <span class="dim-chip">情绪稳定性</span>
+      </div>
+
+      <button class="btn btn-primary" id="startBtn" type="button">开始测试</button>
+
+      <p class="note">
+        本测试定位为自我探索与娱乐参考，不是心理诊断，也不代表固定不变的人格结论。
+        结果仅供你自己参考。
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 测试页 ================= -->
+  <section class="screen" id="screen-test">
+    <div class="card">
+      <div class="progress-head">
+        <span id="progressText">第 1 题 / 共 20 题</span>
+        <span id="progressPct">已答 0 / 20</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+      <p class="q-text" id="qText">加载中…</p>
+      <div class="options" id="options"></div>
+
+      <div class="hint hidden" id="hint"></div>
+
+      <!-- 答题卡：一眼看出哪些题没答，点数字直接跳过去 -->
+      <div class="dots-head">答题卡</div>
+      <div class="dots" id="dots"></div>
+
+      <div class="nav-row">
+        <button class="btn btn-ghost" id="prevBtn" type="button">上一题</button>
+        <button class="btn btn-ghost" id="nextBtn" type="button">下一题</button>
+        <button class="btn btn-primary" id="submitBtn" type="button">查看结果</button>
+      </div>
+      <div class="kbd-hint">也可以用键盘：<kbd>1</kbd>–<kbd>5</kbd> 选择，<kbd>←</kbd><kbd>→</kbd> 翻页</div>
+    </div>
+  </section>
+
+  <!-- ================= 计算中 ================= -->
+  <section class="screen" id="screen-loading">
+    <div class="card">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div id="loadingText">正在分析…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 结果页 ================= -->
+  <section class="screen" id="screen-result">
+    <div class="card">
+      <div class="result-head">
+        <h2>你的人格画像</h2>
+        <div class="sub" id="resultSub"></div>
+      </div>
+
+      <!-- 图表：横向条形图。单一系列 → 不需要图例，标题已说明画的是什么 -->
+      <figure class="chart" style="margin:0">
+        <div class="plot" id="plot"></div>
+        <div class="axis-row">
+          <div class="axis-ticks">
+            <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+          </div>
+        </div>
+      </figure>
+
+      <button class="table-toggle" id="tableToggle" type="button">显示表格视图</button>
+      <div id="tableWrap" class="hidden">
+        <table class="data">
+          <thead>
+            <tr><th>维度</th><th style="text-align:right">分数</th><th>档位</th></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="readings" id="readings"></div>
+
+      <!-- AI 个性化解读 -->
+      <div class="ai-block">
+        <div class="ai-head">
+          <span class="ai-title">AI 个性化解读</span>
+          <span class="ai-meta" id="aiMeta"></span>
+        </div>
+        <div id="aiContent"></div>
+      </div>
+
+      <div class="disclaimer" id="disclaimer"></div>
+
+      <div class="nav-row">
+        <button class="btn btn-ghost" id="restartBtn" type="button">重新测试</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 错误页 ================= -->
+  <section class="screen" id="screen-error">
+    <div class="card">
+      <div class="error-box">
+        <div style="font-size:17px;font-weight:600;margin-bottom:6px" id="errTitle">出错了</div>
+        <div class="msg" id="errMsg"></div>
+        <button class="btn btn-primary" id="errRetry" type="button">重试</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+"use strict";
+
+const API = "";                       // 同源部署，静态页由 Spring Boot 托管
+
+const state = {
+  sessionId: null,
+  questions: [],
+  answers: {},                        // questionId -> score
+  index: 0,
+  result: null,
+};
+
+/* ---------- 屏幕切换 ---------- */
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+function showError(title, msg, retry) {
+  document.getElementById("errTitle").textContent = title;
+  document.getElementById("errMsg").textContent = msg;
+  const btn = document.getElementById("errRetry");
+  btn.onclick = retry || (() => location.reload());
+  show("screen-error");
+}
+
+/* ---------- HTTP ---------- */
+async function api(path, options) {
+  const res = await fetch(API + path, options);
+  const text = await res.text();
+  let body = null;
+  try { body = text ? JSON.parse(text) : null; } catch (e) { body = null; }
+
+  if (!res.ok) {
+    // 把后端统一的错误结构翻译成人能看懂的一句话
+    let detail = body && body.message ? body.message : ("HTTP " + res.status);
+    if (body && body.fieldErrors && body.fieldErrors.length) {
+      detail += "\n" + body.fieldErrors.map(f => "· " + f.field + "：" + f.message).join("\n");
+    }
+    throw new Error(detail);
+  }
+  return body;
+}
+
+const postJSON = (path, payload) => api(path, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(payload === undefined ? {} : payload),
+});
+
+/* ---------- 流程 ---------- */
+async function startTest() {
+  clearAdvance();
+  show("screen-loading");
+  document.getElementById("loadingText").textContent = "正在准备题目…";
+  try {
+    const [session, bank] = await Promise.all([
+      postJSON("/api/test-sessions"),
+      api("/api/questions"),
+    ]);
+    state.sessionId = session.sessionId;
+    state.questions = bank.questions;
+    state.options = bank.options;
+    state.answers = {};
+    state.index = 0;
+    renderQuestion();
+    show("screen-test");
+  } catch (e) {
+    showError("无法开始测试", e.message + "\n\n请确认后端已启动：./mvnw spring-boot:run", startTest);
+  }
+}
+
+/* ------------------------------------------------------------------
+   自动跳转的定时器句柄。
+   ⚠️ 必须持有它，并在任何新的交互开始前取消——原来的实现每次点击都
+   新排一个 setTimeout 却从不取消，连点两次就会有两个定时器先后触发，
+   index 一次跳两格，中间那道题被整道跳过，用户还完全看不出来。
+   跳过题的后果是它永远没有答案，结束时"是否答完"的检查永远不通过，
+   「查看结果」按钮也就永远不出现。
+   ------------------------------------------------------------------ */
+let advanceTimer = null;
+
+function clearAdvance() {
+  if (advanceTimer !== null) {
+    clearTimeout(advanceTimer);
+    advanceTimer = null;
+  }
+}
+
+const totalQuestions = () => state.questions.length;
+
+function answeredCount() {
+  let n = 0;
+  for (const q of state.questions) {
+    if (state.answers[q.id] !== undefined) n++;
+  }
+  return n;
+}
+
+/** 第一道没答的题的下标；全部答完返回 -1 */
+function firstUnanswered() {
+  for (let i = 0; i < state.questions.length; i++) {
+    if (state.answers[state.questions[i].id] === undefined) return i;
+  }
+  return -1;
+}
+
+/* 所有跳转都走这里，保证任何导航都会先取消待执行的自动跳转 */
+function goTo(index) {
+  clearAdvance();
+  const max = state.questions.length - 1;
+  state.index = Math.max(0, Math.min(index, max));
+  renderQuestion();
+}
+
+function nextQuestion() {
+  if (state.index < totalQuestions() - 1) goTo(state.index + 1);
+}
+
+function prevQuestion() {
+  if (state.index > 0) goTo(state.index - 1);
+}
+
+function renderQuestion() {
+  const q = state.questions[state.index];
+  const total = totalQuestions();
+  const answered = answeredCount();
+  const missing = total - answered;
+
+  document.getElementById("progressText").textContent =
+    "第 " + (state.index + 1) + " 题 / 共 " + total + " 题";
+  // 显示"已答 N / 20"而不是百分比——完成度这件事，个数比比例直观得多
+  document.getElementById("progressPct").textContent = "已答 " + answered + " / " + total;
+  document.getElementById("progressFill").style.width =
+    (total ? (answered / total * 100) : 0) + "%";
+  document.getElementById("qText").textContent = q.content;
+
+  const box = document.getElementById("options");
+  box.innerHTML = "";
+  state.options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "opt" + (state.answers[q.id] === opt.value ? " chosen" : "");
+    btn.innerHTML = '<span class="dot"></span><span></span>';
+    btn.lastChild.textContent = opt.label;
+    btn.onclick = () => choose(q.id, opt.value);
+    box.appendChild(btn);
+  });
+
+  document.getElementById("prevBtn").disabled = state.index === 0;
+  document.getElementById("nextBtn").disabled = state.index === total - 1;
+
+  // 缺题时把"还差几题"直接写在按钮上，而不是让按钮凭空消失——
+  // 按钮消失用户只会以为程序坏了，不知道是自己的题没答完。
+  document.getElementById("submitBtn").textContent =
+    missing === 0 ? "查看结果" : ("还差 " + missing + " 题");
+
+  const hint = document.getElementById("hint");
+  if (missing === 0) {
+    hint.classList.add("hidden");
+  } else {
+    hint.classList.remove("hidden");
+    hint.innerHTML = "";
+    const strong = document.createElement("strong");
+    strong.textContent = "还有 " + missing + " 题没答。";
+    hint.append(strong, document.createTextNode(" 点下面答题卡里的数字可以直接跳过去。"));
+  }
+
+  renderDots();
+}
+
+/** 答题卡：20 个数字方块，一眼看出哪些没答，点一下跳过去 */
+function renderDots() {
+  const box = document.getElementById("dots");
+  box.innerHTML = "";
+  state.questions.forEach((q, i) => {
+    const answered = state.answers[q.id] !== undefined;
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "dot-item"
+      + (answered ? " answered" : "")
+      + (i === state.index ? " current" : "");
+    item.textContent = String(i + 1);
+    item.title = "第 " + (i + 1) + " 题" + (answered ? "（已答）" : "（未答）");
+    item.onclick = () => goTo(i);
+    box.appendChild(item);
+  });
+}
+
+function choose(questionId, score) {
+  clearAdvance();                 // ← 关键：先取消上一次还没执行的自动跳转
+  state.answers[questionId] = score;
+  renderQuestion();
+
+  // 还有下一题就自动前进；最后一题停在原地等用户点「查看结果」。
+  // 延迟 260ms 是为了让用户看清自己选中的是哪个选项。
+  if (state.index < state.questions.length - 1) {
+    advanceTimer = setTimeout(() => {
+      advanceTimer = null;
+      goTo(state.index + 1);
+    }, 260);
+  }
+}
+
+/** 点「查看结果」：没答完就跳到第一道漏答的题，答完了才提交 */
+function onResultClick() {
+  clearAdvance();
+  const missingIndex = firstUnanswered();
+  if (missingIndex >= 0) {
+    goTo(missingIndex);
+    return;
+  }
+  submitTest();
+}
+
+async function submitTest() {
+  clearAdvance();
+  show("screen-loading");
+  document.getElementById("loadingText").textContent = "正在计算结果…";
+  try {
+    const answers = state.questions.map(q => ({
+      questionId: q.id,
+      score: state.answers[q.id],
+    }));
+    await postJSON("/api/test-sessions/" + state.sessionId + "/answers", { answers });
+
+    document.getElementById("loadingText").textContent = "正在生成画像…";
+    state.result = await postJSON("/api/test-sessions/" + state.sessionId + "/submit");
+
+    renderResult();
+    show("screen-result");
+  } catch (e) {
+    showError("计算失败", e.message, () => { renderQuestion(); show("screen-test"); });
+  }
+}
+
+/* ---------- 结果渲染 ---------- */
+function renderResult() {
+  const r = state.result;
+
+  document.getElementById("resultSub").textContent =
+    r.dimensions.length + " 个维度 · 完成于 " +
+    new Date(r.submittedAt || r.createdAt).toLocaleString("zh-CN");
+
+  // --- 条形图 ---
+  const plot = document.getElementById("plot");
+  const tableBody = document.getElementById("tableBody");
+  plot.innerHTML = "";
+  tableBody.innerHTML = "";
+
+  r.dimensions.forEach(d => {
+    const row = document.createElement("div");
+    row.className = "bar-row";
+
+    const name = document.createElement("div");
+    name.className = "dim-name";
+    name.textContent = d.name;
+
+    const track = document.createElement("div");
+    track.className = "track";
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    bar.style.setProperty("--w", d.score + "%");   // CSS 负责其余部分
+    track.appendChild(bar);
+
+    const val = document.createElement("div");
+    val.className = "val";
+    val.textContent = Number(d.score).toFixed(2);
+
+    const lvl = document.createElement("div");
+    lvl.className = "lvl";
+    lvl.textContent = d.levelLabel;
+
+    row.append(name, track, val, lvl);
+    plot.appendChild(row);
+
+    // 悬停提示（增强，不是唯一读值途径——数值已经直接标注在右侧）
+    row.addEventListener("mousemove", ev => showTip(ev, d));
+    row.addEventListener("mouseleave", hideTip);
+
+    // 表格视图的行
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td></td><td class='num'></td><td></td>";
+    tr.children[0].textContent = d.name;
+    tr.children[1].textContent = Number(d.score).toFixed(2);
+    tr.children[2].textContent = d.levelLabel;
+    tableBody.appendChild(tr);
+  });
+
+  // --- 解读 ---
+  const readings = document.getElementById("readings");
+  readings.innerHTML = "";
+  r.dimensions.forEach(d => {
+    const box = document.createElement("div");
+    box.className = "reading";
+
+    const head = document.createElement("div");
+    head.className = "head";
+    const nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = d.name;
+    const sc = document.createElement("span");
+    sc.className = "sc";
+    sc.textContent = Number(d.score).toFixed(2) + " · " + d.levelLabel;
+    head.append(nm, sc);
+
+    const p = document.createElement("p");
+    p.textContent = d.description;
+
+    box.append(head, p);
+    readings.appendChild(box);
+  });
+
+  document.getElementById("disclaimer").textContent = r.disclaimer;
+
+  renderAiIdle();
+}
+
+/* ------------------------------------------------------------------
+   AI 个性化解读
+   ------------------------------------------------------------------ */
+const aiMetaEl = document.getElementById("aiMeta");
+const aiContentEl = document.getElementById("aiContent");
+
+function renderAiIdle() {
+  aiMetaEl.textContent = "";
+  aiContentEl.innerHTML = "";
+
+  const lead = document.createElement("p");
+  lead.className = "ai-lead";
+  lead.textContent = "上面的解读是按档位查表得到的固定文案。"
+    + "AI 解读会结合你这 5 个维度的组合，写一段专门针对你的分析。";
+
+  const actions = document.createElement("div");
+  actions.className = "ai-actions";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "aiGenBtn";
+  btn.className = "btn btn-primary";
+  btn.textContent = "生成 AI 解读";
+  btn.onclick = () => loadAiReport(false);
+  actions.appendChild(btn);
+
+  aiContentEl.append(lead, actions);
+}
+
+function renderAiLoading() {
+  aiMetaEl.textContent = "";
+  aiContentEl.innerHTML = "";
+
+  const box = document.createElement("div");
+  box.className = "ai-loading";
+  const sp = document.createElement("div");
+  sp.className = "spinner-sm";
+  const label = document.createElement("span");
+  label.textContent = "正在生成…通常需要 5 到 20 秒";
+  box.append(sp, label);
+  aiContentEl.appendChild(box);
+}
+
+function renderAiDone(data) {
+  const when = new Date(data.generatedAt).toLocaleString("zh-CN");
+  aiMetaEl.textContent = data.provider + " · " + when;
+  aiContentEl.innerHTML = "";
+
+  const text = document.createElement("div");
+  text.className = "ai-text";
+  // 按空行分段。
+  // ⚠️ 用 textContent 而不是 innerHTML——模型输出是不可信内容，
+  // 当成 HTML 插入就是一个 XSS 入口（模型可能被诱导输出 <script>）。
+  // 这是"永远不要相信外部输入"的一个具体例子，哪怕输入来自你自己调的 API。
+  data.content.split(/\n\s*\n/).forEach(para => {
+    const t = para.trim();
+    if (!t) return;
+    const p = document.createElement("p");
+    p.textContent = t;
+    text.appendChild(p);
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "ai-actions";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn btn-ghost";
+  btn.textContent = "重新生成";
+  btn.onclick = () => loadAiReport(true);
+  actions.appendChild(btn);
+
+  if (data.cached) {
+    const note = document.createElement("span");
+    note.className = "ai-meta";
+    note.textContent = "复用了上次的结果，没有重复调用 AI";
+    actions.appendChild(note);
+  }
+
+  aiContentEl.append(text, actions);
+}
+
+function renderAiError(message) {
+  aiMetaEl.textContent = "";
+  aiContentEl.innerHTML = "";
+
+  const box = document.createElement("div");
+  box.className = "ai-error";
+  const strong = document.createElement("strong");
+  strong.textContent = "生成失败：";
+  box.append(strong, document.createTextNode(message));
+
+  const actions = document.createElement("div");
+  actions.className = "ai-actions";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn btn-ghost";
+  btn.textContent = "重试";
+  btn.onclick = () => loadAiReport(false);
+  actions.appendChild(btn);
+
+  aiContentEl.append(box, actions);
+}
+
+async function loadAiReport(regenerate) {
+  const sid = state.result && state.result.sessionId;
+  if (!sid) return;
+
+  renderAiLoading();
+  try {
+    const path = "/api/test-sessions/" + sid + "/ai-report"
+      + (regenerate ? "?regenerate=true" : "");
+    renderAiDone(await postJSON(path));
+  } catch (e) {
+    renderAiError(e.message);
+  }
+}
+
+/* ---------- 悬停提示 ---------- */
+const tipEl = document.getElementById("tip");
+function showTip(ev, d) {
+  tipEl.innerHTML = "";
+  const l1 = document.createElement("div");
+  const b = document.createElement("b");
+  b.textContent = d.name;
+  l1.appendChild(b);
+  const l2 = document.createElement("div");
+  l2.textContent = "分数 " + Number(d.score).toFixed(2) + " · " + d.levelLabel;
+  tipEl.append(l1, l2);
+  tipEl.classList.add("on");
+  tipEl.style.left = Math.min(ev.clientX + 14, window.innerWidth - tipEl.offsetWidth - 12) + "px";
+  tipEl.style.top = (ev.clientY - tipEl.offsetHeight - 12) + "px";
+}
+function hideTip() { tipEl.classList.remove("on"); }
+
+/* ---------- 主题 ---------- */
+const themeBtn = document.getElementById("themeBtn");
+themeBtn.onclick = () => {
+  const root = document.documentElement;
+  const isDark = root.getAttribute("data-theme") === "dark"
+    || (!root.hasAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+  root.setAttribute("data-theme", isDark ? "light" : "dark");
+};
+
+/* ---------- 表格视图 ---------- */
+const tableToggle = document.getElementById("tableToggle");
+tableToggle.onclick = () => {
+  const wrap = document.getElementById("tableWrap");
+  const hidden = wrap.classList.toggle("hidden");
+  tableToggle.textContent = hidden ? "显示表格视图" : "隐藏表格视图";
+};
+
+/* ---------- 直达结果页：/?result=<sessionId> ---------- */
+(async function initFromUrl() {
+  const sid = new URLSearchParams(location.search).get("result");
+  if (!sid) return;
+  show("screen-loading");
+  document.getElementById("loadingText").textContent = "正在载入画像…";
+  try {
+    state.result = await api("/api/test-sessions/" + encodeURIComponent(sid) + "/result");
+    renderResult();
+    show("screen-result");
+  } catch (e) {
+    showError("无法载入结果", e.message, () => { location.href = location.pathname; });
+  }
+})();
+
+/* ---------- 键盘快捷键 ---------- */
+document.addEventListener("keydown", ev => {
+  // 只在答题屏生效，避免在首页/结果页误触发
+  if (!document.getElementById("screen-test").classList.contains("active")) return;
+  // 输入框里的按键不拦截
+  const tag = (ev.target && ev.target.tagName) || "";
+  if (tag === "INPUT" || tag === "TEXTAREA" || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+
+  if (ev.key >= "1" && ev.key <= "5") {
+    const q = state.questions[state.index];
+    const opt = state.options.find(o => String(o.value) === ev.key);
+    if (q && opt) { choose(q.id, opt.value); ev.preventDefault(); }
+  } else if (ev.key === "ArrowLeft") {
+    prevQuestion(); ev.preventDefault();
+  } else if (ev.key === "ArrowRight") {
+    nextQuestion(); ev.preventDefault();
+  }
+});
+
+/* ---------- 事件绑定 ---------- */
+document.getElementById("startBtn").onclick = startTest;
+document.getElementById("prevBtn").onclick = prevQuestion;
+document.getElementById("nextBtn").onclick = nextQuestion;
+document.getElementById("submitBtn").onclick = onResultClick;
+document.getElementById("restartBtn").onclick = () => { clearAdvance(); show("screen-home"); };
+</script>
+</body>
+</html>
