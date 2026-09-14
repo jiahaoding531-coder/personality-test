@@ -83,6 +83,14 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- 提供 MockMvc 的 Security 支持：with(csrf())、with(user(...)) 等请求后置处理器，
+		     以及 @WithMockUser 这类注解。测受保护的端点时必需，
+		     否则每个 POST 都会被 CSRF 拦成 403，测试根本没法写。 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>

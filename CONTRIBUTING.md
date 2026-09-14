@@ -59,11 +59,25 @@ npm run dev                            # → http://localhost:5173
 ## 提交前必做
 
 ```bash
-cd backend  && ./mvnw test        # 单元测试必须全绿
+cd backend  && ./mvnw test        # 56 个测试必须全绿
 cd frontend && npm run typecheck  # 类型检查必须无错误
 ```
 
 **CI 会跑这两条，本地先确认能省一轮来回。**
+
+### 集成测试需要一个测试库
+
+`backend` 的测试分两层：19 个纯逻辑单元测试不依赖任何外部环境，
+另外 37 个集成测试要连数据库。**先建一次测试库**（和开发库分开，避免互相污染）：
+
+```bash
+psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
+```
+
+表结构不用手动建——Flyway 会在测试启动时自动执行 `db/migration/` 下的迁移脚本。
+
+> 换用户名/密码的话设环境变量：`DB_USER` / `DB_PASSWORD`
+> （默认都是 `postgres`，见 `src/test/resources/application-test.yml`）。
 
 ---
 

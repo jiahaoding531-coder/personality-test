@@ -64,11 +64,15 @@ V0.1 的目标**不是**做出完整产品，而是用最小成本让这条链�
 cd backend && ./mvnw test
 ```
 
-期望：`Tests run: 19, Failures: 0, Errors: 0, Skipped: 0`
+期望：`Tests run: 56, Failures: 0, Errors: 0, Skipped: 0`
 
-> ⚠️ 目前只覆盖了两个**纯逻辑类**（计分算法、提示词构建）。
-> Controller、Security 配置、事务边界全靠手工验证——
-> 这是目前最大的工程债，见 README 路线图。
+| 层 | 数量 | 需要数据库 | 覆盖 |
+|---|---|---|---|
+| 纯逻辑单元测试 | 19 | ❌ | 计分算法、提示词约束 |
+| 集成测试 | 37 | ✅ | HTTP 契约、安全规则、事务、用户隔离 |
+
+集成测试需要一个测试库（`personality_mvp_test`），
+表结构由 Flyway 在测试启动时自动创建。详见 `CONTRIBUTING.md`。
 
 ### 端到端验收
 
