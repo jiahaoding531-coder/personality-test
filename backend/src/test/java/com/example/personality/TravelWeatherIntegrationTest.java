@@ -4,6 +4,7 @@ import com.example.personality.amap.LocationResolver;
 import com.example.personality.amap.WeatherProvider;
 import com.example.personality.domain.LocationInfo;
 import com.example.personality.domain.Weather;
+import com.example.personality.repository.PlaceRepository;
 import com.example.personality.service.WeatherService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +19,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.JsonNode;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +61,9 @@ class TravelWeatherIntegrationTest extends IntegrationTestBase {
     @Autowired
     private WeatherService weatherService;
 
+    @Autowired
+    private PlaceRepository placeRepository;
+
     /**
      * ⚠️ 天气缓存是**进程级单例**，{@code @Transactional} 回滚不了它。
      *
@@ -78,26 +85,45 @@ class TravelWeatherIntegrationTest extends IntegrationTestBase {
     // ==========================================================
 
     @Test
-    @DisplayName("【核心】下雨天：户外地点被砍半，室内地点几乎不受影响")
+    @DisplayName("【核心】下雨天：每个地点的天气惩罚精确等于它的室内程度决定的那个值")
     void rainAffectsOutdoorPlacesButNotIndoorOnes() throws Exception {
+        double penalty = 0.5;   // 中雨：WeatherKind.RAIN
+
         List<JsonNode> places = recommendWith(Weather.of("中雨", 18));
+        assertFalse(places.isEmpty(), "这个时钟下应该至少有一个地点开着，否则测试等于没跑");
 
-        List<Double> factors = new ArrayList<>();
+        // ⚠️ 这条断言**刻意不假设"哪个地点进了前三"**。
+        //
+        // 最初的写法是断言"结果里必然有一个 0.5"（赌西湖·苏堤进前三），
+        // 结果在 CI 上红了——本地跑绿、CI 跑红，因为两边时区不同：
+        // 引擎的硬过滤会排除"这个点已经关门"的地点，而 CI 容器是 UTC。
+        // 于是候选集不一样，被砍半的苏堤在 CI 上掉出了前三。
+        //
+        // 那是典型的"看时间脸色"的测试，正是 ClockConfig 的类注释
+        // 专门警告过的那类问题。现在改成**逐个地点对账**：
+        // 不管回来的是哪几个，每一个都必须满足它自己的那条等式。
+        // 这样断言反而更强（覆盖全部地点，而不只是"有没有 0.5"），
+        // 而且和时钟、和候选集彻底无关。
         for (JsonNode place : places) {
-            factors.add(place.get("scoreBreakdown").get("weather").asDouble());
+            long placeId = place.get("placeId").asLong();
+            int indoor = placeRepository.findById(placeId)
+                    .orElseThrow(() -> new AssertionError("地点不存在：" + placeId))
+                    .getIndoor();
+
+            double expected = 1.0 - penalty * (1 - indoor / 100.0);
+            double actual = place.get("scoreBreakdown").get("weather").asDouble();
+
+            assertEquals(expected, actual, 1e-9,
+                    String.format("%s（室内程度 %d）的天气因子应该是 %.4f，实际 %.4f",
+                            place.get("name").asString(), indoor, expected, actual));
+
+            assertTrue(actual <= 1.0, "天气因子不能超过 1（会撞数据库 CHECK）：" + actual);
         }
 
-        // 西湖边的 Top 3 里必然有完全户外的（西湖·苏堤 indoor=0，餐厅 indoor=80 左右）。
-        // 所以应该能看到"被压的那个"和"基本没动的那些"同时存在。
-        assertTrue(factors.contains(0.5),
-                "中雨的惩罚是 0.5，完全户外的地点应该正好砍半，实际：" + factors);
-        assertTrue(factors.stream().anyMatch(f -> f > 0.5),
-                "室内的地方不该被同等对待，实际：" + factors);
-
-        for (double factor : factors) {
-            assertTrue(factor <= 1.0, "天气因子不能超过 1（会撞数据库 CHECK）：" + factor);
-            assertTrue(factor >= 0.5, "惩罚最多砍半，不会归零：" + factor);
-        }
+        // 至少有一个地点**真的**被压了，否则上面那圈等式可能只是全都在算 1.0
+        assertTrue(places.stream()
+                        .anyMatch(p -> p.get("scoreBreakdown").get("weather").asDouble() < 1.0),
+                "下雨天至少要有一个户外地点被降权，否则天气等于没生效");
     }
 
     @Test
@@ -224,6 +250,34 @@ class TravelWeatherIntegrationTest extends IntegrationTestBase {
      */
     @TestConfiguration
     static class FakeAmapConfiguration {
+
+        /**
+         * 固定时钟：让"现在几点"不再是一个变量。
+         *
+         * <h2>⚠️ 这不是洁癖，是必须的</h2>
+         *
+         * <p>引擎有个硬过滤：<b>把"这个点已经关门"的地点直接排除掉</b>。
+         * 所以"现在几点"决定了候选集，也决定了哪些地点能进前三。
+         *
+         * <p>不固定时钟的后果，这个测试已经真实地吃到过一次：
+         * 本地开发机是 CST（UTC+8），CI 容器是 UTC，同一个测试在两边
+         * 跑出来**结果不一样**——本地晚上 8 点跑，博物馆早就关了，
+         * 户外地点容易上榜；CI 是 UTC 中午，大部分地方开着，
+         * 竞争一多结果就变了。表现是"本地全绿、CI 红一条"。
+         *
+         * <p>这正是 {@code ClockConfig} 当初把"现在几点"做成可注入依赖的理由
+         * （它的类注释里写着："测试会变成看时间脸色——同一条测试中午跑绿、
+         * 下午跑红。这是最难查的一类问题：不是代码错了，是跑的时候不对"）。
+         * 只是集成测试这边一直没把它用上。
+         *
+         * <p>取杭州时间 10:00（UTC 02:00）：绝大多数地点都开着，
+         * 候选集稳定，而且足够大。
+         */
+        @Bean
+        @Primary
+        Clock fixedClock() {
+            return Clock.fixed(Instant.parse("2026-06-15T02:00:00Z"), ZoneId.of("Asia/Shanghai"));
+        }
 
         @Bean
         @Primary
