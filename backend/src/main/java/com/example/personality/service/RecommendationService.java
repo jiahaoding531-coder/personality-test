@@ -128,13 +128,16 @@ public class RecommendationService {
                 .map(Place::toCandidate)
                 .toList();
 
-        // ⑥ 此刻什么情况：现在几点、还剩多久、人在哪、最多走多远
+        // ⑥ 此刻什么情况：现在几点、还剩多久、人在哪、最多走多远、
+        //    预算上限、以及用户主动说的状态（累了 / 饿了 / 想散步）
         RecommendationContext context = RecommendationContext.withLocation(
                 LocalTime.now(),
                 request.remainingMinutesOrDefault(),
                 request.latitude(),
                 request.longitude(),
-                request.maxDistanceKmOrDefault());
+                request.maxDistanceKmOrDefault(),
+                request.maxTicketPrice(),
+                request.statesOrEmpty());
 
         // ⑦ 交给算法。它不认识数据库，也不认识反馈——只做硬过滤 + 打分 + 排序
         List<ScoredPlace> top = engine.recommend(effective, candidates, context, TOP_N);

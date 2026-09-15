@@ -1,11 +1,14 @@
 package com.example.personality.dto;
 
 import com.example.personality.domain.RecommendationContext;
+import com.example.personality.domain.TravelState;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+
+import java.util.Set;
 
 /**
  * 请求推荐时的「当前处境」。
@@ -53,7 +56,14 @@ public record RecommendationRequest(
         @DecimalMax(value = "50.0", message = "maxDistanceKm 最多为 50 公里")
         Double maxDistanceKm,
 
-        Boolean excludeSeen
+        Boolean excludeSeen,
+
+        @Min(value = 0, message = "maxTicketPrice 不能为负数")
+        @Max(value = 1000, message = "maxTicketPrice 最多 1000 元")
+        Integer maxTicketPrice,
+
+        /** 此刻的状态（累了 / 饿了 / 想散步）。可以同时传多个，也可以不传。 */
+        Set<TravelState> states
 ) {
 
     /** 不传剩余时长时的默认值：4 小时。够逛两个景点，是比较典型的半日行程。 */
@@ -76,5 +86,10 @@ public record RecommendationRequest(
 
     public boolean excludeSeenOrDefault() {
         return Boolean.TRUE.equals(excludeSeen);
+    }
+
+    /** 状态，没传就是空集合（"没特别说明"和"说了没有状态"在这里是一回事）。 */
+    public Set<TravelState> statesOrEmpty() {
+        return states == null ? Set.of() : states;
     }
 }

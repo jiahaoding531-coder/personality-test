@@ -3,7 +3,7 @@
 > 两条完整可跑的链路：
 > **人格测试 → 5 维画像 → AI 个性化反馈**，
 > 以及 **旅行偏好测试 → 8 维画像 → 结合定位的 Top 3 推荐**。
-> 两套前端（零构建静态页 + React），135 个自动化测试，CI 全绿。
+> 两套前端（零构建静态页 + React），142 个自动化测试，CI 全绿。
 
 [![CI](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml/badge.svg)](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
@@ -66,7 +66,7 @@ Session Cookie 认证、测试历史、速率限制、Top 3 旅行推荐。详�
 | 构建 | Maven Wrapper | **无需单独安装 Maven** |
 | AI | DeepSeek（OpenAI 兼容协议） | 可选启用，默认关闭时用桩实现 |
 | 前端 | React 19 + TypeScript + Vite | 独立目录 `frontend/`，另有一个零构建的静态页 |
-| 测试 | JUnit 5 + MockMvc | 135 个：53 个纯逻辑单测 + 82 个集成测试 |
+| 测试 | JUnit 5 + MockMvc | 142 个：60 个纯逻辑单测 + 82 个集成测试 |
 | CI | GitHub Actions | push/PR 自动跑测试 + 类型检查 |
 
 ---
@@ -450,19 +450,19 @@ personality-test/
 ## 测试
 
 ```bash
-cd backend && ./mvnw test        # 135 个测试
+cd backend && ./mvnw test        # 142 个测试
 cd frontend && npm run typecheck # 类型检查（前端还没有单测，见路线图）
 ```
 
 ```
-Tests run: 135, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 142, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 分成两层，**各自解决不同的问题**：
 
 | 层 | 数量 | 需要数据库 | 耗时 | 测什么 |
 |---|---|---|---|---|
-| **纯逻辑单元测试** | 53 | ❌ | 0.15 秒 | 计分算法（两套量表）、推荐引擎、提示词约束 |
+| **纯逻辑单元测试** | 60 | ❌ | 0.15 秒 | 计分算法（两套量表）、推荐引擎、提示词约束 |
 | **集成测试** | 81 | ✅ | ~30 秒 | HTTP 契约、安全规则、事务、用户隔离 |
 
 **纯逻辑单元测试不需要数据库** —— 它们直接 `new ScoringService()` /
@@ -615,12 +615,30 @@ psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 > 系统只能按"这次推荐里贡献最大的维度"来归因，可能出现"因为太吵被否掉、
 > 却被算到自然风光头上"的误判。要真正准确得让用户说出原因，那是更重的交互。
 
-### V1.0 计划中
+### V1.0 ✅ 当前状态层
 
+- [x] 把「此刻的处境」做成独立一层（`RecommendationContext`），**不持久化**
+- [x] 状态：`TIRED` / `HUNGRY` / `WANT_WALK`，作用于**地点属性**而不是用户偏好
+- [x] 硬约束：**预算上限**（此前 `ticket_price` 查出来了但打分时一分钱都没算）
+- [x] 前端 6 个场景按钮：「我想散步一下」「我有点累了」「我想吃饭」
+      「只剩 1 小时」「不想走远」「预算不多」
+
+> ⚠️ **踩过的坑**：最初把"我累了"实现成"降低步行意愿"，测试直接红了——
+> 兴趣分是归一化加权平均，调小某个维度的权重**不改变排序**。
+> 语义也错了：应该是"费腿的地方要变差"（关于地点），不是"我没那么在乎走路了"（关于你）。
+
+### V1.1 计划中
+
+- [ ] **跨会话记忆**：现在画像挂在 `session_id` 上，用户点"重新测一次"就全部归零。
+      "用得越多越准"目前只在一个会话内成立
+- [ ] **反馈归因改进**：让用户说"为什么不喜欢"（太远/太累/太贵/不合口味），
+      而不是系统按"贡献最大的维度"猜
 - [ ] **AI 生成推荐理由**：`recommendations.reason` 字段已预留，把结构化的
       `reasons` 喂给 DeepSeek 生成自然语言解释——计划书第七节明确划给 AI 的职责
 - [ ] 导航（拼一个高德/苹果地图 URL 跳转，半小时的活）
-- [ ] 定位与天气：接高德开放平台，把 `RecommendationContext` 里预留的字段填上
+- [ ] 天气 + 真实 POI：接高德开放平台。**在这之前不要碰 Agent**——
+> 计划书第十三节说 Agent 的价值是"调用工具"，而现在一个真实工具都没有，
+> 做出来的 Agent 会"判断缺什么信息"，然后发现什么都没得调
 - [ ] 多次结果对比（历史页并排两张画像，看变化）
 - [ ] 让 `rawScore` / `itemCount` 返回真实值（目前是 `-1` 占位）
 - [ ] 前端单元测试（Vitest + Testing Library）

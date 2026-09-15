@@ -5,11 +5,14 @@ import com.example.personality.domain.PlaceTraits;
 import com.example.personality.domain.RecommendationContext;
 import com.example.personality.domain.ScoredPlace;
 import com.example.personality.domain.TravelDimension;
+import com.example.personality.domain.TravelState;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 
 /**
@@ -109,6 +112,11 @@ public class RecommendationEngine {
             if (place.suggestedMinutes() > context.remainingMinutes()) {
                 continue;
             }
+            // 超出预算的地方也不推荐。用户说"预算不多"，推一个 200 块门票的
+            // 地方给他，和"时间不够"是同一类错误：去了也没用。
+            if (!context.allowsTicketPrice(place.ticketPrice())) {
+                continue;
+            }
 
             // ---------- ② 兴趣匹配（主信号） ----------
             MatchResult match = computeInterest(preference, place.traits());
@@ -130,7 +138,12 @@ public class RecommendationEngine {
             // quality=100 → 1.00（不扣），quality=0 → 0.85（扣 15%）
             double qualityFactor = 1.0 - QUALITY_WEIGHT * (1.0 - place.quality() / 100.0);
 
-            double score = match.interest() * distanceFactor * qualityFactor;
+            // ---------- ⑤ 此刻的状态 ----------
+            // "我累了"就是在这里生效的：越费腿的地方这个系数越小。
+            // 没状态时恒等于 1.0，几乎零开销。
+            double stateFactor = stateFactor(context.states(), place.traits());
+
+            double score = match.interest() * distanceFactor * qualityFactor * stateFactor;
 
             scored.add(new ScoredPlace(place, score, match.interest(),
                     distanceKm, qualityFactor, match.topMatches()));
@@ -143,6 +156,50 @@ public class RecommendationEngine {
     // ==========================================================
     // 内部实现
     // ==========================================================
+
+    /**
+     * 「此刻的状态」折算成的一个乘性系数。
+     *
+     * <p><b>⚠️ 关键：状态作用于地点属性，不是用户偏好。</b>
+     *
+     * <p>最初把"我累了"实现成"把步行意愿从 100 降到 60"，测试直接红了——
+     * 排序一点没变。因为兴趣分是归一化的加权平均，把某个维度的权重调小，
+     * 分子分母同时缩小，比值不变。而且语义上就错了：
+     * <b>"我累了"不是"我没那么在乎走路了"，而是"费腿的地方要变差"。</b>
+     * 前者是关于「你」的，后者是关于「地点」的。
+     *
+     * <p>公式（偏向 b，地点在该维度的得分 v）：
+     * <pre>
+     *   系数 = Π (1 + b × v/100) / (1 + max(b, 0))
+     * </pre>
+     *
+     * <p>除以 {@code (1 + max(b, 0))} 是<b>必须的归一化</b>：不除的话正偏向
+     * 会让系数大于 1，总分就可能超过 1——而数据库上有
+     * {@code CHECK (score BETWEEN 0 AND 1)}。除了之后所有系数都 ≤ 1，
+     * 和距离系数、质量系数保持一致，score ≤ 1 这条不变量继续成立。
+     *
+     * <p>没有状态时直接返回 1.0（乘法单位元），对原有打分零影响。
+     */
+    static double stateFactor(Set<TravelState> states, PlaceTraits traits) {
+        if (states == null || states.isEmpty()) {
+            return 1.0;
+        }
+
+        // 多个状态可能作用于同一个维度（比如"累了"和"想散步"都影响 walking），
+        // 偏向直接相加——两个相反的偏向会互相抵消，这是对的
+        Map<TravelDimension, Double> bias = new EnumMap<>(TravelDimension.class);
+        for (TravelState state : states) {
+            state.attributeBias().forEach((dimension, value) -> bias.merge(dimension, value, Double::sum));
+        }
+
+        double factor = 1.0;
+        for (Map.Entry<TravelDimension, Double> entry : bias.entrySet()) {
+            double b = entry.getValue();
+            double placeValue = traits.valueOf(entry.getKey()) / 100.0;
+            factor *= (1.0 + b * placeValue) / (1.0 + Math.max(b, 0.0));
+        }
+        return factor;
+    }
 
     /**
      * 计算兴趣匹配度。

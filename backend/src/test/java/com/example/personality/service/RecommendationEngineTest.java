@@ -5,6 +5,7 @@ import com.example.personality.domain.PlaceTraits;
 import com.example.personality.domain.RecommendationContext;
 import com.example.personality.domain.ScoredPlace;
 import com.example.personality.domain.TravelDimension;
+import com.example.personality.domain.TravelState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +36,154 @@ class RecommendationEngineTest {
     /** 一个「只剩很多时间、没有定位」的宽松场景，让时间/距离不干扰对兴趣匹配的验证。 */
     private static final RecommendationContext RELAXED =
             RecommendationContext.of(LocalTime.of(10, 0), 600);
+
+    // ==========================================================
+    // 当前状态：把"此刻的处境"折算成偏好修正
+    // ==========================================================
+
+    /**
+     * 这几条测试守的是「长期偏好与当前状态必须分开」（计划书第七节）。
+     *
+     * <p>同一个用户、同一份画像，只因为说了句"我累了"，结果就应该不一样——
+     * 而且画像本身<b>不能被改动</b>：用户说"我饿了"不代表他从此变成美食爱好者。
+     */
+
+    @Test
+    @DisplayName("说「我累了」→ 费腿的地方被压下去")
+    void tiredStateDeprioritisesWalkingHeavyPlaces() {
+        // 用中性画像（每个维度都 50）。⚠️ 刻意不用"只在乎走路"那种极端画像：
+        // 那种情况下两个地点只在一个维度上有差异，任何调整都改变不了相对顺序，
+        // 测不出状态有没有生效。中性画像才是常态——旅行测试答"说不好"就是全 50。
+        Map<TravelDimension, Integer> pref = neutralPreference();
+
+        PlaceCandidate flat = place("平地公园", traits(60, 50, 50, 50, 50, 50, 10));
+        PlaceCandidate hilly = place("爬山路线", traits(60, 50, 50, 50, 50, 50, 95));
+
+        assertEquals("爬山路线", engine.recommend(pref, List.of(flat, hilly), RELAXED, 3)
+                .get(0).place().name(), "没状态时，属性更突出的爬山排前面");
+
+        List<ScoredPlace> afterTired = engine.recommend(
+                pref, List.of(flat, hilly), withStates(TravelState.TIRED), 3);
+        assertEquals("平地公园", afterTired.get(0).place().name(),
+                "累了之后平地应该排到前面——这就是「我累了」生效的方式");
+    }
+
+    @Test
+    @DisplayName("说「我饿了」→ 有美食属性的地方冒到前面")
+    void hungryStatePromotesFoodPlaces() {
+        Map<TravelDimension, Integer> pref = neutralPreference();
+
+        // 公园在其它维度上明显更好，所以没状态时它稳赢；
+        // 面馆唯一的强项是美食——这样"饿了"才是翻盘的那个因素，而不是本来就在赢
+        PlaceCandidate park = place("湿地公园", traits(90, 60, 5, 60, 60, 60, 60));
+        PlaceCandidate restaurant = place("老字号面馆", traits(10, 40, 95, 40, 40, 40, 40));
+
+        assertEquals("湿地公园", engine.recommend(pref, List.of(park, restaurant), RELAXED, 3)
+                .get(0).place().name(), "没状态时，综合更好的公园应该排前面");
+
+        List<ScoredPlace> afterHungry = engine.recommend(
+                pref, List.of(park, restaurant), withStates(TravelState.HUNGRY), 3);
+        assertEquals("老字号面馆", afterHungry.get(0).place().name(),
+                "饿了之后馆子应该排到前面");
+    }
+
+    @Test
+    @DisplayName("状态只作用于这一次打分，不会改动传进来的偏好")
+    void statesDoNotMutateThePreference() {
+        Map<TravelDimension, Integer> pref = neutralPreference();
+        Map<TravelDimension, Integer> snapshot = new EnumMap<>(pref);
+
+        engine.recommend(pref, List.of(place("甲", traits(50, 50, 50, 50, 50, 50, 50))),
+                withStates(TravelState.TIRED), 3);
+
+        assertEquals(snapshot, pref,
+                "传给引擎的偏好不能被改动——「我累了」是关于地点的判断，不是对用户偏好的修改");
+    }
+
+    @Test
+    @DisplayName("同时说「我累了」和「我想散步」→ 两个偏向抵消，结果回到中性")
+    void multipleStatesCancelOut() {
+        // 两个状态都作用于 walking：-0.8 和 +0.8，净效果是 0
+        Map<TravelDimension, Integer> pref = neutralPreference();
+        PlaceCandidate flat = place("平地公园", traits(60, 50, 50, 50, 50, 50, 10));
+        PlaceCandidate hilly = place("爬山路线", traits(60, 50, 50, 50, 50, 50, 95));
+
+        List<ScoredPlace> result = engine.recommend(pref, List.of(flat, hilly),
+                withStates(TravelState.TIRED, TravelState.WANT_WALK), 3);
+
+        assertEquals("爬山路线", result.get(0).place().name(),
+                "一正一负抵消后，应该和无状态时一样");
+    }
+
+    @Test
+    @DisplayName("状态系数永远 ≤ 1——score ≤ 1 这条不变量不能被打破")
+    void stateFactorNeverExceedsOne() {
+        // 这是防数据库 CHECK 约束的：score 是四个因子相乘，任何一个 > 1 都可能越界。
+        // 正偏向（饿了）如果直接乘上去会得到 1.76，所以公式里做了归一化。
+        PlaceTraits mostFood = traits(0, 0, 100, 0, 0, 0, 0);
+        PlaceTraits mostWalking = traits(0, 0, 0, 0, 0, 0, 100);
+
+        assertTrue(RecommendationEngine.stateFactor(
+                java.util.Set.of(TravelState.HUNGRY), mostFood) <= 1.0);
+        assertTrue(RecommendationEngine.stateFactor(
+                java.util.Set.of(TravelState.WANT_WALK), mostWalking) <= 1.0);
+        assertEquals(1.0, RecommendationEngine.stateFactor(java.util.Set.of(), mostFood),
+                "没有状态时应该是乘法单位元");
+    }
+
+    // ==========================================================
+    // 当前状态：预算（硬约束，不是排序）
+    // ==========================================================
+
+    @Test
+    @DisplayName("超出预算的地方被直接排除，而不是排在后面")
+    void placesOverBudgetAreExcluded() {
+        Map<TravelDimension, Integer> pref = only(TravelDimension.NATURE, 100);
+
+        PlaceCandidate freePark = placeWithTicket("免费公园", traits(90, 30, 10, 50, 20, 20, 50), 0);
+        PlaceCandidate expensive = placeWithTicket("贵景区", traits(95, 50, 20, 80, 30, 40, 60), 200);
+
+        // 不设预算时，属性更好的贵景区排第一
+        List<ScoredPlace> unlimited = engine.recommend(pref, List.of(freePark, expensive), RELAXED, 3);
+        assertEquals("贵景区", unlimited.get(0).place().name());
+
+        // 设 50 元上限后，贵景区应该被整个排除（不是降到第二名）
+        RecommendationContext budget = withBudget(50);
+        List<ScoredPlace> limited = engine.recommend(pref, List.of(freePark, expensive), budget, 3);
+        assertEquals(1, limited.size(), "超预算的地方应该被排除，只剩免费那个");
+        assertEquals("免费公园", limited.get(0).place().name());
+    }
+
+    @Test
+    @DisplayName("预算上限为 0 表示「只能去免费的」，而不是「不限」")
+    void zeroBudgetMeansFreeOnly() {
+        Map<TravelDimension, Integer> pref = only(TravelDimension.NATURE, 100);
+
+        PlaceCandidate freePark = placeWithTicket("免费公园", traits(90, 0, 0, 0, 0, 0, 0), 0);
+        PlaceCandidate paid = placeWithTicket("收费公园", traits(90, 0, 0, 0, 0, 0, 0), 1);
+
+        List<ScoredPlace> result = engine.recommend(pref, List.of(freePark, paid),
+                withBudget(0), 3);
+
+        assertEquals(1, result.size(), "上限 0 就该只剩免费的——它和不设上限是两回事");
+        assertEquals("免费公园", result.get(0).place().name());
+    }
+
+    // ---------- 状态测试用的小工具 ----------
+
+    private static RecommendationContext withStates(TravelState... states) {
+        return RecommendationContext.withLocation(
+                RELAXED.now(), RELAXED.remainingMinutes(), null, null,
+                RecommendationContext.DEFAULT_MAX_DISTANCE_KM,
+                null, java.util.Set.of(states));
+    }
+
+    private static RecommendationContext withBudget(int maxTicketPrice) {
+        return RecommendationContext.withLocation(
+                RELAXED.now(), RELAXED.remainingMinutes(), null, null,
+                RecommendationContext.DEFAULT_MAX_DISTANCE_KM,
+                maxTicketPrice, java.util.Set.of());
+    }
 
     // ==========================================================
     // 兴趣匹配：算法的核心
@@ -207,7 +356,7 @@ class RecommendationEngineTest {
         PlaceCandidate far = placeAt("远的公园", 30.3100, 120.2000,
                 traits(90, 30, 0, 60, 30, 50, 50));     // 约 9 公里
 
-        RecommendationContext ctx = new RecommendationContext(
+        RecommendationContext ctx = RecommendationContext.withLocation(
                 LocalTime.of(10, 0), 600, lat, lon, 20.0);
 
         List<ScoredPlace> top = engine.recommend(pref, List.of(far, near), ctx, 3);
@@ -223,7 +372,7 @@ class RecommendationEngineTest {
         PlaceCandidate farAway = placeAt("很远的地方", 31.0000, 121.0000,
                 traits(100, 100, 100, 100, 100, 100, 100));
 
-        RecommendationContext ctx = new RecommendationContext(
+        RecommendationContext ctx = RecommendationContext.withLocation(
                 LocalTime.of(10, 0), 600, 30.2420, 120.1400, 10.0);
 
         assertTrue(engine.recommend(pref, List.of(farAway), ctx, 3).isEmpty());
@@ -354,6 +503,21 @@ class RecommendationEngineTest {
     // 测试夹具
     // ==========================================================
 
+    /**
+     * 中性画像：所有维度都是 50，也就是旅行测试里"说不好"全选的那个结果。
+     *
+     * <p>状态类的测试用它而不是 {@code only(...)}：极端画像（只有一个维度有权重）
+     * 下，两个地点往往只在一个维度上有差异，任何调整都改变不了它们的相对顺序，
+     * 测不出状态到底有没有生效。
+     */
+    private static Map<TravelDimension, Integer> neutralPreference() {
+        Map<TravelDimension, Integer> map = new EnumMap<>(TravelDimension.class);
+        for (TravelDimension dimension : TravelDimension.values()) {
+            map.put(dimension, 50);
+        }
+        return map;
+    }
+
     private static Map<TravelDimension, Integer> only(TravelDimension dimension, int value) {
         Map<TravelDimension, Integer> map = new EnumMap<>(TravelDimension.class);
         for (TravelDimension d : TravelDimension.values()) {
@@ -390,5 +554,11 @@ class RecommendationEngineTest {
     private static PlaceCandidate placeWithQuality(String name, PlaceTraits traits, int quality) {
         return new PlaceCandidate(1L, name, "NATURE", 30.2420, 120.1400, traits,
                 quality, 0, 60, null, null, "测试地点");
+    }
+
+    /** 指定门票价格的地点。用来验证"预算上限"这条硬约束。 */
+    private static PlaceCandidate placeWithTicket(String name, PlaceTraits traits, int ticketPrice) {
+        return new PlaceCandidate(1L, name, "NATURE", 30.2420, 120.1400, traits,
+                80, ticketPrice, 60, null, null, "测试地点");
     }
 }
