@@ -155,3 +155,94 @@ Content-Type: application/json
 
 ### ⑬ 路径变量不是数字 → 期望 400（不是 500）
 GET http://localhost:8080/api/test-sessions/abc/result
+
+
+### ============================================================
+### 旅行偏好测试（TravelMind）—— 同一条流水线，换个前缀
+### ============================================================
+### 顺序：⑭ 取旅行题 → ⑮ 建会话 → ⑯ 答 8 题 → ⑰ 提交 → ⑱ 推荐
+### 和人格链路一样，POST 需要 CSRF + 会话令牌，直接用浏览器点更省事。
+
+### ⑭ 旅行题库 —— 期望 8 道题（对比：不带 scale 参数仍是 20 道人格题）
+GET http://localhost:8080/api/questions?scale=TRAVEL
+
+### ⑭b 不带参数 —— 期望仍然是 20 道人格题（默认值没破坏老行为）
+GET http://localhost:8080/api/questions
+
+### ⑮ 建旅行会话 —— 期望 201，返回 sessionId 和 accessToken
+POST http://localhost:8080/api/travel/sessions
+Content-Type: application/json
+
+{}
+
+### ⑯ 保存作答 —— 8 道题全量。这里答的是"自然/摄影/小众拉满，人群和步行无所谓"
+### 期望 200，savedCount=8
+POST http://localhost:8080/api/travel/sessions/1/answers
+Content-Type: application/json
+
+{
+  "answers": [
+    { "questionId": 21, "score": 5 },
+    { "questionId": 22, "score": 4 },
+    { "questionId": 23, "score": 3 },
+    { "questionId": 24, "score": 5 },
+    { "questionId": 25, "score": 5 },
+    { "questionId": 26, "score": 1 },
+    { "questionId": 27, "score": 2 },
+    { "questionId": 28, "score": 3 }
+  ]
+}
+
+### ⑰ 提交并计分 —— 期望 8 个维度，分数只会是 0/25/50/75/100
+### 按上面的答案：自然 100、人文 75、美食 50、摄影 100、小众 100、人群 0、步行 25、规划 50
+POST http://localhost:8080/api/travel/sessions/1/submit
+
+### ⑰b 再提交一次 → 期望 409（幂等）
+POST http://localhost:8080/api/travel/sessions/1/submit
+
+### ⑱ 查询画像 —— 和 submit 的响应一样，但只读、不触发计分
+GET http://localhost:8080/api/travel/sessions/1/profile
+
+### ⑲ 推荐 Top 3 —— 西湖坐标。期望 3 条，分数降序，每条带 reasons
+POST http://localhost:8080/api/travel/sessions/1/recommendations
+Content-Type: application/json
+
+{
+  "latitude": 30.2420,
+  "longitude": 120.1400,
+  "remainingMinutes": 300
+}
+
+### ⑳ 再请求一次 → 期望 batchNo=2（新开一批，**不删旧的**——删了会级联删掉用户反馈）
+POST http://localhost:8080/api/travel/sessions/1/recommendations
+Content-Type: application/json
+
+{
+  "latitude": 30.2420,
+  "longitude": 120.1400
+}
+
+### 以下旅行链路的错误路径
+
+### ㉑ 不传定位 → 期望 400（定位是这个接口的必填项）
+POST http://localhost:8080/api/travel/sessions/1/recommendations
+Content-Type: application/json
+
+{
+  "remainingMinutes": 120
+}
+
+### ㉒ 还没提交就要推荐 → 期望 404（没有画像就没法推荐）
+POST http://localhost:8080/api/travel/sessions/2/recommendations
+Content-Type: application/json
+
+{
+  "latitude": 30.2420,
+  "longitude": 120.1400
+}
+
+### ㉓ 拿人格会话调旅行的 submit → 期望 409（而不是算出错误的结果）
+POST http://localhost:8080/api/travel/sessions/1/submit
+
+### ㉔ scale 写小写 → 期望 400（枚举按名字绑定，大小写敏感）
+GET http://localhost:8080/api/questions?scale=travel

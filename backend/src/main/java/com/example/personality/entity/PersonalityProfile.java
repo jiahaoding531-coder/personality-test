@@ -70,7 +70,7 @@ public class PersonalityProfile {
      *
      * <p>调用前请确保 scores 里 5 个维度齐全——ScoringService 已经保证了这一点。
      */
-    public static PersonalityProfile from(Long sessionId, Map<Dimension, DimensionScore> scores) {
+    public static PersonalityProfile from(Long sessionId, Map<Dimension, DimensionScore<Dimension>> scores) {
         PersonalityProfile profile = new PersonalityProfile();
         profile.sessionId = sessionId;
         profile.openness = normalizedOf(scores, Dimension.OPENNESS);
@@ -81,8 +81,8 @@ public class PersonalityProfile {
         return profile;
     }
 
-    private static BigDecimal normalizedOf(Map<Dimension, DimensionScore> scores, Dimension dimension) {
-        DimensionScore score = scores.get(dimension);
+    private static BigDecimal normalizedOf(Map<Dimension, DimensionScore<Dimension>> scores, Dimension dimension) {
+        DimensionScore<Dimension> score = scores.get(dimension);
         if (score == null) {
             // 正常情况下不会发生（ScoringService 会先拦），这里只是最后一道防御
             throw new IllegalStateException("计分结果缺少维度：" + dimension.label());

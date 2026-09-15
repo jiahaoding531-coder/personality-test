@@ -33,6 +33,20 @@ public record RecommendationContext(
         return new RecommendationContext(now, remainingMinutes, null, null, DEFAULT_MAX_DISTANCE_KM);
     }
 
+    /**
+     * 有定位的场景：知道在哪、现在几点、还剩多少时间。
+     *
+     * <p>和 {@link #of} 分开写成两个工厂方法，而不是让调用方直接
+     * {@code new}——两个参数和五个参数的构造器调用点长得太像了，
+     * 万一有人把经纬度传反了，编译器不会拦你（都是 double），
+     * 但结果会跑到地球另一边去。
+     */
+    public static RecommendationContext withLocation(LocalTime now, int remainingMinutes,
+                                                     double latitude, double longitude,
+                                                     double maxDistanceKm) {
+        return new RecommendationContext(now, remainingMinutes, latitude, longitude, maxDistanceKm);
+    }
+
     /** 有没有定位。没有的话距离因素会失效（所有地点距离分一样）。 */
     public boolean hasLocation() {
         return latitude != null && longitude != null;

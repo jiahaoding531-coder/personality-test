@@ -1,8 +1,9 @@
 # personality-test
 
-> 一个人的**人格测试 → 5 维画像 → AI 个性化反馈**闭环。
-> 完整可跑：答题、计分、存画像、AI 解读、用户体系、测试历史，
-> 两套前端（零构建静态页 + React），79 个自动化测试，CI 全绿。
+> 两条完整可跑的链路：
+> **人格测试 → 5 维画像 → AI 个性化反馈**，
+> 以及 **旅行偏好测试 → 8 维画像 → 结合定位的 Top 3 推荐**。
+> 两套前端（零构建静态页 + React），113 个自动化测试，CI 全绿。
 
 [![CI](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml/badge.svg)](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
@@ -19,17 +20,36 @@
 
 **5 个维度**：开放性、外向性、责任心、宜人性、情绪稳定性
 
+## 两条链路
+
+这个仓库里其实有两个流程，它们**共用同一套会话机制和计分引擎**，
+但画像的维度、结果页、后续动作完全不同：
+
+| | 人格测试 | 旅行偏好测试（TravelMind） |
+|---|---|---|
+| 题目 | 20 道，每维度 4 题，含 8 道反向题 | 8 道场景题，每维度 1 题，全正向 |
+| 画像 | 5 维，分数连续 | 8 维，分数只能取 0/25/50/75/100 |
+| 结果 | 5 维条形图 + 档位解读文案 + AI 深度解读 | 8 维条形图 + **结合定位的 Top 3 地点推荐** |
+| 规模 | 完整 | **V0**：59 个杭州模拟景点，不接真实地图和天气 |
+
+旅行侧是 `TravelMind.docx` 计划书的第一阶段——**先把推荐算法本身跑通**，
+证明了它准不准之后，再接高德这类真实数据源。推荐分数由确定性算法算出
+（兴趣匹配 × 距离衰减 × 质量修正），**AI 生成自然语言理由**是下一步。
+
 ## 这不是什么
 
-⚠️ **本项目的测评结果定位为「自我探索 / 娱乐性质」，不是心理诊断，也不是专业人格测评。**
+⚠️ **人格测试的结果定位为「自我探索 / 娱乐性质」，不是心理诊断，也不是专业人格测评。**
 它基于一个简化的 5 因子模型，20 道题、固定权重，没有经过心理测量学验证（信效度检验）。
 请勿用于任何临床、招聘、评估他人的用途。
 
-同样地，本项目**不实现**：社交、支付、推荐算法、模型训练、微服务。
+⚠️ **旅行推荐用的是模拟数据**：59 个景点的属性是手工标注的，只有杭州一个城市。
+真实世界的 POI 查询、天气、营业状态都得接外部 API，那是计划书里的 Phase 3。
+
+同样地，本项目**不实现**：社交、支付、模型训练、微服务。
 这些不是遗漏，是刻意排除的范围——**先证明核心价值，再扩大技术复杂度**。
 
 **已有的**：匿名/登录两种模式并存的测试流程、基于 DeepSeek 的个性化解读、
-Session Cookie 认证、测试历史、速率限制。详见下方「路线图」。
+Session Cookie 认证、测试历史、速率限制、Top 3 旅行推荐。详见下方「路线图」。
 
 ---
 
@@ -45,7 +65,7 @@ Session Cookie 认证、测试历史、速率限制。详见下方「路线图�
 | 构建 | Maven Wrapper | **无需单独安装 Maven** |
 | AI | DeepSeek（OpenAI 兼容协议） | 可选启用，默认关闭时用桩实现 |
 | 前端 | React 19 + TypeScript + Vite | 独立目录 `frontend/`，另有一个零构建的静态页 |
-| 测试 | JUnit 5 + MockMvc | 79 个：19 个纯逻辑单测 + 60 个集成测试 |
+| 测试 | JUnit 5 + MockMvc | 113 个：42 个纯逻辑单测 + 71 个集成测试 |
 | CI | GitHub Actions | push/PR 自动跑测试 + 类型检查 |
 
 ---
@@ -380,10 +400,12 @@ personality-test/
 │       ├── main/resources/
 │       │   ├── application.yml 应用配置
 │       │   ├── static/index.html  ★ 零构建演示页，Spring Boot 直接托管
-│       │   └── db/migration/   Flyway 迁移脚本（V1 ~ V4）
+│       │   └── db/migration/   Flyway 迁移脚本（V1 ~ V9）
 │       └── test/java/com/example/personality/
-│           ├── service/ScoringServiceTest.java   13 个计分断言
-│           └── ai/AiPromptBuilderTest.java        6 个提示词约束断言
+│           ├── service/ScoringServiceTest.java        13 个人格计分断言
+│           ├── service/ScoringServiceTravelTest.java   7 个旅行计分断言
+│           ├── service/RecommendationEngineTest.java  16 个推荐算法断言
+│           └── ai/AiPromptBuilderTest.java             6 个提示词约束断言
 │
 └── frontend/                   ── React + TypeScript 前端 ──
     ├── Dockerfile              多阶段构建（Vite 构建 → nginx 托管）
@@ -394,7 +416,7 @@ personality-test/
         ├── types.ts            后端 DTO 的类型映射
         ├── api.ts              请求封装 + CSRF + 统一错误处理
         ├── App.tsx             状态机
-        ├── screens/            Home / Test / Result / Auth / History
+        ├── screens/            Home / Test / Result / TravelResult / Auth / History
         ├── components/         BarChart / AiPanel / ThemeToggle / Status
         └── styles.css          设计令牌 + 全部样式（含深色模式）
 ```
@@ -415,20 +437,20 @@ personality-test/
 ## 测试
 
 ```bash
-cd backend && ./mvnw test        # 79 个测试
+cd backend && ./mvnw test        # 113 个测试
 cd frontend && npm run typecheck # 类型检查（前端还没有单测，见路线图）
 ```
 
 ```
-Tests run: 79, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 113, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 分成两层，**各自解决不同的问题**：
 
 | 层 | 数量 | 需要数据库 | 耗时 | 测什么 |
 |---|---|---|---|---|
-| **纯逻辑单元测试** | 19 | ❌ | 0.15 秒 | 计分算法、提示词约束 |
-| **集成测试** | 37 | ✅ | ~11 秒 | HTTP 契约、安全规则、事务、用户隔离 |
+| **纯逻辑单元测试** | 42 | ❌ | 0.15 秒 | 计分算法（两套量表）、推荐引擎、提示词约束 |
+| **集成测试** | 71 | ✅ | ~20 秒 | HTTP 契约、安全规则、事务、用户隔离 |
 
 **纯逻辑单元测试不需要数据库** —— 它们直接 `new ScoringService()` /
 `new AiPromptBuilder()`，不启动 Spring 容器。这是把核心逻辑与框架解耦换来的：
@@ -441,8 +463,13 @@ Tests run: 79, Failures: 0, Errors: 0, Skipped: 0
 psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 ```
 
-表结构不用手动建——Flyway 在测试启动时会自动跑一遍 V1~V4 迁移
+表结构不用手动建——Flyway 在测试启动时会自动跑一遍 V1~V9 迁移
 （顺带验证了迁移脚本本身是可执行的）。
+
+> ⚠️ **改动或重命名迁移文件后必须先 `./mvnw clean test`。**
+> Maven 复制资源时不会清理 `target/classes` 里已经消失的源文件，
+> 于是新旧两个同名迁移会同时出现在 classpath 上，报
+> `Found more than one migration with version N`——看着像代码问题，其实是构建残留。
 
 > **为什么集成测试不用 H2 之类的内存数据库？**
 > 本项目的表结构用了 PostgreSQL 特有的东西：`timestamptz`、
@@ -549,12 +576,31 @@ psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 > 前端镜像只有 28.9MB，因为运行阶段**只用 nginx**——
 > 编译完之后 Node 就没用了，留在镜像里纯属浪费。
 
-### V0.8 计划中
+### V0.8 ✅ TravelMind V0：旅行偏好测试 + Top 3 推荐
 
+- [x] `ScoringService` 泛型化，两套量表共用一套计分算法（`ScaleDimension` 接口）
+- [x] 8 道旅行偏好题（V6 迁移）、59 个杭州模拟景点（V7 迁移）
+- [x] `RecommendationEngine`：硬过滤 + 兴趣加权匹配 × 距离衰减 × 质量修正
+- [x] 旅行画像 `travel_profiles`、推荐记录 `recommendations`、反馈表 `recommendation_feedback`（V9 迁移）
+- [x] `/api/travel/**` 五个端点 + `?scale=TRAVEL`
+- [x] 前端旅行结果页（8 维画像 + 定位面板 + Top 3 卡片）
+- [x] 11 个旅行链路集成测试 + 7 个旅行计分单测
+
+**刻意没做**（下一步）：用户反馈（👍/👎、"换一批"）——表已经建好了，
+但没有接口。反馈是整个闭环里最有价值的数据（计划书第十九节的核心指标
+"推荐接受率是否随使用次数提升"要靠它），所以排在下一步而不是顺手做。
+
+### V0.9 计划中
+
+- [ ] **用户反馈接口**：👍/👎 + "换一批"，并把反馈接回画像（计划书 Phase 6「个性化」）
+- [ ] **AI 生成推荐理由**：`recommendations.reason` 字段已预留，把结构化的
+      `reasons` 喂给 DeepSeek 生成自然语言解释——计划书第七节明确划给 AI 的职责
+- [ ] 导航（拼一个高德/苹果地图 URL 跳转，半小时的活）
 - [ ] 多次结果对比（历史页并排两张画像，看变化）
 - [ ] 让 `rawScore` / `itemCount` 返回真实值（目前是 `-1` 占位）
 - [ ] 前端单元测试（Vitest + Testing Library）
-- [ ] CI 里加 Docker 构建检查
+- [ ] **接真实 POI 数据**（高德开放平台）：把 `PlaceRepository.findAll()` 换成
+      按定位的边界框查询——现在是模拟数据阶段的简化
 - [ ] 历史记录分页（目前最多返回 100 条）
 - [ ] 限流阈值改成可配置（目前是 `LoginRateLimiter` 里的常量）
 

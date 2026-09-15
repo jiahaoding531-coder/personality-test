@@ -24,7 +24,7 @@ package com.example.personality.domain;
  *   <li>{@code WALKING} ←→ 地点的步行强度（越愿意走越费腿的地方也能去）</li>
  * </ul>
  */
-public enum TravelDimension {
+public enum TravelDimension implements ScaleDimension {
 
     NATURE("自然风光"),
     CULTURE("人文历史"),
@@ -41,7 +41,8 @@ public enum TravelDimension {
         this.label = label;
     }
 
-    /** 中文展示名。 */
+    /** 中文展示名。实现自 {@link ScaleDimension}。 */
+    @Override
     public String label() {
         return label;
     }

@@ -178,6 +178,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/test-sessions/*/result").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/test-sessions/*/ai-report").permitAll()
 
+                        // 旅行偏好测试。规则和人格测试完全对称——同样是匿名可做，
+                        // 靠会话访问令牌（X-Session-Token）而不是登录身份来保护数据。
+                        // ⚠️ 新增端点时这里必须逐条补：漏写的后果很隐蔽——
+                        // 请求会掉进最后那句 anyRequest().permitAll()，功能"看起来能用"，
+                        // 但这条路径没有经过显式声明的规则，将来收紧权限时会被漏掉。
+                        .requestMatchers(HttpMethod.POST, "/api/travel/sessions").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/travel/sessions/*/answers").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/travel/sessions/*/submit").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/travel/sessions/*/profile").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/travel/sessions/*/recommendations").permitAll()
+
                         // 「我的」数据必须登录
                         .requestMatchers("/api/me/**").authenticated()
 

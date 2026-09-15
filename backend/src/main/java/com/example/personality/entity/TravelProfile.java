@@ -1,5 +1,6 @@
 package com.example.personality.entity;
 
+import com.example.personality.domain.DimensionScore;
 import com.example.personality.domain.TravelDimension;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -67,26 +68,34 @@ public class TravelProfile {
      * <p>参数用 Map 而不是 8 个 BigDecimal，是为了让调用方（计分服务）
      * 能以循环的方式填值，不用写 8 行展开的代码。
      */
-    public static TravelProfile from(Long sessionId, Map<TravelDimension, BigDecimal> scores) {
+    public static TravelProfile from(Long sessionId,
+                                     Map<TravelDimension, DimensionScore<TravelDimension>> scores) {
         TravelProfile p = new TravelProfile();
         p.sessionId = sessionId;
-        p.nature = get(scores, TravelDimension.NATURE);
-        p.culture = get(scores, TravelDimension.CULTURE);
-        p.food = get(scores, TravelDimension.FOOD);
-        p.photography = get(scores, TravelDimension.PHOTOGRAPHY);
-        p.hiddenGems = get(scores, TravelDimension.HIDDEN_GEMS);
-        p.crowdTolerance = get(scores, TravelDimension.CROWD_TOLERANCE);
-        p.walking = get(scores, TravelDimension.WALKING);
-        p.planning = get(scores, TravelDimension.PLANNING);
+        p.nature = normalizedOf(scores, TravelDimension.NATURE);
+        p.culture = normalizedOf(scores, TravelDimension.CULTURE);
+        p.food = normalizedOf(scores, TravelDimension.FOOD);
+        p.photography = normalizedOf(scores, TravelDimension.PHOTOGRAPHY);
+        p.hiddenGems = normalizedOf(scores, TravelDimension.HIDDEN_GEMS);
+        p.crowdTolerance = normalizedOf(scores, TravelDimension.CROWD_TOLERANCE);
+        p.walking = normalizedOf(scores, TravelDimension.WALKING);
+        p.planning = normalizedOf(scores, TravelDimension.PLANNING);
         return p;
     }
 
-    private static BigDecimal get(Map<TravelDimension, BigDecimal> scores, TravelDimension dimension) {
-        BigDecimal v = scores.get(dimension);
-        if (v == null) {
+    /**
+     * 从计分结果里取某个维度的归一化分。
+     *
+     * <p>取不到就抛异常，正常情况下不会发生（{@code ScoringService} 会先拦），
+     * 这里只是最后一道防御——和 {@code PersonalityProfile.normalizedOf} 一个套路。
+     */
+    private static BigDecimal normalizedOf(Map<TravelDimension, DimensionScore<TravelDimension>> scores,
+                                           TravelDimension dimension) {
+        DimensionScore<TravelDimension> score = scores.get(dimension);
+        if (score == null) {
             throw new IllegalStateException("旅行偏好缺少维度：" + dimension.label());
         }
-        return v;
+        return score.normalized();
     }
 
     /**

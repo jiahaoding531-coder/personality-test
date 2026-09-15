@@ -70,10 +70,10 @@ class ScoringServiceTest {
     @Test
     @DisplayName("全部选最低分（1 分）→ 归一化到 0.00")
     void allLowestScores_normalizeToZero() {
-        Map<Dimension, DimensionScore> result = service.score(uniformAnswers(4, 1, false));
+        Map<Dimension, DimensionScore<Dimension>>result = service.score(uniformAnswers(4, 1, false));
 
         for (Dimension dimension : Dimension.values()) {
-            DimensionScore score = result.get(dimension);
+            DimensionScore<Dimension> score = result.get(dimension);
             assertEquals(4, score.rawSum(), dimension.label() + " 的原始分应为 4×1=4");
             assertBigDecimalEquals("0.00", score.normalized(), dimension.label() + " 应归一化到 0.00");
             assertEquals(Level.LOW, score.level());
@@ -83,10 +83,10 @@ class ScoringServiceTest {
     @Test
     @DisplayName("全部选最高分（5 分）→ 归一化到 100.00")
     void allHighestScores_normalizeToHundred() {
-        Map<Dimension, DimensionScore> result = service.score(uniformAnswers(4, 5, false));
+        Map<Dimension, DimensionScore<Dimension>>result = service.score(uniformAnswers(4, 5, false));
 
         for (Dimension dimension : Dimension.values()) {
-            DimensionScore score = result.get(dimension);
+            DimensionScore<Dimension> score = result.get(dimension);
             assertEquals(20, score.rawSum(), dimension.label() + " 的原始分应为 4×5=20");
             assertBigDecimalEquals("100.00", score.normalized(), dimension.label() + " 应归一化到 100.00");
             assertEquals(Level.HIGH, score.level());
@@ -96,10 +96,10 @@ class ScoringServiceTest {
     @Test
     @DisplayName("全部选中间分（3 分）→ 归一化到 50.00")
     void allMidpointScores_normalizeToFifty() {
-        Map<Dimension, DimensionScore> result = service.score(uniformAnswers(4, 3, false));
+        Map<Dimension, DimensionScore<Dimension>>result = service.score(uniformAnswers(4, 3, false));
 
         for (Dimension dimension : Dimension.values()) {
-            DimensionScore score = result.get(dimension);
+            DimensionScore<Dimension> score = result.get(dimension);
             assertEquals(12, score.rawSum());
             assertBigDecimalEquals("50.00", score.normalized(), dimension.label() + " 应归一化到 50.00");
             assertEquals(Level.MEDIUM, score.level());
@@ -113,10 +113,10 @@ class ScoringServiceTest {
     @Test
     @DisplayName("全选 1 分的反向题 → 翻转成满分 → 归一化到 100.00（验证反向与归一化能正确串联）")
     void allReversedLowestScores_normalizeToHundred() {
-        Map<Dimension, DimensionScore> result = service.score(uniformAnswers(4, 1, true));
+        Map<Dimension, DimensionScore<Dimension>>result = service.score(uniformAnswers(4, 1, true));
 
         for (Dimension dimension : Dimension.values()) {
-            DimensionScore score = result.get(dimension);
+            DimensionScore<Dimension> score = result.get(dimension);
             assertEquals(20, score.rawSum(), "1 分反向翻转成 5 分，四题合计应为 20");
             assertBigDecimalEquals("100.00", score.normalized());
         }
@@ -132,15 +132,15 @@ class ScoringServiceTest {
         //   反向 1 分        → 6-1 = 5
         //   合计             → 18
         //   归一化 (18-4)/16*100 = 87.50
-        List<ScoredItem> opennessItems = List.of(
+        List<ScoredItem<Dimension>>opennessItems = List.of(
                 item(Dimension.OPENNESS, false, 5),
                 item(Dimension.OPENNESS, false, 4),
                 item(Dimension.OPENNESS, true, 2),
                 item(Dimension.OPENNESS, true, 1)
         );
 
-        Map<Dimension, DimensionScore> result = service.score(answersWithCustomDimension(Dimension.OPENNESS, opennessItems));
-        DimensionScore openness = result.get(Dimension.OPENNESS);
+        Map<Dimension, DimensionScore<Dimension>>result = service.score(answersWithCustomDimension(Dimension.OPENNESS, opennessItems));
+        DimensionScore<Dimension> openness = result.get(Dimension.OPENNESS);
 
         assertEquals(18, openness.rawSum(), "5 + 4 + (6-2) + (6-1) = 18");
         assertEquals(4, openness.itemCount());
@@ -164,17 +164,17 @@ class ScoringServiceTest {
     @Test
     @DisplayName("每维度换成 6 题时，归一化公式自动适配（不需要改代码）")
     void normalizationAdaptsToItemCount() {
-        Map<Dimension, DimensionScore> result = service.score(uniformAnswers(6, 1, false));
+        Map<Dimension, DimensionScore<Dimension>>result = service.score(uniformAnswers(6, 1, false));
 
         for (Dimension dimension : Dimension.values()) {
-            DimensionScore score = result.get(dimension);
+            DimensionScore<Dimension> score = result.get(dimension);
             assertEquals(6, score.itemCount(), "应该识别出每维度 6 题");
             assertEquals(6, score.rawSum());
             assertBigDecimalEquals("0.00", score.normalized(), "6 题全 1 分仍应归一到 0.00");
         }
 
         // 6 题全 5 分 → rawSum=30 → (30-6)/(36-6)*100 = 80/... 等等，是 (30-6)/(30-6)=1 → 100.00
-        Map<Dimension, DimensionScore> maxResult = service.score(uniformAnswers(6, 5, false));
+        Map<Dimension, DimensionScore<Dimension>>maxResult = service.score(uniformAnswers(6, 5, false));
         assertBigDecimalEquals("100.00", maxResult.get(Dimension.OPENNESS).normalized());
     }
 
@@ -186,7 +186,7 @@ class ScoringServiceTest {
     @DisplayName("某个维度一道题都没有 → 抛 InvalidAnswersException")
     void missingDimension_throws() {
         // 只作答 4 个维度，故意漏掉「情绪稳定性」
-        List<ScoredItem> items = new ArrayList<>();
+        List<ScoredItem<Dimension>>items = new ArrayList<>();
         for (Dimension dimension : Dimension.values()) {
             if (dimension == Dimension.EMOTIONAL_STABILITY) {
                 continue;
@@ -204,11 +204,11 @@ class ScoringServiceTest {
     @Test
     @DisplayName("分值越界（0 或 6）→ 抛 InvalidAnswersException")
     void outOfRangeScore_throws() {
-        List<ScoredItem> tooLow = uniformAnswers(4, 3, false);
+        List<ScoredItem<Dimension>>tooLow = uniformAnswers(4, 3, false);
         tooLow.set(0, item(Dimension.OPENNESS, false, 0));
         assertThrows(InvalidAnswersException.class, () -> service.score(tooLow), "0 分应该被拒绝");
 
-        List<ScoredItem> tooHigh = uniformAnswers(4, 3, false);
+        List<ScoredItem<Dimension>>tooHigh = uniformAnswers(4, 3, false);
         tooHigh.set(0, item(Dimension.OPENNESS, false, 6));
         assertThrows(InvalidAnswersException.class, () -> service.score(tooHigh), "6 分应该被拒绝");
     }
@@ -227,7 +227,7 @@ class ScoringServiceTest {
     @Test
     @DisplayName("返回值必须是不可变 Map，且包含全部 5 个维度")
     void resultIsUnmodifiableAndComplete() {
-        Map<Dimension, DimensionScore> result = service.score(uniformAnswers(4, 3, false));
+        Map<Dimension, DimensionScore<Dimension>>result = service.score(uniformAnswers(4, 3, false));
 
         assertEquals(5, result.size(), "必须恰好包含 5 个维度");
         for (Dimension dimension : Dimension.values()) {
@@ -243,13 +243,13 @@ class ScoringServiceTest {
     // 测试辅助方法
     // ==========================================================
 
-    private static ScoredItem item(Dimension dimension, boolean reverseScored, int rawScore) {
-        return new ScoredItem(dimension, reverseScored, rawScore);
+    private static ScoredItem<Dimension> item(Dimension dimension, boolean reverseScored, int rawScore) {
+        return new ScoredItem<>(dimension, reverseScored, rawScore);
     }
 
     /** 5 个维度各 {@code itemsPerDimension} 题，全部同一分值、同一正反向设置。 */
-    private static List<ScoredItem> uniformAnswers(int itemsPerDimension, int score, boolean reverse) {
-        List<ScoredItem> items = new ArrayList<>();
+    private static List<ScoredItem<Dimension>>uniformAnswers(int itemsPerDimension, int score, boolean reverse) {
+        List<ScoredItem<Dimension>>items = new ArrayList<>();
         for (Dimension dimension : Dimension.values()) {
             for (int i = 0; i < itemsPerDimension; i++) {
                 items.add(item(dimension, reverse, score));
@@ -259,8 +259,8 @@ class ScoringServiceTest {
     }
 
     /** 指定某个维度用自定义的题目集合，其余维度用 4 题、3 分填充，保证计分能通过完整性校验。 */
-    private static List<ScoredItem> answersWithCustomDimension(Dimension target, List<ScoredItem> customItems) {
-        List<ScoredItem> items = new ArrayList<>();
+    private static List<ScoredItem<Dimension>>answersWithCustomDimension(Dimension target, List<ScoredItem<Dimension>>customItems) {
+        List<ScoredItem<Dimension>>items = new ArrayList<>();
         for (Dimension dimension : Dimension.values()) {
             if (dimension == target) {
                 items.addAll(customItems);

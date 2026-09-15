@@ -40,8 +40,8 @@ Base URL：`http://localhost:8080`
 | `400` | 参数不合法 | 分值越界、答案列表为空、没答完就提交、**请求体不是合法 JSON**、**路径变量类型不对** |
 | `401` | 未认证 | 用户名或密码错误、访问需要登录的端点 |
 | `403` | 无权限 | **缺少 CSRF 令牌** |
-| `404` | 资源不存在 | 会话 ID 不存在、结果还没生成 |
-| `409` | 状态冲突 | 重复提交已提交过的会话、用户名已被占用 |
+| `404` | 资源不存在 | 会话 ID 不存在、结果还没生成、**没带令牌访问别人的会话**（和"不存在"返回一样的消息，防止探测） |
+| `409` | 状态冲突 | 重复提交已提交过的会话、用户名已被占用、**拿人格会话去调旅行的 submit** |
 | `429` | 请求过于频繁 | **触发登录/注册限流**（响应带 `Retry-After` 头） |
 | `501` | 未实现 | AI 报告，但未配置 API Key（`AI_ENABLED` 不为 true） |
 | `502` | 上游故障 | 大模型服务超时或报错 |
@@ -373,6 +373,17 @@ curl -X POST "http://localhost:8080/api/test-sessions/$SID/answers" \
 
 > **`GET` 请求没有副作用**，调多少次结果都一样，可以放心缓存。
 
+**查询参数**
+
+| 参数 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `scale` | `PERSONALITY` \| `TRAVEL` | `PERSONALITY` | 取哪套题库 |
+
+> ⚠️ **枚举按名字绑定，大小写敏感**：`?scale=travel` 会返回 400，必须写 `TRAVEL`。
+>
+> 默认值是 `PERSONALITY` 而不是"必填"，是为了让 V0.1 的调用方（老静态页、老测试）
+> 一行都不用改——不传参数时拿到的仍然是那 20 道人格题。
+
 **200 OK**
 
 ```json
@@ -680,6 +691,199 @@ curl -X POST "http://localhost:8080/api/test-sessions/$SID/answers" \
 
 外加写作要求：第二人称、串联维度组合而非逐条念分数、每个维度既讲优势也讲代价、
 结尾给 2~3 条**具体**建议（明令禁止「多与人交流」这类空话）、限 400~600 字。
+
+---
+
+---
+
+# 旅行偏好测试（TravelMind）
+
+链路：建会话 → 答 8 道题 → 提交算画像 → 带定位拿 Top 3 推荐。
+
+> **为什么是独立的 `/api/travel` 前缀，而不是复用 `/api/test-sessions`？**
+> 两者底层共用同一张 `test_sessions` 表和同一套会话机制，但**返回结构不同**：
+> 人格侧是 5 维 + 档位 + 解读文案，旅行侧是 8 维的 key/name/score。
+> 硬塞进一个端点会让响应变成"两套字段并存、各自一半是 null"的形状。
+>
+> **安全模型完全一样**：同样是匿名可做，同样靠 `X-Session-Token` 保护数据。
+> 推荐结果和旅行画像都挂在 `session_id` 上，而会话 ID 是自增整数——
+> 所以每个端点都会校验所有权，失败返回 **404 而不是 403**（403 会泄露"这个 ID 存在"）。
+
+## `POST /api/travel/sessions`
+
+创建一次旅行偏好测试会话。请求体为空，响应结构和 `POST /api/test-sessions` 完全一致。
+
+**201 Created**
+
+```json
+{
+  "sessionId": 28,
+  "accessToken": "3f2b8c1e-...",
+  "status": "IN_PROGRESS",
+  "createdAt": "2026-09-15T03:09:45Z"
+}
+```
+
+> `accessToken` 是匿名用户访问这个会话的唯一凭证，**只在这一次返回**。
+> 后续请求要放在 `X-Session-Token` 头里。
+
+---
+
+## `POST /api/travel/sessions/{id}/answers`
+
+保存作答。请求体与人格侧**完全一致**（`{ answers: [{ questionId, score }] }`），
+所以复用了同一个 DTO。
+
+⚠️ 旅行题号不能提交到人格会话（反之亦然）——后端按会话的 `scale` 过滤题库，
+拿错量表的题号会返回 400「题目不存在」。
+
+---
+
+## `POST /api/travel/sessions/{id}/submit`
+
+提交并计分，产出 8 维旅行画像。**和人格侧的 submit 一样是"计分 + 读取"两步合一。**
+
+> **分数只有 0 / 25 / 50 / 75 / 100 五档**，因为每个维度只有 1 道题：
+> 归一化公式 `(rawSum - itemCount) / (itemCount × 4) × 100` 在 `itemCount = 1` 时
+> 化简成 `(score - 1) × 25`，五档等距。
+
+**200 OK**
+
+```json
+{
+  "sessionId": 28,
+  "status": "SUBMITTED",
+  "createdAt": "2026-09-15T03:09:45Z",
+  "submittedAt": "2026-09-15T03:10:12Z",
+  "scale": "TRAVEL",
+  "dimensions": [
+    { "key": "NATURE", "name": "自然风光", "score": 100.00 },
+    { "key": "CULTURE", "name": "人文历史", "score": 75.00 },
+    { "key": "FOOD", "name": "美食探索", "score": 50.00 },
+    { "key": "PHOTOGRAPHY", "name": "摄影出片", "score": 100.00 },
+    { "key": "HIDDEN_GEMS", "name": "小众独特", "score": 100.00 },
+    { "key": "CROWD_TOLERANCE", "name": "人群耐受", "score": 0.00 },
+    { "key": "WALKING", "name": "步行意愿", "score": 25.00 },
+    { "key": "PLANNING", "name": "提前规划", "score": 50.00 }
+  ]
+}
+```
+
+> ⚠️ 维度只有 `key` / `name` / `score` 三个字段，**没有人格画像那套
+> `level` / `levelLabel` / `description`**。理由见 `TravelProfileResponse` 的注释：
+> 8 维 × 3 档 = 24 段文案，而五档分数本身已经够直白了。
+>
+> ⚠️ `PLANNING` 不参与地点排序——它描述的是"你怎么安排行程"，
+> 不是"你想要什么样的地方"。这会影响将来的行程生成粒度。
+
+**错误**
+
+| 码 | 场景 |
+|---|---|
+| `404` | 会话不存在，或没有权限（两者返回一样的消息） |
+| `409` | 已经提交过的会话 / 拿人格会话调这个端点 |
+| `400` | 还有题目没作答 |
+
+---
+
+## `GET /api/travel/sessions/{id}/profile`
+
+查询已生成的旅行画像。响应和 submit 完全一致。
+
+> `GET` 必须幂等无副作用：只读，**不触发计分**。没提交过返回 404。
+
+---
+
+## `POST /api/travel/sessions/{id}/recommendations`
+
+给这次会话推荐 Top 3 地点。
+
+> **为什么是 POST 而不是 GET？** 这个操作**有副作用**——每次调用都会在
+> `recommendations` 表里新写一批记录。用户反馈要挂到推荐行上，
+> 而"接受率是否随使用次数提升"这个核心指标也需要历史数据。
+> GET 按 HTTP 语义必须是幂等可缓存的，这里显然不满足。
+
+**请求体**
+
+```json
+{
+  "latitude": 30.2420,
+  "longitude": 120.1400,
+  "remainingMinutes": 300,
+  "maxDistanceKm": 10
+}
+```
+
+| 字段 | 类型 | 必填 | 默认 | 说明 |
+|---|---|---|---|---|
+| `latitude` | number | ✅ | — | 纬度，-90 ~ 90 |
+| `longitude` | number | ✅ | — | 经度，-180 ~ 180 |
+| `remainingMinutes` | int | | `240` | 今天还剩多少分钟可玩。15 ~ 1440 |
+| `maxDistanceKm` | number | | `10` | 候选地点最大半径。0.5 ~ 50 |
+
+> **为什么定位必填？** 引擎在没有定位时也能排序（距离因素失效），
+> 但那排的是"兴趣匹配 + 质量"，和"你附近此刻最值得去哪"是两回事。
+> 与其返回一个看起来正常、实际没考虑距离的结果，不如直接要求给定位。
+>
+> 剩余时长则相反，它有个合理的默认值（4 小时），而且用户经常说不清。
+
+**200 OK**
+
+```json
+{
+  "sessionId": 28,
+  "batchNo": 1,
+  "generatedAt": "2026-09-15T03:10:30Z",
+  "places": [
+    {
+      "rank": 1,
+      "placeId": 1,
+      "name": "西湖·苏堤",
+      "category": "NATURE",
+      "description": "西湖最经典的一段，两侧都是水面和柳树",
+      "scorePercent": 62,
+      "distanceKm": 0.00,
+      "ticketPrice": 0,
+      "suggestedMinutes": 120,
+      "openFrom": null,
+      "openTo": null,
+      "reasons": [
+        { "dimensionKey": "NATURE", "dimensionLabel": "自然风光", "userPreference": 100, "placeValue": 95 },
+        { "dimensionKey": "PHOTOGRAPHY", "dimensionLabel": "摄影出片", "userPreference": 100, "placeValue": 90 },
+        { "dimensionKey": "CULTURE", "dimensionLabel": "人文历史", "userPreference": 75, "placeValue": 80 }
+      ]
+    }
+  ]
+}
+```
+
+**字段说明**
+
+| 字段 | 说明 |
+|---|---|
+| `batchNo` | 这是该会话的第几批推荐，从 1 开始。**点 👍/👎 时要连它一起带上** |
+| `scorePercent` | 0~100 的整数。`score = 兴趣匹配 × 距离衰减 × 质量修正`，三个因子都 ≤ 1 |
+| `distanceKm` | 距离用户的公里数 |
+| `openFrom` / `openTo` | `"HH:mm"`。**两个都是 `null` 表示全天开放**（公园、街区） |
+| `reasons` | 推荐依据，按贡献从大到小，最多 3 条。**是算出来的，不是 AI 编的** |
+
+> ⚠️ **`places` 可能是空数组。** 定位附近 10 公里内没有"正在营业 + 停留时长装得进
+> 剩余时间"的地点时，这是**正常结果不是错误**。前端要专门处理这个情况，
+> 而不是当成请求失败。
+>
+> ⚠️ **演示数据只有杭州的 59 个景点。** 用真实定位（不在杭州）几乎必然返回空列表。
+> 这不是 bug，是"模拟数据只有一个城市"的必然结果——真实 POI 接入是计划书的 Phase 3。
+
+**错误**
+
+| 码 | 场景 |
+|---|---|
+| `400` | 定位没传、经纬度越界、`remainingMinutes` 超范围 |
+| `404` | 会话不存在 / 没权限 / **还没提交（没有画像就没法推荐）** |
+
+> **推荐记录是 append-only 的**：重新推荐是新开一批（`batchNo + 1`），
+> **不会删掉旧的那批**。因为 `recommendation_feedback` 外键挂在推荐行上，
+> 删推荐会级联删掉用户反馈——而反馈是整个项目里最该攒下来的数据。
 
 ---
 

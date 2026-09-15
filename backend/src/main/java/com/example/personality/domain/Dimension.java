@@ -8,8 +8,11 @@ package com.example.personality.domain;
  *
  * <p>为什么用枚举而不是散落的字符串：如果哪一天要把"情绪稳定性"改名成"抗压能力"，
  * 只需要改这里的 label 一处，编译器会帮你检查所有引用。
+ *
+ * <p>实现 {@link ScaleDimension} 是为了让计分器能同时服务两套量表——
+ * 见那个接口的说明。这里只是"多声明一行 implements"，没有任何方法要新写。
  */
-public enum Dimension {
+public enum Dimension implements ScaleDimension {
 
     OPENNESS("开放性"),
     EXTRAVERSION("外向性"),
@@ -23,7 +26,8 @@ public enum Dimension {
         this.label = label;
     }
 
-    /** 中文展示名，用于 API 响应和 AI 提示词。 */
+    /** 中文展示名，用于 API 响应和 AI 提示词。实现自 {@link ScaleDimension}。 */
+    @Override
     public String label() {
         return label;
     }

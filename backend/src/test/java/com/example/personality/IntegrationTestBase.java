@@ -1,5 +1,6 @@
 package com.example.personality;
 
+import com.example.personality.entity.QuestionScale;
 import com.example.personality.security.LoginRateLimiter;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -183,9 +184,40 @@ public abstract class IntegrationTestBase {
         return new TestSessionRef(body.get("sessionId").asLong(), body.get("accessToken").asString());
     }
 
-    /** 取题库里的全部题目 ID。 */
+    /**
+     * 建一个<b>旅行偏好测试</b>会话。
+     *
+     * <p>和 {@link #createTestSession} 唯一的不同就是打的是 {@code /api/travel/sessions}——
+     * 底层还是同一张 test_sessions 表，只是 scale 列存的是 TRAVEL。
+     *
+     * @param loginSession 传 null 表示匿名创建
+     */
+    protected TestSessionRef createTravelSession(MockHttpSession loginSession) throws Exception {
+        var request = post("/api/travel/sessions").with(csrf());
+        if (loginSession != null) {
+            request = request.session(loginSession);
+        }
+        MvcResult result = mockMvc.perform(request)
+                .andExpect(status().isCreated())
+                .andReturn();
+        JsonNode body = objectMapper.readTree(
+                new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8));
+        return new TestSessionRef(body.get("sessionId").asLong(), body.get("accessToken").asString());
+    }
+
+    /** 取<b>人格</b>题库的全部题目 ID。 */
     protected List<Long> fetchQuestionIds() throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/questions"))
+        return fetchQuestionIds(QuestionScale.PERSONALITY);
+    }
+
+    /**
+     * 取指定量表的全部题目 ID。
+     *
+     * <p>⚠️ 必须带 scale 参数：questions 表从 V6 起同时装着两套题，
+     * 不指定的话拿到的是人格那 20 道。
+     */
+    protected List<Long> fetchQuestionIds(QuestionScale scale) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/questions").param("scale", scale.name()))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode questions = objectMapper.readTree(
@@ -196,14 +228,26 @@ public abstract class IntegrationTestBase {
         return ids;
     }
 
-    /** 把全部题目都答成同一个分值。 */
+    /** 把<b>人格</b>测试的全部题目都答成同一个分值。 */
     protected void answerAllQuestions(TestSessionRef ref, int score, MockHttpSession loginSession)
             throws Exception {
+        answerQuestions("/api/test-sessions", ref, fetchQuestionIds(), score, loginSession);
+    }
+
+    /** 把<b>旅行</b>测试的 8 道题都答成同一个分值。 */
+    protected void answerAllTravelQuestions(TestSessionRef ref, int score, MockHttpSession loginSession)
+            throws Exception {
+        answerQuestions("/api/travel/sessions", ref,
+                fetchQuestionIds(QuestionScale.TRAVEL), score, loginSession);
+    }
+
+    private void answerQuestions(String basePath, TestSessionRef ref, List<Long> questionIds,
+                                 int score, MockHttpSession loginSession) throws Exception {
         List<Map<String, Object>> answers = new ArrayList<>();
-        for (Long qid : fetchQuestionIds()) {
+        for (Long qid : questionIds) {
             answers.add(Map.of("questionId", qid, "score", score));
         }
-        var request = withToken(post("/api/test-sessions/{id}/answers", ref.id()).with(csrf())
+        var request = withToken(post(basePath + "/{id}/answers", ref.id()).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json(Map.of("answers", answers))), ref);
         if (loginSession != null) {

@@ -3,20 +3,22 @@ package com.example.personality.service;
 import com.example.personality.domain.Dimension;
 import com.example.personality.domain.DimensionScore;
 import com.example.personality.domain.ScoredItem;
+import com.example.personality.domain.TravelDimension;
 import com.example.personality.dto.AnswerSubmission;
 import com.example.personality.entity.Answer;
 import com.example.personality.entity.PersonalityProfile;
 import com.example.personality.entity.Question;
 import com.example.personality.entity.QuestionScale;
 import com.example.personality.entity.TestSession;
+import com.example.personality.entity.TravelProfile;
 import com.example.personality.exception.ConflictException;
 import com.example.personality.exception.InvalidAnswersException;
-import com.example.personality.exception.NotImplementedException;
 import com.example.personality.exception.ResourceNotFoundException;
 import com.example.personality.repository.AnswerRepository;
 import com.example.personality.repository.PersonalityProfileRepository;
 import com.example.personality.repository.QuestionRepository;
 import com.example.personality.repository.TestSessionRepository;
+import com.example.personality.repository.TravelProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,22 +81,25 @@ public class TestSessionService {
     private final AnswerRepository answerRepository;
     private final QuestionRepository questionRepository;
     private final PersonalityProfileRepository profileRepository;
+    private final TravelProfileRepository travelProfileRepository;
     private final ScoringService scoringService;
 
     public TestSessionService(TestSessionRepository sessionRepository,
                               AnswerRepository answerRepository,
                               QuestionRepository questionRepository,
                               PersonalityProfileRepository profileRepository,
+                              TravelProfileRepository travelProfileRepository,
                               ScoringService scoringService) {
         this.sessionRepository = sessionRepository;
         this.answerRepository = answerRepository;
         this.questionRepository = questionRepository;
         this.profileRepository = profileRepository;
+        this.travelProfileRepository = travelProfileRepository;
         this.scoringService = scoringService;
     }
 
     /**
-     * 开启一次新的测试会话。
+     * 开启一次新的人格测试会话。
      *
      * <p>只有一条 INSERT，本来不开事务也行，但统一加上更省心：
      * 将来这个方法要扩展成"建会话 + 预生成答题卡"时，事务边界已经在那儿了。
@@ -102,6 +107,18 @@ public class TestSessionService {
     @Transactional
     public TestSession createSession(Long userId) {
         return sessionRepository.save(TestSession.start(userId));
+    }
+
+    /**
+     * 开启一次新的旅行偏好测试会话。
+     *
+     * <p>和人格测试共用 test_sessions 表，差别只有 {@code scale} 这一列——
+     * 见 V8 迁移脚本里"为什么复用而不是新建一张表"的说明。
+     * 这行差异就是全部：{@link TestSession#start(Long, QuestionScale)} 那个重载。
+     */
+    @Transactional
+    public TestSession createTravelSession(Long userId) {
+        return sessionRepository.save(TestSession.start(userId, QuestionScale.TRAVEL));
     }
 
     /**
@@ -172,67 +189,70 @@ public class TestSessionService {
     public PersonalityProfile submit(Long sessionId) {
         TestSession session = requireSession(sessionId);
 
-        // ---- 量表检查 ----
-        // 这个方法的返回类型是 PersonalityProfile，整套逻辑（ScoredItem 用
-        // Dimension、结果存 personality_profiles）都只适用于人格量表。
-        // 旅行量表的计分还没接入（TravelProfile / RecommendationEngine 已就位，
-        // 缺的是计分与推荐的服务层），这里明确挡住而不是让它算出错误的东西。
-        //
-        // 抛 501 而不是 500：这是"功能没做"，不是"服务器坏了"。
-        if (session.getScale() != QuestionScale.PERSONALITY) {
-            throw new NotImplementedException(
-                    "量表「" + session.getScale().label() + "」的计分尚未接入，暂时无法提交");
-        }
+        SubmitInputs inputs = validateSubmit(
+                sessionId, session, QuestionScale.PERSONALITY,
+                // ---- 幂等性第二道防线：检查画像是否已存在 ----
+                // 第一道防线在并发下可能失效（两个请求同时读到 IN_PROGRESS），
+                // 但 personality_profiles.session_id 上的唯一约束会让其中一个事务失败，
+                // 无论如何都不会产生两份画像。
+                profileRepository.existsBySessionId(sessionId));
 
-        // ---- 幂等性第一道防线：应用层检查会话状态 ----
-        if (session.isSubmitted()) {
-            throw new ConflictException("会话 " + sessionId + " 已经提交过了，不能重复提交");
-        }
-        // ---- 幂等性第二道防线：检查画像是否已存在 ----
-        // 第一道防线在并发下可能失效（两个请求同时读到 IN_PROGRESS），
-        // 但 personality_profiles.session_id 上的唯一约束会让其中一个事务失败，
-        // 无论如何都不会产生两份画像。
-        if (profileRepository.existsBySessionId(sessionId)) {
-            throw new ConflictException("会话 " + sessionId + " 已经生成过画像了");
-        }
-
-        Map<Long, Question> questionsById = loadQuestionsById(session.getScale());
-
-        List<Answer> answers = answerRepository.findBySessionId(sessionId);
-        if (answers.isEmpty()) {
-            throw new InvalidAnswersException("还没有作答任何题目，无法提交");
-        }
-        if (answers.size() < questionsById.size()) {
-            int missing = questionsById.size() - answers.size();
-            throw new InvalidAnswersException("还有 " + missing + " 道题没有作答，无法提交");
-        }
-
-        // 把"数据库里的作答记录"翻译成"计分器认识的输入"。
-        // 这一步是实体层和领域层之间的适配——ScoringService 完全不知道
-        // Answer / Question 这两个 JPA 实体的存在。
-        List<ScoredItem> items = new ArrayList<>(answers.size());
-        for (Answer answer : answers) {
-            Question question = questionsById.get(answer.getQuestionId());
-            if (question == null) {
-                // 理论上不会发生（saveAnswers 已经校验过），但外键只保证引用的题目存在，
-                // 不保证它现在还在。留一道防御，出问题时能立刻定位。
-                throw new IllegalStateException("作答引用了不存在的题目：id=" + answer.getQuestionId());
-            }
-            // getDimension() 现在返回的是字符串（为了同时装下两套量表的维度名），
-            // 这里必须用它解析成人格枚举。走到这一步的会话已经确保是 PERSONALITY，
+        List<ScoredItem<Dimension>> items = new ArrayList<>(inputs.answers().size());
+        for (Answer answer : inputs.answers()) {
+            Question question = requireQuestion(inputs.questionsById(), answer);
+            // getDimension() 返回的是字符串（为了同时装下两套量表的维度名），
+            // 这里必须解析成人格枚举。走到这一步的会话已经确保是 PERSONALITY，
             // 所以解析不会失败。
-            items.add(new ScoredItem(question.getPersonalityDimension(), question.isReverseScored(), answer.getScore()));
+            items.add(new ScoredItem<>(
+                    question.getPersonalityDimension(), question.isReverseScored(), answer.getScore()));
         }
 
-        Map<Dimension, DimensionScore> scores = scoringService.score(items);
+        Map<Dimension, DimensionScore<Dimension>> scores = scoringService.score(items);
 
         PersonalityProfile profile = profileRepository.save(PersonalityProfile.from(sessionId, scores));
+        markSubmitted(session);
 
-        session.markSubmitted();
-        // 这一行 save 其实是多余的——JPA 的"脏检查"（dirty checking）会发现
-        // 从数据库查出来的 session 对象被改动了，事务提交时自动生成 UPDATE。
-        // 这里显式写出来是为了让意图更清楚，对新手更友好。
-        sessionRepository.save(session);
+        return profile;
+    }
+
+    /**
+     * 提交<b>旅行偏好测试</b>并计分，产出 8 维旅行画像。
+     *
+     * <p>和 {@link #submit(Long)} 是平行的两条链路：校验、幂等、答题完整性全都复用
+     * （见 {@link #validateSubmit}），只有两处不同——
+     * <ul>
+     *   <li>计分用的是 {@code TravelDimension} 而不是 {@code Dimension}</li>
+     *   <li>结果存进 {@code travel_profiles} 而不是 {@code personality_profiles}</li>
+     * </ul>
+     * 这正是不把两套量表拆成两个 Service 的理由：流程一样，只有"维度是哪套"不同。
+     *
+     * @return 计算出的旅行画像
+     * @throws ResourceNotFoundException 会话不存在
+     * @throws ConflictException         会话不是旅行量表 / 已提交过 / 已生成过画像
+     * @throws InvalidAnswersException   题目没答完
+     */
+    @Transactional
+    public TravelProfile submitTravel(Long sessionId) {
+        TestSession session = requireSession(sessionId);
+
+        SubmitInputs inputs = validateSubmit(
+                sessionId, session, QuestionScale.TRAVEL,
+                travelProfileRepository.existsBySessionId(sessionId));
+
+        List<ScoredItem<TravelDimension>> items = new ArrayList<>(inputs.answers().size());
+        for (Answer answer : inputs.answers()) {
+            Question question = requireQuestion(inputs.questionsById(), answer);
+            items.add(new ScoredItem<>(
+                    question.getTravelDimension(), question.isReverseScored(), answer.getScore()));
+        }
+
+        // 这里必须显式传 Class：旅行维度和人格维度是两套枚举，
+        // 只靠泛型推断不出该用哪一套（见 ScoringService 里的说明）
+        Map<TravelDimension, DimensionScore<TravelDimension>> scores =
+                scoringService.score(items, TravelDimension.class);
+
+        TravelProfile profile = travelProfileRepository.save(TravelProfile.from(sessionId, scores));
+        markSubmitted(session);
 
         return profile;
     }
@@ -284,5 +304,79 @@ public class TestSessionService {
             byId.put(question.getId(), question);
         }
         return byId;
+    }
+
+    /**
+     * 校验提交的产物：这次会话的题目表 + 全部作答。
+     *
+     * <p>把"能不能提交"的四道检查收在一处，人格和旅行两条链路共用：
+     * <ol>
+     *   <li><b>量表对不对</b>——拿旅行会话去调人格的 submit 是调用方的错，
+     *       明确报错比让计分器按错误的枚举解析要好得多</li>
+     *   <li><b>有没有重复提交</b>（幂等第一道防线）</li>
+     *   <li><b>画像是不是已经存在</b>（幂等第二道防线，由调用方查好传进来——
+     *       因为两张画像表在不同的 Repository 里）</li>
+     *   <li><b>题答完了没有</b></li>
+     * </ol>
+     */
+    private SubmitInputs validateSubmit(Long sessionId, TestSession session,
+                                        QuestionScale expectedScale, boolean profileExists) {
+
+        // ---- 量表检查 ----
+        // 报 409 而不是 501：旅行量表的计分已经接入了，现在这个情况是
+        // "调用方拿错了接口"，属于客户端错误，不是"功能没做"。
+        if (session.getScale() != expectedScale) {
+            throw new ConflictException("这个会话用的是「" + session.getScale().label()
+                    + "」，请调用对应的接口提交");
+        }
+
+        // ---- 幂等性第一道防线：应用层检查会话状态 ----
+        if (session.isSubmitted()) {
+            throw new ConflictException("会话 " + sessionId + " 已经提交过了，不能重复提交");
+        }
+        // ---- 幂等性第二道防线：画像是否已存在 ----
+        if (profileExists) {
+            throw new ConflictException("会话 " + sessionId + " 已经生成过画像了");
+        }
+
+        Map<Long, Question> questionsById = loadQuestionsById(session.getScale());
+
+        List<Answer> answers = answerRepository.findBySessionId(sessionId);
+        if (answers.isEmpty()) {
+            throw new InvalidAnswersException("还没有作答任何题目，无法提交");
+        }
+        if (answers.size() < questionsById.size()) {
+            int missing = questionsById.size() - answers.size();
+            throw new InvalidAnswersException("还有 " + missing + " 道题没有作答，无法提交");
+        }
+
+        return new SubmitInputs(questionsById, answers);
+    }
+
+    /** 按作答记录找到对应的题目，找不到说明数据有问题，留一道能立刻定位的防御。 */
+    private Question requireQuestion(Map<Long, Question> questionsById, Answer answer) {
+        Question question = questionsById.get(answer.getQuestionId());
+        if (question == null) {
+            // 理论上不会发生（saveAnswers 已经校验过），但外键只保证引用的题目存在，
+            // 不保证它现在还在。
+            throw new IllegalStateException("作答引用了不存在的题目：id=" + answer.getQuestionId());
+        }
+        return question;
+    }
+
+    /**
+     * 标记会话已提交。
+     *
+     * <p>下面那行 save 其实是多余的——JPA 的"脏检查"（dirty checking）会发现
+     * 从数据库查出来的 session 对象被改动了，事务提交时自动生成 UPDATE。
+     * 显式写出来是为了让意图更清楚，对新手更友好。
+     */
+    private void markSubmitted(TestSession session) {
+        session.markSubmitted();
+        sessionRepository.save(session);
+    }
+
+    /** {@link #validateSubmit} 的产物：题目表 + 全部作答。 */
+    private record SubmitInputs(Map<Long, Question> questionsById, List<Answer> answers) {
     }
 }

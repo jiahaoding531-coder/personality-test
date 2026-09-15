@@ -5,6 +5,7 @@ import com.example.personality.entity.QuestionScale;
 import com.example.personality.service.QuestionService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -44,10 +45,12 @@ public class QuestionController {
      * "某个 getter 忘了写导致字段丢失"的情况。
      */
     @GetMapping
-    public QuestionsResponse getQuestions() {
-        // 这个端点目前固定返回人格量表。等旅行测试的前端就绪，
-        // 再加一个 ?scale=TRAVEL 参数或 /api/questions/travel 端点——
-        // 现在开出来只会让人拿到 8 道题却无处提交。
-        return questionService.getQuestions(QuestionScale.PERSONALITY);
+    public QuestionsResponse getQuestions(
+            // defaultValue 让 /api/questions 的行为和 V0.1 时完全一样（返回人格题），
+            // 老的前端和测试一行都不用改。要旅行题就显式写 ?scale=TRAVEL。
+            //
+            // ⚠️ 枚举按名字绑定，大小写敏感：?scale=travel 会 400，必须写 TRAVEL。
+            @RequestParam(defaultValue = "PERSONALITY") QuestionScale scale) {
+        return questionService.getQuestions(scale);
     }
 }
