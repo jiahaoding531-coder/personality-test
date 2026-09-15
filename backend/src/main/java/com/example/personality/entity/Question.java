@@ -1,6 +1,7 @@
 package com.example.personality.entity;
 
 import com.example.personality.domain.Dimension;
+import com.example.personality.domain.TravelDimension;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -31,17 +32,37 @@ public class Question {
     private String content;
 
     /**
-     * {@code @Enumerated(EnumType.STRING)} <b>绝对不能省</b>。
+     * 所属维度。
      *
-     * <p>JPA 的默认行为是 {@code EnumType.ORDINAL}——把枚举存成它在声明中的序号
-     * （0、1、2...）。一旦你哪天调整了 Dimension 里常量的顺序，或者往中间插了一个新维度，
-     * 数据库里所有历史数据的含义就全错位了，而且不会报错，是纯粹的静默数据损坏。
+     * <p><b>⚠️ 这里存的是字符串而不是枚举，是刻意的。</b>
      *
-     * <p>STRING 存的是枚举名字符串（"OPENNESS"），可读、抗重排，是本项目的正确选择。
+     * <p>因为一个问题可能属于两套量表之一：人格题是 {@code Dimension}
+     * （OPENNESS、EXTRAVERSION…），旅行题是 {@code TravelDimension}
+     * （NATURE、FOOD…）。用一个枚举字段装不下。
+     *
+     * <p>直接写 {@code @Enumerated} 会在读取旅行题时抛
+     * {@code No enum constant Dimension.NATURE}——而且是在序列化时才炸，
+     * 表现为接口 500，排查起来得绕一圈。
+     *
+     * <p>取值由应用层的枚举保证（见 {@link #getPersonalityDimension()} 和
+     * {@link #getTravelDimension()}）。用具体方法解析而不是到处
+     * {@code valueOf}，好处是**解析失败时的错误信息统一在这里**，
+     * 而且将来加第三个量表只需改这一个文件。
+     */
+    @Column(name = "dimension", nullable = false, length = 32)
+    private String dimension;
+
+    /**
+     * 所属量表。决定 {@link #dimension} 该按哪个枚举解析。
+     *
+     * <p>{@code @Enumerated(EnumType.STRING)} <b>不能省</b>：
+     * JPA 默认用 {@code ORDINAL}（存枚举的声明序号）。
+     * 一旦往枚举中间插一个新值，所有历史数据的含义就静默错位了——
+     * 不报错，纯粹的数据损坏。
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "dimension", nullable = false, length = 32)
-    private Dimension dimension;
+    @Column(name = "scale", nullable = false, length = 20)
+    private QuestionScale scale = QuestionScale.PERSONALITY;
 
     /** 为 true 时，用户对这个题的回答需要做 {@code 6 - score} 的反转。 */
     @Column(name = "reverse_scored", nullable = false)
@@ -80,8 +101,35 @@ public class Question {
         return content;
     }
 
-    public Dimension getDimension() {
+    /** 维度的原始字符串值，如 "OPENNESS" 或 "NATURE"。 */
+    public String getDimension() {
         return dimension;
+    }
+
+    public QuestionScale getScale() {
+        return scale;
+    }
+
+    /** 按人格维度解析。非人格题调用会抛异常——调用前应先确认 scale。 */
+    public Dimension getPersonalityDimension() {
+        return Dimension.valueOf(dimension);
+    }
+
+    /** 按旅行维度解析。非旅行题调用会抛异常。 */
+    public TravelDimension getTravelDimension() {
+        return TravelDimension.valueOf(dimension);
+    }
+
+    /**
+     * 维度的中文展示名，按量表自动选择。
+     *
+     * <p>放在实体上而不是让 DTO 自己判断，是为了让"维度名怎么来的"
+     * 只有一个定义处。
+     */
+    public String getDimensionLabel() {
+        return scale == QuestionScale.TRAVEL
+                ? TravelDimension.valueOf(dimension).label()
+                : Dimension.valueOf(dimension).label();
     }
 
     public boolean isReverseScored() {

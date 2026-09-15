@@ -20,14 +20,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SetupSmokeTest extends IntegrationTestBase {
 
     @Test
-    @DisplayName("应用上下文能启动，Flyway 迁移已执行，题库有 20 道题")
+    @DisplayName("应用上下文能启动，Flyway 迁移已执行，两套题库都灌好了")
     void contextLoadsAndMigrationsRan() throws Exception {
         mockMvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
                 .andExpect(jsonPath("$.database").value("UP"))
-                // 这个断言顺带验证了：测试库的表建好了、V2 脚本把 20 道题灌进去了
-                .andExpect(jsonPath("$.questionCount").value(20));
+                // 这个断言顺带验证了：测试库的表建好了、V2 脚本把 20 道人格题灌进去了
+                .andExpect(jsonPath("$.questionCount").value(20))
+                // V6 另外灌了 8 道旅行偏好题，两套题库共存是后面所有
+                // 按 scale 过滤逻辑的前提——这里少了就意味着迁移没跑全
+                .andExpect(jsonPath("$.travelQuestionCount").value(8));
     }
 
     @Test

@@ -64,6 +64,17 @@ public class TestSession {
     @Column(name = "status", nullable = false, length = 20)
     private SessionStatus status = SessionStatus.IN_PROGRESS;
 
+    /**
+     * 这次会话用的是哪套量表。
+     *
+     * <p>决定 submit 时算哪种画像，也决定答题时该取哪批题目。
+     * 一旦会话建立就不再改变——不允许在中途换量表，
+     * 因为已经存下的答案属于另一套题库。
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scale", nullable = false, length = 20)
+    private QuestionScale scale = QuestionScale.PERSONALITY;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -75,9 +86,15 @@ public class TestSession {
 
     /** 开启一次新会话，同时生成一个随机的访问令牌。 */
     public static TestSession start(Long userId) {
+        return start(userId, QuestionScale.PERSONALITY);
+    }
+
+    /** 开启一次指定量表的新会话。 */
+    public static TestSession start(Long userId, QuestionScale scale) {
         TestSession session = new TestSession();
         session.userId = userId;
         session.status = SessionStatus.IN_PROGRESS;
+        session.scale = scale;
         // 用 UUID.randomUUID() 而不是自增或时间戳：
         // 它基于密码学安全的随机数生成器，128 位空间，猜中概率可以忽略。
         session.accessToken = UUID.randomUUID();
@@ -132,6 +149,10 @@ public class TestSession {
 
     public SessionStatus getStatus() {
         return status;
+    }
+
+    public QuestionScale getScale() {
+        return scale;
     }
 
     public Instant getCreatedAt() {

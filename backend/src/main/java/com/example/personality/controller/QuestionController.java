@@ -1,6 +1,7 @@
 package com.example.personality.controller;
 
 import com.example.personality.dto.QuestionsResponse;
+import com.example.personality.entity.QuestionScale;
 import com.example.personality.service.QuestionService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,6 +45,9 @@ public class QuestionController {
      */
     @GetMapping
     public QuestionsResponse getQuestions() {
-        return questionService.getQuestions();
+        // 这个端点目前固定返回人格量表。等旅行测试的前端就绪，
+        // 再加一个 ?scale=TRAVEL 参数或 /api/questions/travel 端点——
+        // 现在开出来只会让人拿到 8 道题却无处提交。
+        return questionService.getQuestions(QuestionScale.PERSONALITY);
     }
 }

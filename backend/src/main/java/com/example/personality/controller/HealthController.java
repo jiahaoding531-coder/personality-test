@@ -1,5 +1,6 @@
 package com.example.personality.controller;
 
+import com.example.personality.entity.QuestionScale;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -49,10 +50,22 @@ public class HealthController {
         body.put("timestamp", Instant.now());
 
         try {
+            // 题库从 V6 起有两套，直接 count(*) 会得到 28，说不清是哪套的数。
+            // 按量表分开数：人格题的 20 道仍然对应 V2 那个迁移脚本，
+            // 旅行题的 8 道对应 V6，两边都能一眼看出灌进去了没有。
+            //
+            // 量表名用枚举的 name() 而不是在 SQL 里写死字符串——
+            // 将来枚举改名，这里会跟着变（编译期就发现），而不是静默查出 0 行。
             Integer questionCount = jdbcTemplate.queryForObject(
-                    "SELECT count(*) FROM questions", Integer.class);
+                    "SELECT count(*) FROM questions WHERE scale = ?",
+                    Integer.class, QuestionScale.PERSONALITY.name());
+            Integer travelQuestionCount = jdbcTemplate.queryForObject(
+                    "SELECT count(*) FROM questions WHERE scale = ?",
+                    Integer.class, QuestionScale.TRAVEL.name());
+
             body.put("database", "UP");
             body.put("questionCount", questionCount);
+            body.put("travelQuestionCount", travelQuestionCount);
             return ResponseEntity.ok(body);
         } catch (Exception e) {
             // 数据库不通时返回 503 Service Unavailable，而不是 200。

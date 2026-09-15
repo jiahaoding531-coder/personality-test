@@ -7,9 +7,11 @@ import com.example.personality.dto.AnswerSubmission;
 import com.example.personality.entity.Answer;
 import com.example.personality.entity.PersonalityProfile;
 import com.example.personality.entity.Question;
+import com.example.personality.entity.QuestionScale;
 import com.example.personality.entity.TestSession;
 import com.example.personality.exception.ConflictException;
 import com.example.personality.exception.InvalidAnswersException;
+import com.example.personality.exception.NotImplementedException;
 import com.example.personality.exception.ResourceNotFoundException;
 import com.example.personality.repository.AnswerRepository;
 import com.example.personality.repository.PersonalityProfileRepository;
@@ -118,7 +120,7 @@ public class TestSessionService {
             throw new ConflictException("会话 " + sessionId + " 已提交，不能再修改答案");
         }
 
-        Map<Long, Question> questionsById = loadQuestionsById();
+        Map<Long, Question> questionsById = loadQuestionsById(session.getScale());
 
         // 先整体校验一遍，再统一写库。避免"写了一半才发现第 8 题不存在"，
         // 留下一个答了一半的会话。
@@ -170,6 +172,18 @@ public class TestSessionService {
     public PersonalityProfile submit(Long sessionId) {
         TestSession session = requireSession(sessionId);
 
+        // ---- 量表检查 ----
+        // 这个方法的返回类型是 PersonalityProfile，整套逻辑（ScoredItem 用
+        // Dimension、结果存 personality_profiles）都只适用于人格量表。
+        // 旅行量表的计分还没接入（TravelProfile / RecommendationEngine 已就位，
+        // 缺的是计分与推荐的服务层），这里明确挡住而不是让它算出错误的东西。
+        //
+        // 抛 501 而不是 500：这是"功能没做"，不是"服务器坏了"。
+        if (session.getScale() != QuestionScale.PERSONALITY) {
+            throw new NotImplementedException(
+                    "量表「" + session.getScale().label() + "」的计分尚未接入，暂时无法提交");
+        }
+
         // ---- 幂等性第一道防线：应用层检查会话状态 ----
         if (session.isSubmitted()) {
             throw new ConflictException("会话 " + sessionId + " 已经提交过了，不能重复提交");
@@ -182,7 +196,7 @@ public class TestSessionService {
             throw new ConflictException("会话 " + sessionId + " 已经生成过画像了");
         }
 
-        Map<Long, Question> questionsById = loadQuestionsById();
+        Map<Long, Question> questionsById = loadQuestionsById(session.getScale());
 
         List<Answer> answers = answerRepository.findBySessionId(sessionId);
         if (answers.isEmpty()) {
@@ -204,7 +218,10 @@ public class TestSessionService {
                 // 不保证它现在还在。留一道防御，出问题时能立刻定位。
                 throw new IllegalStateException("作答引用了不存在的题目：id=" + answer.getQuestionId());
             }
-            items.add(new ScoredItem(question.getDimension(), question.isReverseScored(), answer.getScore()));
+            // getDimension() 现在返回的是字符串（为了同时装下两套量表的维度名），
+            // 这里必须用它解析成人格枚举。走到这一步的会话已经确保是 PERSONALITY，
+            // 所以解析不会失败。
+            items.add(new ScoredItem(question.getPersonalityDimension(), question.isReverseScored(), answer.getScore()));
         }
 
         Map<Dimension, DimensionScore> scores = scoringService.score(items);
@@ -245,10 +262,25 @@ public class TestSessionService {
                 .orElseThrow(() -> new ResourceNotFoundException("测试会话不存在：id=" + sessionId));
     }
 
-    /** 把题库整表读进内存做成 Map，方便按 ID 查题干信息。20 道题的量级完全没必要优化。 */
-    private Map<Long, Question> loadQuestionsById() {
+    /**
+     * 把<b>指定量表</b>的题库读进内存做成 Map，方便按 ID 查题干信息。
+     * 一套题最多 20 道的量级，完全没必要优化。
+     *
+     * <p><b>⚠️ 这里的 scale 过滤是必须的，别改回 findAll()。</b>
+     *
+     * <p>questions 表从 V6 起同时装着两套题（20 道人格 + 8 道旅行）。不过滤的话：
+     * <ul>
+     *   <li>{@code submit} 里那句 {@code answers.size() < questionsById.size()}
+     *       会永远成立——人格会话只答 20 道，却要跟 28 道比，用户看到的是
+     *       「还有 8 道题没有作答」，而他明明每道都答了</li>
+     *   <li>{@code saveAnswers} 会放行另一套量表的题号，写进一堆和本次会话
+     *       无关的作答</li>
+     * </ul>
+     * 顺带还白拿一个效果：拿旅行题号往人格会话里提交，会被当成"题目不存在"挡掉。
+     */
+    private Map<Long, Question> loadQuestionsById(QuestionScale scale) {
         Map<Long, Question> byId = new HashMap<>();
-        for (Question question : questionRepository.findAll()) {
+        for (Question question : questionRepository.findByScaleOrderBySortOrderAsc(scale)) {
             byId.put(question.getId(), question);
         }
         return byId;

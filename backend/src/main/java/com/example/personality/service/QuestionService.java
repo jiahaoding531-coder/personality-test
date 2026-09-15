@@ -4,6 +4,7 @@ import com.example.personality.dto.QuestionResponse;
 import com.example.personality.dto.QuestionsResponse;
 import com.example.personality.dto.ScaleOption;
 import com.example.personality.entity.Question;
+import com.example.personality.entity.QuestionScale;
 import com.example.personality.repository.QuestionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,10 +58,15 @@ public class QuestionService {
         this.questionRepository = questionRepository;
     }
 
-    /** 取出全部题目 + 量表选项。 */
+    /**
+     * 取出<b>指定量表</b>的全部题目 + 量表选项。
+     *
+     * <p>参数从 V6 起是必须的：questions 表现在装了两套题库，
+     * 不加条件就会把 28 道题一起返回给人格测试的页面。
+     */
     @Transactional(readOnly = true)
-    public QuestionsResponse getQuestions() {
-        List<Question> entities = questionRepository.findAllByOrderBySortOrderAsc();
+    public QuestionsResponse getQuestions(QuestionScale scale) {
+        List<Question> entities = questionRepository.findByScaleOrderBySortOrderAsc(scale);
 
         List<QuestionResponse> questions = new ArrayList<>(entities.size());
         for (Question question : entities) {
@@ -78,7 +84,7 @@ public class QuestionService {
      * 比把所有题目查出来再 {@code .size()} 高效得多。
      */
     @Transactional(readOnly = true)
-    public long countQuestions() {
-        return questionRepository.count();
+    public long countQuestions(QuestionScale scale) {
+        return questionRepository.countByScale(scale);
     }
 }

@@ -1,6 +1,5 @@
 package com.example.personality.dto;
 
-import com.example.personality.domain.Dimension;
 import com.example.personality.entity.Question;
 
 /**
@@ -26,12 +25,13 @@ public record QuestionResponse(
 ) {
 
     public static QuestionResponse from(Question question) {
-        Dimension dimension = question.getDimension();
         return new QuestionResponse(
                 question.getId(),
                 question.getContent(),
-                dimension.name(),
-                dimension.label(),
+                // 维度的英文标识（如 OPENNESS / NATURE）
+                question.getDimension(),
+                // 中文名由实体按量表解析，DTO 不重复这个判断
+                question.getDimensionLabel(),
                 question.getSortOrder()
         );
     }
