@@ -568,6 +568,70 @@ function ContextBanner({
   )
 }
 
+/**
+ * 「为什么是它」——把四个打分因子摊开给用户看。
+ *
+ * <p>默认折叠着：不想让每张卡片都堆满数字。但它是这个产品敢说
+ * "决策助手"而不是"排序器"的关键——用户随时能查账。
+ *
+ * <p>公式画成 {@code 兴趣 × 距离 × 质量 × 状态 = 最终分} 而不是列四行，
+ * 是因为**乘法本身就是信息**：任何一项掉到 0 整个结果就是 0，
+ * 所以"再好的地方，太远了也不去"。
+ */
+function WhyPanel({ place }: { place: RecommendedPlace }) {
+  const [open, setOpen] = useState(false)
+  const b = place.scoreBreakdown
+  const pct = (v: number) => Math.round(v * 100)
+
+  return (
+    <div className="why">
+      <button className="link-btn why-toggle" type="button" onClick={() => setOpen((v) => !v)}>
+        {open ? '收起' : '为什么是它？'}
+      </button>
+
+      {open && (
+        <div className="why-body">
+          <div className="why-formula">
+            <span>
+              兴趣匹配 <b>{pct(b.interest)}%</b>
+            </span>
+            <span className="why-op">×</span>
+            <span>
+              距离 <b>{pct(b.distance)}%</b>
+            </span>
+            <span className="why-op">×</span>
+            <span>
+              质量 <b>{pct(b.quality)}%</b>
+            </span>
+            <span className="why-op">×</span>
+            <span>
+              此刻状态 <b>{pct(b.state)}%</b>
+            </span>
+            <span className="why-op">=</span>
+            <span className="why-final">{pct(b.finalScore)}%</span>
+          </div>
+
+          {place.reasons.length > 0 && (
+            <ul className="reasons">
+              {place.reasons.map((r) => (
+                <li key={r.dimensionKey}>
+                  你很在乎「{r.dimensionLabel}」<b>{r.userPreference}</b>，这里{' '}
+                  <b>{r.placeValue}</b>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p className="why-note">
+            四项是<b>相乘</b>的：任何一项掉到 0，整体就是 0。
+            所以再合口味的地方，太远、太贵或者时间不够，都不会被推荐。
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PlaceCard({
   place,
   reaction,
@@ -597,15 +661,7 @@ function PlaceCard({
         <span>{openHours}</span>
       </div>
 
-      {place.reasons.length > 0 && (
-        <ul className="reasons">
-          {place.reasons.map((r) => (
-            <li key={r.dimensionKey}>
-              你很在乎「{r.dimensionLabel}」<b>{r.userPreference}</b>，这里 <b>{r.placeValue}</b>
-            </li>
-          ))}
-        </ul>
-      )}
+      <WhyPanel place={place} />
 
       <div className="feedback-row">
         <button

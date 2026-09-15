@@ -225,6 +225,28 @@ export interface DimensionAdjustment {
   effectiveScore: number
 }
 
+/**
+ * 推荐分数的构成——回答「为什么是它」。
+ *
+ * ⚠️ 这四个是**相乘**的关系，不是相加。展示时要画出乘号：
+ * 乘法意味着任何一项掉到 0，整个结果就是 0——这正是"太远的地方不该被推荐"
+ * 的算法依据（加权求和会让"兴趣极高"补偿掉"距离极远"）。
+ *
+ * 都是 0~1 的比例。
+ */
+export interface ScoreBreakdown {
+  /** 兴趣匹配（主信号） */
+  interest: number
+  /** 距离衰减。没定位时恒为 1.0 */
+  distance: number
+  /** 质量修正。0.85~1.0，只往下扣 */
+  quality: number
+  /** 当前状态的修正。没状态时恒为 1.0 */
+  state: number
+  /** 四个因子相乘，等于 scorePercent / 100 */
+  finalScore: number
+}
+
 export interface RecommendedPlace {
   rank: number
   /** 点 👍/👎 时要带上它——反馈挂在"某一次推荐的某一条"上，不是挂在地点上 */
@@ -235,6 +257,8 @@ export interface RecommendedPlace {
   description: string
   /** 综合得分，0~100 的整数 */
   scorePercent: number
+  /** 这个分数是怎么来的 */
+  scoreBreakdown: ScoreBreakdown
   /** 距离用户多少公里。**全天开放的地点是 null** */
   distanceKm: number | null
   ticketPrice: number
