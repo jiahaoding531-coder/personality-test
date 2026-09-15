@@ -456,6 +456,17 @@ function RecommendationList({
 
   return (
     <div className="card">
+      {/*
+        地名让定位**可被验证**：浏览器给的是「30.2420, 120.1400」这样一串数字，
+        用户没法看着它判断准不准。换成「杭州市西湖区北山街附近」，偏了一眼就能看出来。
+        ⚠️ null 是正常情况（没配高德 / 用户拒绝定位 / 高德挂了），不是错误。
+      */}
+      {data.locationLabel && (
+        <p className="hint">
+          你在<b>{data.locationLabel}</b>。定位不准的话，展开下面「改一下」手动填经纬度。
+        </p>
+      )}
+
       <ContextBanner context={appliedContext} onCorrect={onCorrect} />
 
       {unsure && (

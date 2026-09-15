@@ -27,12 +27,19 @@ import java.util.List;
  * @param appliedContext <b>这次是按什么处境算的</b>，含"哪些是系统自己推断的"。
  *                       前端必须把它显示出来——系统一旦开始替用户猜，
  *                       就得说清楚猜了什么，否则用户莫名其妙，也没法纠正
+ * @param locationLabel  这次用的坐标对应的人话地名，形如「杭州市西湖区北山街附近」。
+ *                       <b>可能是 null</b>——没定位、或没配置高德时就是这样。
+ *                       <p>它的作用是让定位<b>可被验证</b>：用户授权定位后拿到的
+ *                       只是一串经纬度，他没法看着它判断准不准；换成地名，
+ *                       偏了一眼就能看出来。这和 {@code appliedContext}
+ *                       是同一个原则——<b>系统替你做的判断，都要摊开给你看</b>
  */
 public record RecommendationResponse(
         Long sessionId,
         int batchNo,
         Instant generatedAt,
         List<RecommendedPlace> places,
-        AppliedContext appliedContext
+        AppliedContext appliedContext,
+        String locationLabel
 ) {
 }

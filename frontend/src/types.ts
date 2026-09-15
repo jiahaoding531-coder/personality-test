@@ -308,6 +308,16 @@ export interface RecommendationResponse {
   places: RecommendedPlace[]
   /** 这次按什么处境算的，含"哪些是系统推断的" */
   appliedContext: AppliedContext
+  /**
+   * 这次用的坐标对应的人话地名，形如「杭州市西湖区北山街附近」。
+   *
+   * ⚠️ 可能是 null——没定位、后端没配高德、或高德请求失败时都会这样。
+   * 这不是错误，是正常降级，所以判空渲染就行，别当异常处理。
+   *
+   * 它存在的意义是让定位**可被验证**：一串经纬度用户没法判断准不准，
+   * 换成地名，偏了一眼就能看出来。
+   */
+  locationLabel: string | null
 }
 
 /**

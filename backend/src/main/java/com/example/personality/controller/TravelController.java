@@ -1,5 +1,6 @@
 package com.example.personality.controller;
 
+import com.example.personality.domain.LocationInfo;
 import com.example.personality.dto.AnswersSavedResponse;
 import com.example.personality.dto.FeedbackRequest;
 import com.example.personality.dto.FeedbackResponse;
@@ -11,6 +12,7 @@ import com.example.personality.dto.TravelProfileResponse;
 import com.example.personality.entity.TestSession;
 import com.example.personality.security.AppUserPrincipal;
 import com.example.personality.security.SessionAccessGuard;
+import com.example.personality.service.AmbientService;
 import com.example.personality.service.RecommendationService;
 import com.example.personality.service.TestSessionService;
 import com.example.personality.service.TravelProfileService;
@@ -55,15 +57,18 @@ public class TravelController {
     private final TestSessionService testSessionService;
     private final TravelProfileService travelProfileService;
     private final RecommendationService recommendationService;
+    private final AmbientService ambientService;
     private final SessionAccessGuard accessGuard;
 
     public TravelController(TestSessionService testSessionService,
                             TravelProfileService travelProfileService,
                             RecommendationService recommendationService,
+                            AmbientService ambientService,
                             SessionAccessGuard accessGuard) {
         this.testSessionService = testSessionService;
         this.travelProfileService = travelProfileService;
         this.recommendationService = recommendationService;
+        this.ambientService = ambientService;
         this.accessGuard = accessGuard;
     }
 
@@ -144,6 +149,19 @@ public class TravelController {
      * GET 按 HTTP 语义必须是幂等、可缓存的，而"每次调用产生一批新数据"显然不满足。
      *
      * <p>请求体里的定位是必填的，理由见 {@link RecommendationRequest}。
+     *
+     * <h2>⚠️ 先取环境，再进事务</h2>
+     *
+     * <p>两行的顺序不能反，也不能合并进 service。{@code recommend} 上有
+     * {@code @Transactional}，整个方法期间占着数据库连接；而逆地理编码是
+     * 一次网络往返。把网络等待放进事务，十来个并发就能把连接池占满，
+     * 让所有接口一起排队超时。
+     *
+     * <p>所以在这里（事务外、控制器层）先把地名取好，再把结果当参数传进去。
+     * 完整理由见 {@link AmbientService} 的类注释。
+     *
+     * <p>取不到地名时 {@code ambientService} 返回空，这里是正常的 null，
+     * 不构成错误——{@code locationLabel} 就是 null，其余照常。
      */
     @PostMapping("/sessions/{sessionId}/recommendations")
     public RecommendationResponse recommend(
@@ -153,7 +171,14 @@ public class TravelController {
             @Valid @RequestBody RecommendationRequest request) {
 
         checkAccess(sessionId, sessionToken, principal);
-        return recommendationService.recommend(sessionId, request);
+
+        // 事务外：网络调用
+        LocationInfo location = ambientService
+                .resolveLocation(request.latitude(), request.longitude())
+                .orElse(null);
+
+        // 事务内：只碰本地数据库
+        return recommendationService.recommend(sessionId, request, location);
     }
 
     /**

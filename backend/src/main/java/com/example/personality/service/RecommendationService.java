@@ -1,5 +1,6 @@
 package com.example.personality.service;
 
+import com.example.personality.domain.LocationInfo;
 import com.example.personality.domain.PlaceCandidate;
 import com.example.personality.domain.RecommendationContext;
 import com.example.personality.domain.ScoredPlace;
@@ -53,9 +54,15 @@ import java.util.Set;
  *
  * <h2>事务边界</h2>
  *
- * <p>整个方法一个事务，没有拆开——因为全程只碰本地数据库，
- * 没有大模型调用那种"几秒钟的外部等待"（那种情况必须挪到事务外，
- * 否则并发一上来连接池立刻被占满，见 {@code AiReportService} 的教训）。
+ * <p>整个方法一个事务，没有拆开——因为它<b>全程只碰本地数据库</b>。
+ *
+ * <p>⚠️ 这条性质是<b>要主动维护</b>的，不是天然成立的。接入高德之后，
+ * 地名、天气这类需要网络等待的数据如果在这里现查，事务就会横跨一次
+ * 几百毫秒到几秒的网络往返，把数据库连接白白占住（池子只有 10 个），
+ * 并发一上来所有接口一起排队超时——{@code AiReportService} 已经吃过一次这个亏。
+ *
+ * <p>所以规矩是：<b>要外部数据，调用方先在事务外取好再传进来</b>（见 {@link AmbientService}）。
+ * 往这个方法里加任何 {@code RestClient} / HTTP 调用之前，先想清楚这一条。
  *
  * <h2>⚠️ 这里不写"重新推荐前先删掉旧的"</h2>
  *
@@ -119,11 +126,25 @@ public class RecommendationService {
      * 这就是"👎 之后下次推荐会变"的实现方式。修正每次实时算，
      * 问卷画像本身不动（理由见 {@link TravelPreferenceAdjuster}）。
      *
+     * <h2>⚠️ 这个方法里不许出现网络调用</h2>
+     *
+     * <p>整个方法是一个事务，全程占着数据库连接；而外部调用要等几百毫秒到几秒。
+     * 连接池只有 10 个连接，把网络等待放进事务，十来个并发就能把池子占满，
+     * 让所有接口一起排队超时。
+     *
+     * <p>所以需要外部数据（地名、天气）时，调用方要先在<b>事务外</b>
+     * 通过 {@link AmbientService} 取好，再当参数传进来。保持这个方法
+     * "只碰本地数据库"——这样它的耗时是确定的、可预测的。
+     *
+     * @param location 用户坐标对应的人话地名，由调用方在事务外查好。
+     *                 <b>可以为 null</b>（没定位、没配高德、或上游失败），
+     *                 这时响应里的 {@code locationLabel} 就是 null，其余一切照常
      * @throws com.example.personality.exception.ResourceNotFoundException 会话不存在，
      *         或还没提交（没画像就没法推荐）
      */
     @Transactional
-    public RecommendationResponse recommend(Long sessionId, RecommendationRequest request) {
+    public RecommendationResponse recommend(Long sessionId, RecommendationRequest request,
+                                            LocationInfo location) {
 
         // ① 用户是谁：读这次会话的旅行画像（没画像会抛 404）
         TravelProfile profile = travelProfileService.loadProfile(sessionId);
@@ -196,7 +217,10 @@ public class RecommendationService {
                 batchNo,
                 generatedAt(saved),
                 toPlaces(top, saved),
-                buildAppliedContext(context, inferred));
+                buildAppliedContext(context, inferred),
+                // 地名是调用方在事务外查好传进来的。取不到就是 null，
+                // 不在这里补救——补救意味着一次网络调用，而这里在事务里。
+                location == null ? null : blankToNull(location.label()));
     }
 
     /**
@@ -517,6 +541,17 @@ public class RecommendationService {
     /** 全天开放的地点（公园、街区）营业时间是 null，原样输出 null，前端显示成"全天"。 */
     private static String formatTime(LocalTime time) {
         return time == null ? null : time.format(TIME_FORMAT);
+    }
+
+    /**
+     * 空串统一成 null。
+     *
+     * <p>接口契约里"没有地名"只有<b>一种</b>表示法。留两种（null 和 ""）的话，
+     * 前端就得写 {@code {label && <p>{label}</p>}} 之外再加一层判空，
+     * 而漏写的那次会渲染出一个空白的"你在 附近"。
+     */
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     private static List<MatchReason> toReasons(List<ScoredPlace.MatchedDimension> matches) {
