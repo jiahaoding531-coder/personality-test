@@ -245,6 +245,29 @@ export interface RecommendedPlace {
   reasons: MatchReason[]
 }
 
+/** 一个状态 + 它的中文名（中文名由后端给，前端不用维护翻译表） */
+export interface StateLabel {
+  key: string
+  label: string
+}
+
+/**
+ * 这次推荐**实际用的处境**。
+ *
+ * 系统一旦开始替用户猜，就必须说清楚猜了什么——否则用户莫名其妙，
+ * 想纠正也不知道从哪下手。`inferredStates` 就是"哪些是我猜的"。
+ */
+export interface AppliedContext {
+  /** 服务端时间（"HH:mm:ss"） */
+  now: string
+  remainingMinutes: number
+  maxDistanceKm: number
+  maxTicketPrice: number | null
+  states: StateLabel[]
+  /** 其中哪些是系统自己推断的。用户没说过，所以最该给一键改 */
+  inferredStates: StateLabel[]
+}
+
 export interface RecommendationResponse {
   sessionId: number
   /** 这是该会话的第几批推荐。点 👍/👎 时要连它一起带上 */
@@ -252,6 +275,8 @@ export interface RecommendationResponse {
   generatedAt: string
   /** 可能是空数组——附近没有营业中的地点时，这是正常结果不是错误 */
   places: RecommendedPlace[]
+  /** 这次按什么处境算的，含"哪些是系统推断的" */
+  appliedContext: AppliedContext
 }
 
 /**
@@ -271,6 +296,13 @@ export interface RecommendationRequest {
   maxTicketPrice?: number
   /** 此刻的状态（累了 / 饿了 / 想散步），可以传多个 */
   states?: TravelState[]
+  /**
+   * 让系统自己推断处境，而不是等用户填。
+   *
+   * 为 true 时服务端会按当前时间推断（比如饭点 → 想吃饭），
+   * 并把推断结果回传在 `appliedContext.inferredStates` 里——猜了什么必须看得见。
+   */
+  autoInfer?: boolean
   /**
    * 是否排除这个会话里已经推荐过、且没被点过 👍 的地点。
    *

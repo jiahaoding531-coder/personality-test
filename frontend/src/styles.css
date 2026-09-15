@@ -952,6 +952,44 @@ table.data td.num {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- 「我按什么推的」 ---- */
+
+/* 一行说明，压在推荐列表上方。它是自动模式能成立的前提：
+   系统替用户猜了，就得摊开说清楚，否则用户莫名其妙。 */
+.context-banner {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--hover-wash);
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+}
+
+.context-banner b {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 「我猜的」小标签。必须和"用户自己说的"在视觉上区分开——
+   猜错的东西最该被一眼看到，也最该被一键改掉。 */
+.inferred-tag {
+  display: inline-block;
+  margin: 0 2px 0 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px dashed var(--series-1);
+  color: var(--series-1);
+  font-size: 11px;
+}
+
+/* 「改一下」的折叠开关：是个次要动作，用链接样式 */
+.manual-toggle {
+  display: block;
+  margin: 14px 0 0;
+  font-size: 13px;
+}
+
 /* ---- 场景快捷按钮 ---- */
 
 .field-label {
