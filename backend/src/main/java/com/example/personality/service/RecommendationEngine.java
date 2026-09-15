@@ -167,6 +167,31 @@ public class RecommendationEngine {
         return scored.size() > limit ? scored.subList(0, limit) : scored;
     }
 
+    /**
+     * 只算「这个地点在你在乎的维度上拿了多少分」，不做过滤也不排序。
+     *
+     * <h2>为什么单独开这个口子</h2>
+     *
+     * <p>生成 AI 推荐理由时，需要把"为什么合你口味"讲清楚——也就是
+     * {@link ScoredPlace.MatchedDimension} 那几个（"你很在乎自然风光，这里 95"）。
+     * 这个数据<br>
+     * ① 每次推荐时都算过一遍，但算完就丢了（因为没落库，只存了因子）；<br>
+     * ② 前端「为什么是它」面板里显示的正是它。
+     *
+     * <p>理由接口是<b>第二次请求</b>，需要用它，又不能重现整条推荐链路
+     * （那要用户坐标、当时的天气……全都已经不在了）。所以把这段纯计算开出来，
+     * 让它能独立被调用。
+     *
+     * <p><b>⚠️ 和 {@link #recommend} 用的是同一个 {@code computeInterest}</b>，
+     * 所以两边算出来的匹配度必然一致。这一条很重要：如果这里另写一套，
+     * 就会出现"AI 说的"和"面板上显示的"对不上——而那份面板正是这个产品
+     * 敢叫决策助手的底气，让它和 AI 的话打架得不偿失。
+     */
+    public List<ScoredPlace.MatchedDimension> matchDimensions(
+            Map<TravelDimension, Integer> preference, PlaceTraits traits) {
+        return computeInterest(preference, traits).topMatches();
+    }
+
     // ==========================================================
     // 内部实现
     // ==========================================================

@@ -250,4 +250,30 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
         mockMvc.perform(get("/api/travel/sessions/{id}/profile", aliceRef.id()).session(bobSession))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("没配置 AI 时，理由接口返回 501 —— 前端据此把 AI 入口藏起来")
+    void reasonsReturnNotImplementedWhenAiIsDisabled() throws Exception {
+        // ⚠️ 这个测试跑在**默认上下文**里（app.ai.enabled 没设 → 走桩实现），
+        // 所以它验证的是一条真实存在的路径，而不是"没配 key 会怎样"的猜测：
+        // 别人 clone 这个仓库、什么都不配直接跑，推荐功能完全正常，
+        // 只是没有 AI 那段话——而不是看到一个坏掉的功能或者一堆报错。
+        //
+        // （带假生成器的那些用例在 TravelReasonIntegrationTest 里。）
+        TestSessionRef ref = createTravelSession(null);
+        answerAllTravelQuestions(ref, 4, null);
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref))
+                .andExpect(status().isOk());
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/recommendations", ref.id()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("latitude", WEST_LAKE_LAT, "longitude", WEST_LAKE_LNG))), ref))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(withToken(
+                        post("/api/travel/sessions/{id}/recommendations/reasons", ref.id()).with(csrf()),
+                        ref))
+                // 501 而不是 404：接口存在，只是功能没启用。前端能据此区分
+                // "地址写错了"和"AI 没配"，并给出不同的提示
+                .andExpect(status().isNotImplemented());
+    }
 }

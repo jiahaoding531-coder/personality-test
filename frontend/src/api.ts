@@ -11,6 +11,7 @@ import type {
   SessionResultResponse,
   SessionSummary,
   TravelProfileResponse,
+  TravelReasonResponse,
   UserResponse,
 } from './types'
 
@@ -291,6 +292,25 @@ export const api = {
         },
         sessionToken,
       ),
+    ),
+
+  /**
+   * 生成这一批推荐的 AI 理由。
+   *
+   * ⚠️ 和推荐本身是**两个请求**，这是刻意的：推荐是本地算法算的（毫秒级），
+   * 理由要调大模型（几秒）。绑在一起的话，这个产品最核心的交互就得等 AI，
+   * 而且 AI 一慢或一挂，推荐本身也跟着不可用。
+   *
+   * ⚠️ 可能返回 **501**：那是"AI 没启用"（别人 clone 仓库不配 key 的情况），
+   * 不是错误。调用方据此把 AI 入口整个藏起来，而不是弹一个报错。
+   *
+   * @param regenerate 为 false 时，这批已经生成过就直接返回缓存，
+   *                   不会重复花钱。用户点「重新生成」时才传 true。
+   */
+  getTravelReasons: (sessionId: number, regenerate: boolean, sessionToken?: string) =>
+    request<TravelReasonResponse>(
+      `/api/travel/sessions/${sessionId}/recommendations/reasons?regenerate=${regenerate}`,
+      withSessionToken({ method: 'POST' }, sessionToken),
     ),
 
   /**

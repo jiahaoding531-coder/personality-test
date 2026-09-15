@@ -983,6 +983,75 @@ table.data td.num {
   font-size: 11px;
 }
 
+/* ============================================================
+   AI 推荐理由
+   ============================================================ */
+
+/* 模式开关那一行。放在 Top N 标题下面，因为它决定"下面这些卡片里
+   会不会多出一段话"。 */
+.ai-reason-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ai-reason-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 自动/手动二选一。做成小方块而不是胶囊，和旁边的链接按钮区分开——
+   它是"设置"，不是"操作"。 */
+.seg {
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.seg.chosen {
+  border-color: var(--series-1);
+  color: var(--series-1);
+  font-weight: 600;
+}
+
+.ai-reason-status {
+  color: var(--text-secondary);
+}
+
+.ai-reason-status.error {
+  color: var(--series-1);
+}
+
+/* AI 那句话。放在乘法式之上，用左侧竖线而不是背景色——
+   背景色会和卡片里的其它高亮区块抢注意力，
+   而这句话应该读起来像"朋友插了句话"，不是一块需要处理的提示。 */
+.why-ai {
+  margin: 0 0 12px;
+  padding-left: 10px;
+  border-left: 2px solid var(--series-1);
+  line-height: 1.7;
+}
+
+.why-ai-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 11px;
+  vertical-align: 1px;
+}
+
 /* 天气。用实线边框而不是 `.inferred-tag` 的虚线——
    虚线在这个界面里的含义是"这是猜的，可以否定"，而天气是查来的事实，
    用户没法否定它。视觉上不该混。 */

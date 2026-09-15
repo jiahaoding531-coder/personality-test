@@ -72,6 +72,35 @@ public class Recommendation {
     @Column(name = "score", nullable = false, precision = 4, scale = 3)
     private BigDecimal score;
 
+    // ==========================================================
+    // 五个打分因子（V11 新增）
+    // ==========================================================
+    // 它们和 score 的关系是 score = 五者相乘。
+    //
+    // 【为什么存下来】
+    // 生成 AI 推荐理由时，需要**重建当初是怎么算的**——而理由是另一次请求，
+    // 那时内存里早就什么都没有了。只有一个总分说明不了任何事：
+    // 同样是 63%，可能是"兴趣很合但有点远"，也可能是"兴趣一般但就在楼下"。
+    //
+    // 【⚠️ 为什么可空】
+    // V11 之前的推荐记录没有这些值（不是"算出来是 0"，是**从来没算过**）。
+    // 留 NULL 表示"未知"，语义准确；硬填默认值等于编造历史。
+
+    @Column(name = "interest_factor", precision = 4, scale = 3)
+    private BigDecimal interestFactor;
+
+    @Column(name = "distance_factor", precision = 4, scale = 3)
+    private BigDecimal distanceFactor;
+
+    @Column(name = "quality_factor", precision = 4, scale = 3)
+    private BigDecimal qualityFactor;
+
+    @Column(name = "state_factor", precision = 4, scale = 3)
+    private BigDecimal stateFactor;
+
+    @Column(name = "weather_factor", precision = 4, scale = 3)
+    private BigDecimal weatherFactor;
+
     /** AI 或规则生成的推荐理由。可空。 */
     @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
@@ -83,19 +112,41 @@ public class Recommendation {
     }
 
     /**
+     * 五个打分因子，打包传递。
+     *
+     * <p>为什么不直接给 {@link #of} 加五个 {@code BigDecimal} 参数：
+     * 它们类型完全一样、含义却完全不同，<b>顺序传错了编译器一个字都不会说</b>，
+     * 而结果是一份看起来正常、实际全错的因子记录——这种数据错误事后
+     * 几乎不可能被发现。打包成一个有名字的对象，调用点就必须写明
+     * "哪个是哪个"。
+     *
+     * <p>（同样的理由见 {@code RecommendationContext} 里关于经纬度传反的那段注释。）
+     */
+    public record Factors(BigDecimal interest, BigDecimal distance, BigDecimal quality,
+                          BigDecimal state, BigDecimal weather) {
+    }
+
+    /**
      * 造一条推荐记录。
      *
      * @param batchNo 第几批（从 1 开始）。同一次推荐请求产出的 Top 3 用同一个值
      * @param score   引擎算出来的分。<b>必须 ≤ 1</b>，数据库上有约束卡着
+     * @param factors 五个因子。<b>必须和 score 满足"相乘等于 score"</b>——
+     *                这条不变量数据库表达不了，靠引擎的单元测试守着
      */
     public static Recommendation of(Long sessionId, int batchNo, int rankNo,
-                                    Long placeId, BigDecimal score) {
+                                    Long placeId, BigDecimal score, Factors factors) {
         Recommendation r = new Recommendation();
         r.sessionId = sessionId;
         r.batchNo = batchNo;
         r.rankNo = rankNo;
         r.placeId = placeId;
         r.score = score;
+        r.interestFactor = factors.interest();
+        r.distanceFactor = factors.distance();
+        r.qualityFactor = factors.quality();
+        r.stateFactor = factors.state();
+        r.weatherFactor = factors.weather();
         return r;
     }
 
@@ -137,6 +188,12 @@ public class Recommendation {
 
     public String getReason() {
         return reason;
+    }
+
+    /** 五个因子。V11 之前的历史记录全是 null。 */
+    public Factors getFactors() {
+        return new Factors(interestFactor, distanceFactor, qualityFactor,
+                stateFactor, weatherFactor);
     }
 
     public Instant getCreatedAt() {

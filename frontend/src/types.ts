@@ -323,6 +323,39 @@ export interface AppliedContext {
   weather: WeatherLabel | null
 }
 
+/**
+ * 一批推荐的人话理由。
+ *
+ * ⚠️ 和推荐本身来自**两个接口**：推荐先秒出，理由随后补上。
+ */
+export interface TravelReasonResponse {
+  sessionId: number
+  /**
+   * 这份理由是给**哪一批**的。
+   *
+   * ⚠️ 前端必须拿它和当前展示的批次比对后再采用——连点「换一批」会并发
+   * 好几个请求，先发的可能后回来，不比对就会把旧批次的理由贴到新列表上。
+   */
+  batchNo: number
+  /** 哪个模型写的，比如 "deepseek:deepseek-chat" */
+  provider: string
+  /** true = 直接用了之前生成好的，这次没调大模型 */
+  cached: boolean
+  /** 可能**比地点数少**——模型偶尔会漏掉某个名次 */
+  reasons: PlaceReason[]
+}
+
+export interface PlaceReason {
+  /**
+   * 对应哪条推荐记录。前端按它把理由贴到对应的卡片上。
+   *
+   * 用 id 而不是名次：名次只在"一批之内"有意义，换个批次就指向别的地方了。
+   */
+  recommendationId: number
+  rank: number
+  reason: string
+}
+
 export interface WeatherLabel {
   /** 原始天气描述，比如「多云」「小雨」。比类别更具体，直接显示给用户看 */
   condition: string

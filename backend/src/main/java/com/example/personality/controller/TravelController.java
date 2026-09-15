@@ -9,6 +9,7 @@ import com.example.personality.dto.RecommendationResponse;
 import com.example.personality.dto.SessionResponse;
 import com.example.personality.dto.SubmitAnswersRequest;
 import com.example.personality.dto.TravelProfileResponse;
+import com.example.personality.dto.TravelReasonResponse;
 import com.example.personality.entity.TestSession;
 import com.example.personality.security.AppUserPrincipal;
 import com.example.personality.security.SessionAccessGuard;
@@ -16,6 +17,7 @@ import com.example.personality.service.AmbientService;
 import com.example.personality.service.RecommendationService;
 import com.example.personality.service.TestSessionService;
 import com.example.personality.service.TravelProfileService;
+import com.example.personality.service.TravelReasonService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -58,17 +61,20 @@ public class TravelController {
     private final TravelProfileService travelProfileService;
     private final RecommendationService recommendationService;
     private final AmbientService ambientService;
+    private final TravelReasonService travelReasonService;
     private final SessionAccessGuard accessGuard;
 
     public TravelController(TestSessionService testSessionService,
                             TravelProfileService travelProfileService,
                             RecommendationService recommendationService,
                             AmbientService ambientService,
+                            TravelReasonService travelReasonService,
                             SessionAccessGuard accessGuard) {
         this.testSessionService = testSessionService;
         this.travelProfileService = travelProfileService;
         this.recommendationService = recommendationService;
         this.ambientService = ambientService;
+        this.travelReasonService = travelReasonService;
         this.accessGuard = accessGuard;
     }
 
@@ -204,5 +210,38 @@ public class TravelController {
 
         checkAccess(sessionId, sessionToken, principal);
         return recommendationService.submitFeedback(sessionId, recommendationId, request.reaction());
+    }
+
+    /**
+     * {@code POST /api/travel/sessions/{id}/recommendations/reasons} —— 生成 AI 推荐理由。
+     *
+     * <p>作用于该会话<b>最新的一批</b>推荐，为其中每个地点写一句话。
+     *
+     * <h2>为什么是独立接口，不塞进推荐请求里</h2>
+     *
+     * <p>推荐是本地算法算的（毫秒级），理由要调大模型（几秒）。绑在一起的话，
+     * "拿推荐"这个产品最核心的交互就得等 AI，而且 AI 一慢或一挂，
+     * 推荐本身也跟着不可用。分开之后，前端可以先把列表秒出来，理由到了再填进去。
+     *
+     * <h2>⚠️ 这个端点的访问校验尤其不能省</h2>
+     *
+     * <p><b>AI 调用是花钱的。</b>少了 {@code checkAccess}，任何人都能遍历
+     * sessionId 把别人的理由跑一遍，账单算在会话主人头上——
+     * 人格侧 {@code AiReportController} 的注释专门写了这一条，是同一个道理。
+     *
+     * @param regenerate 为 false 时，这批已经都有理由了就直接返回缓存，
+     *                   <b>不调用大模型</b>。默认关掉是刻意的：用户误点两次
+     *                   不该白花两次 token，而且两次文本不一样反而让人困惑。
+     *                   <p>前端「重新生成」按钮带上 {@code ?regenerate=true} 即可。
+     */
+    @PostMapping("/sessions/{sessionId}/recommendations/reasons")
+    public TravelReasonResponse generateReasons(
+            @PathVariable Long sessionId,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @AuthenticationPrincipal AppUserPrincipal principal,
+            @RequestParam(defaultValue = "false") boolean regenerate) {
+
+        checkAccess(sessionId, sessionToken, principal);
+        return travelReasonService.generate(sessionId, regenerate);
     }
 }

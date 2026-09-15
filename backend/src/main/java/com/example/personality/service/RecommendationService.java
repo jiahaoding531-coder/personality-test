@@ -1,5 +1,6 @@
 package com.example.personality.service;
 
+import com.example.personality.ai.TravelReasonInput;
 import com.example.personality.domain.AmbientContext;
 import com.example.personality.domain.PlaceCandidate;
 import com.example.personality.domain.RecommendationContext;
@@ -17,11 +18,13 @@ import com.example.personality.dto.ScoreBreakdown;
 import com.example.personality.entity.Place;
 import com.example.personality.entity.QuestionScale;
 import com.example.personality.entity.Recommendation;
+import com.example.personality.entity.RecommendationBatch;
 import com.example.personality.entity.RecommendationFeedback;
 import com.example.personality.entity.TestSession;
 import com.example.personality.entity.TravelProfile;
 import com.example.personality.exception.ResourceNotFoundException;
 import com.example.personality.repository.PlaceRepository;
+import com.example.personality.repository.RecommendationBatchRepository;
 import com.example.personality.repository.RecommendationFeedbackRepository;
 import com.example.personality.repository.RecommendationRepository;
 import com.example.personality.repository.TestSessionRepository;
@@ -93,6 +96,7 @@ public class RecommendationService {
     private final TravelProfileService travelProfileService;
     private final PlaceRepository placeRepository;
     private final RecommendationRepository recommendationRepository;
+    private final RecommendationBatchRepository batchRepository;
     private final RecommendationFeedbackRepository feedbackRepository;
     private final TestSessionRepository sessionRepository;
     private final Clock clock;
@@ -103,6 +107,7 @@ public class RecommendationService {
     public RecommendationService(TravelProfileService travelProfileService,
                                  PlaceRepository placeRepository,
                                  RecommendationRepository recommendationRepository,
+                                 RecommendationBatchRepository batchRepository,
                                  RecommendationFeedbackRepository feedbackRepository,
                                  TestSessionRepository sessionRepository,
                                  Clock clock,
@@ -112,6 +117,7 @@ public class RecommendationService {
         this.travelProfileService = travelProfileService;
         this.placeRepository = placeRepository;
         this.recommendationRepository = recommendationRepository;
+        this.batchRepository = batchRepository;
         this.feedbackRepository = feedbackRepository;
         this.sessionRepository = sessionRepository;
         this.clock = clock;
@@ -216,6 +222,26 @@ public class RecommendationService {
         //    以及"接受率是否随使用提升"这个核心指标需要历史数据（计划书第十九节）
         int batchNo = recommendationRepository.nextBatchNo(sessionId);
         List<Recommendation> saved = recommendationRepository.saveAll(toEntities(sessionId, batchNo, top));
+
+        // ⑨ 记下这批推荐当时的处境（V11）。
+        //
+        // 生成 AI 理由时是**另一次请求**——推荐要秒回，AI 要几秒，不能绑在一起。
+        // 到那时内存里早就什么都没有了，只能从数据库重建"当初是怎么算的"。
+        // 不存的话，AI 拿到的就只有一个孤零零的百分数，那它只能编。
+        //
+        // ⚠️ 这里存的是**最终生效的**状态（用户说的 + 系统推断的），
+        // 并把"哪些是推断的"单独记一份——AI 转述时不能把猜的说成用户说的。
+        batchRepository.save(RecommendationBatch.of(
+                sessionId, batchNo,
+                ambient.location() == null ? null : blankToNull(ambient.location().label()),
+                context.now(),
+                context.remainingMinutes(),
+                BigDecimal.valueOf(context.maxDistanceKm()),
+                context.maxTicketPrice(),
+                context.states(),
+                inferred,
+                context.weather() == null ? null : context.weather().condition(),
+                context.weather() == null ? null : context.weather().temperature()));
 
         return new RecommendationResponse(
                 sessionId,
@@ -345,6 +371,158 @@ public class RecommendationService {
         }
 
         return new FeedbackResponse(recommendationId, reaction.name(), adjustments);
+    }
+
+    // ==========================================================
+    // 推荐理由：重建"这批是怎么算的" / 回填生成结果
+    // ==========================================================
+    //
+    // 这两个方法放在这里的理由：生成 AI 理由时需要的"依据"，绝大部分
+    // 是**这个类自己在算推荐时用过的东西**——有效偏好（叠加了反馈修正）、
+    // 地点属性、打分因子。放到别的类里去重建，就得把 loadHistory /
+    // resolveScopeSessionIds 那几十行抄一遍，而抄出来的那份迟早会和
+    // 原版不一致，于是"AI 说的"和"面板上显示的"就开始打架。
+    //
+    // ⚠️ 注意它们都是**独立的小事务**，不是被 recommend() 调用的。
+    // 生成理由走的是和 AiReportService 一样的三段式：
+    //     ① 这里读（短事务） → ② 调大模型（事务外） → ③ 这里写（短事务）
+    // 大模型调用绝不能进事务，理由见本类上方「事务边界」那一节。
+
+    /**
+     * 重建一批推荐的全部依据，供生成 AI 理由使用。
+     *
+     * <p>作用于该会话<b>最新的一批</b>——前端展示的就是那一批。
+     *
+     * @throws ResourceNotFoundException 这个会话还没推荐过
+     */
+    @Transactional(readOnly = true)
+    public ReasonContext buildReasonContext(Long sessionId) {
+        RecommendationBatch batch = batchRepository
+                .findFirstBySessionIdOrderByBatchNoDesc(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "会话 " + sessionId + " 还没有推荐记录，无法生成推荐理由"));
+
+        List<Recommendation> rows = recommendationRepository
+                .findBySessionIdAndBatchNoOrderByRankNoAsc(sessionId, batch.getBatchNo());
+
+        Map<Long, Place> placesById = new LinkedHashMap<>();
+        for (Place place : placeRepository.findAll()) {
+            placesById.put(place.getId(), place);
+        }
+
+        // "为什么合你的口味"要用**有效偏好**来算——也就是叠加过反馈修正的那份。
+        // 用问卷原始画像的话，用户点过 👎 之后 AI 的解释就会和面板上显示的
+        // 对不上（面板用的也是有效偏好）。保持一致比"用哪一份"更重要。
+        TravelProfile profile = travelProfileService.loadProfile(sessionId);
+        Map<TravelDimension, Integer> questionnaire = profile.toPreferenceMap();
+        SessionHistory history = loadHistory(sessionId,
+                resolveScopeSessionIds(sessionId, userIdOf(sessionId)), placesById, questionnaire);
+        Map<TravelDimension, Integer> effective =
+                adjuster.effectivePreference(questionnaire, history.signals());
+
+        List<TravelReasonInput.ExplainedPlace> explained = new ArrayList<>(rows.size());
+        Map<Integer, String> existingReasons = new LinkedHashMap<>();
+        for (Recommendation row : rows) {
+            if (row.getReason() != null && !row.getReason().isBlank()) {
+                existingReasons.put(row.getRankNo(), row.getReason());
+            }
+            Place place = placesById.get(row.getPlaceId());
+            if (place == null) {
+                continue;   // 地点被删了之类的极端情况，跳过这一条
+            }
+            explained.add(toExplained(row, place, effective));
+        }
+
+        return new ReasonContext(batch.getBatchNo(), buildReasonInput(batch, explained), existingReasons);
+    }
+
+    private TravelReasonInput.ExplainedPlace toExplained(Recommendation row, Place place,
+                                                         Map<TravelDimension, Integer> effective) {
+        Recommendation.Factors f = row.getFactors();
+        return new TravelReasonInput.ExplainedPlace(
+                row.getRankNo(),
+                place.getName(),
+                place.getCategory(),
+                place.getDescription(),
+                (int) Math.round(row.getScore().doubleValue() * 100),
+                new TravelReasonInput.Factors(
+                        ratio(f.interest()), ratio(f.distance()), ratio(f.quality()),
+                        ratio(f.state()), ratio(f.weather())),
+                place.getTicketPrice(),
+                place.getSuggestedMinutes(),
+                formatTime(place.getOpenFrom()),
+                formatTime(place.getOpenTo()),
+                // 和前端「为什么是它」面板走的是同一个算法，所以两处必然一致
+                engine.matchDimensions(effective, place.toCandidate().traits()));
+    }
+
+    /**
+     * 从批次处境重建 {@link TravelReasonInput} 的处境部分。
+     *
+     * <p>⚠️ 天气要<b>成对</b>判断：condition 和 temperature 有一个是 null，
+     * 就当作没有天气。只判其中一个的话，另一个 null 会在
+     * {@code doubleValue()} 上抛空指针——而这是个"外部数据源没配好"
+     * 就会走到的正常分支，不该炸。
+     */
+    private static TravelReasonInput buildReasonInput(RecommendationBatch batch,
+                                                      List<TravelReasonInput.ExplainedPlace> places) {
+        Weather weather = null;
+        if (batch.getWeatherCondition() != null && batch.getWeatherTemperature() != null) {
+            weather = Weather.of(batch.getWeatherCondition(),
+                    batch.getWeatherTemperature().doubleValue());
+        }
+
+        return new TravelReasonInput(
+                batch.getLocationLabel(),
+                batch.getContextTime(),
+                batch.getRemainingMinutes(),
+                batch.getMaxDistanceKm().doubleValue(),
+                batch.getMaxTicketPrice(),
+                batch.stateSet(),
+                batch.inferredStateSet(),
+                weather,
+                places);
+    }
+
+    /** {@code BigDecimal} 转回比例，调用方保证非 null（都是刚存下去的）。 */
+    private static double ratio(BigDecimal value) {
+        return value == null ? 1.0 : value.doubleValue();
+    }
+
+    /**
+     * 把生成好的理由写回推荐记录。
+     *
+     * <p>只改 {@code reason} 列，<b>不新开批次</b>——理由是对<b>已有这一批</b>的注解，
+     * 不是一次新的推荐。新开批次会让前端展示的那批和刚生成理由的那批对不上。
+     *
+     * @param reasonByRank 名次 → 理由。只写这里有的名次，
+     *                     模型少给了几条也不影响其余几条落库
+     */
+    @Transactional
+    public void attachReasons(Long sessionId, int batchNo, Map<Integer, String> reasonByRank) {
+        List<Recommendation> rows = recommendationRepository
+                .findBySessionIdAndBatchNoOrderByRankNoAsc(sessionId, batchNo);
+
+        List<Recommendation> changed = new ArrayList<>(rows.size());
+        for (Recommendation row : rows) {
+            String reason = reasonByRank.get(row.getRankNo());
+            if (reason != null && !reason.isBlank()) {
+                row.attachReason(reason);
+                changed.add(row);
+            }
+        }
+        recommendationRepository.saveAll(changed);
+    }
+
+    /**
+     * 生成理由所需的一切：批次号、AI 的输入、以及这批里<b>已经有理由</b>的那些。
+     *
+     * @param batchNo          最新一批的批次号，回填和响应都要用
+     * @param input            交给大模型的事实
+     * @param existingReasons  名次 → 已有理由。用来判断能不能直接吃缓存
+     */
+    public record ReasonContext(int batchNo, TravelReasonInput input,
+                                Map<Integer, String> existingReasons) {
     }
 
     // ==========================================================
@@ -486,7 +664,13 @@ public class RecommendationService {
                     batchNo,
                     i + 1,                       // rank 从 1 开始
                     scored.place().id(),
-                    toColumnScore(scored.score())));
+                    toColumnRatio(scored.score()),
+                    new Recommendation.Factors(
+                            toColumnRatio(scored.interestScore()),
+                            toColumnRatio(scored.distanceFactor()),
+                            toColumnRatio(scored.qualityFactor()),
+                            toColumnRatio(scored.stateFactor()),
+                            toColumnRatio(scored.weatherFactor()))));
         }
         return rows;
     }
@@ -502,12 +686,16 @@ public class RecommendationService {
      * 后者会把浮点误差原样展开（0.1 变成 0.1000000000000000055511151231257827），
      * 前者走的是 {@code Double.toString}，得到的是人能预期的那串数字。
      *
-     * <p>⚠️ 引擎保证了 score ≤ 1（三个因子相乘，每个都 ≤ 1），
+     * <p>⚠️ 引擎保证了 score ≤ 1（五个因子相乘，每个都 ≤ 1），
      * 而数据库上有 {@code CHECK (score BETWEEN 0 AND 1)} 卡着。
      * 改打分公式时务必保持这个不变量。
+     *
+     * <p>五个因子用的是同一个方法——它们的列定义和 score 一模一样
+     * （都是 {@code NUMERIC(4,3)}），而且都表示"0~1 的比例"。
+     * 起名 {@code Ratio} 而不是 {@code Score}，是因为它两个都转。
      */
-    private static BigDecimal toColumnScore(double score) {
-        return BigDecimal.valueOf(score).setScale(3, RoundingMode.HALF_UP);
+    private static BigDecimal toColumnRatio(double ratio) {
+        return BigDecimal.valueOf(ratio).setScale(3, RoundingMode.HALF_UP);
     }
 
     /**

@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 
-import { api } from '../api'
+import { ApiError, api } from '../api'
 import { BarChart } from '../components/BarChart'
 import type {
   AppliedContext,
@@ -37,6 +37,53 @@ import type {
 /** 演示数据的中心点，与后端 V7 种子里西湖的坐标一致。 */
 const DEMO_LAT = '30.2420'
 const DEMO_LNG = '120.1400'
+
+// ---------------------------------------------------------------
+// AI 理由的生成方式
+// ---------------------------------------------------------------
+
+/**
+ * `auto` = 列表出来就自动请求；`manual` = 用户点了才请求。
+ *
+ * 两种模式打的是**同一个接口、同一份缓存**，所以来回切换不会重复花钱。
+ * 区别只是"什么时候花"——自动省一次点击，手动省 token。
+ */
+type ReasonMode = 'auto' | 'manual'
+
+const REASON_MODE_KEY = 'travelmind.reasonMode'
+
+function loadReasonMode(): ReasonMode {
+  try {
+    // 只有明确存过 'manual' 才算手动。其它任何情况（没存过、存了脏值、
+    // localStorage 不可用）都退回自动——它是更省心的那个默认值。
+    return localStorage.getItem(REASON_MODE_KEY) === 'manual' ? 'manual' : 'auto'
+  } catch {
+    // ⚠️ 隐私模式 / 禁用 Cookie 时 localStorage 会直接抛异常。
+    // 一个偏好设置读不到，不该让整个结果页崩掉。
+    return 'auto'
+  }
+}
+
+function saveReasonMode(mode: ReasonMode) {
+  try {
+    localStorage.setItem(REASON_MODE_KEY, mode)
+  } catch {
+    // 存不下就算了，只影响"下次进来还记不记得"，不影响这次使用
+  }
+}
+
+/** 交给 `RecommendationList` 的 AI 理由状态。打包传免得加七个 props。 */
+interface AiReasonState {
+  /** recommendationId → 那句话 */
+  texts: Record<number, string>
+  mode: ReasonMode
+  loading: boolean
+  error: string | null
+  /** AI 没启用（后端返回 501）。这时把入口整个藏起来 */
+  unavailable: boolean
+  onModeChange: (mode: ReasonMode) => void
+  onRequest: () => void
+}
 
 /**
  * 系统"没把握"的判据（前端算）。
@@ -100,6 +147,26 @@ export function TravelResultScreen({
 
   const [myFeedback, setMyFeedback] = useState<Record<number, Reaction>>({})
   const [lastAdjustments, setLastAdjustments] = useState<DimensionAdjustment[] | null>(null)
+
+  // ---- AI 理由 ----
+  const [reasonTexts, setReasonTexts] = useState<Record<number, string>>({})
+  const [reasonMode, setReasonMode] = useState<ReasonMode>(loadReasonMode)
+  const [reasonLoading, setReasonLoading] = useState(false)
+  const [reasonError, setReasonError] = useState<string | null>(null)
+  /** 后端说"AI 没启用"（501）。置位后不再重试，入口也藏起来 */
+  const [aiUnavailable, setAiUnavailable] = useState(false)
+
+  /**
+   * 当前展示的是哪一批推荐。
+   *
+   * ⚠️ 它是**丢弃过期响应用的凭据**，不是给渲染用的——所以放 ref 不放 state。
+   * 连点「换一批」会并发好几个理由请求，先发的完全可能后回来；
+   * 不看一眼"现在已经是第几批了"就把结果 setState 进去，
+   * 旧批次的理由会贴到新列表上，而且看不出是错的（都是通顺的句子）。
+   */
+  const currentBatch = useRef<number | null>(null)
+  /** 已经为哪一批发起过自动请求，避免 effect 重复触发 */
+  const reasonRequestedFor = useRef<number | null>(null)
 
   const sessionId = profile.sessionId
 
@@ -173,6 +240,13 @@ export function TravelResultScreen({
         setRec({ kind: 'done', data })
         setMyFeedback({})
         setLastAdjustments(null)
+
+        // 新的一批：旧批次的理由必须清掉，否则会挂在新卡片上。
+        // ⚠️ 先更新 currentBatch —— 在途的理由请求回来时会拿它做校验。
+        currentBatch.current = data.batchNo
+        reasonRequestedFor.current = null
+        setReasonTexts({})
+        setReasonError(null)
       } catch (e: unknown) {
         setRec({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
       } finally {
@@ -181,6 +255,73 @@ export function TravelResultScreen({
     },
     [form, sessionId, sessionToken],
   )
+
+  /**
+   * 拉这一批的 AI 理由。
+   *
+   * @param regenerate 为 true 时强制重新生成（会真的再花一次 token）
+   */
+  const loadReasons = useCallback(
+    async (batchNo: number, regenerate = false) => {
+      setReasonLoading(true)
+      setReasonError(null)
+      try {
+        const res = await api.getTravelReasons(sessionId, regenerate, sessionToken)
+
+        // ⚠️ 两道校验，缺一不可。见 currentBatch 的注释。
+        //
+        // ① 后端给的是不是我们要的那批？接口返回的永远是"最新一批"，
+        //    如果在途期间又生成了新批次，回来的就不是当初问的那一批。
+        // ② 我们要的那批还是当前展示的吗？用户可能已经点了「换一批」，
+        //    旧批次的理由贴到新列表上完全看不出错——句子都是通顺的。
+        if (res.batchNo !== batchNo || batchNo !== currentBatch.current) {
+          return
+        }
+
+        const texts: Record<number, string> = {}
+        for (const item of res.reasons) {
+          texts[item.recommendationId] = item.reason
+        }
+        setReasonTexts(texts)
+      } catch (e: unknown) {
+        // ⚠️ 501 不是错误，是"这个部署没启用 AI"。
+        // 别人 clone 仓库不配 key 就是这种情况——功能少一块，
+        // 但页面该完完整整、安安静静，而不是弹一个红色的报错。
+        if (e instanceof ApiError && e.status === 501) {
+          setAiUnavailable(true)
+          return
+        }
+        setReasonError(e instanceof Error ? e.message : String(e))
+      } finally {
+        setReasonLoading(false)
+      }
+    },
+    [sessionId, sessionToken],
+  )
+
+  /**
+   * 自动模式：列表一出来就去要理由。
+   *
+   * ⚠️ 用 `reasonRequestedFor` 做守卫，而不是把 state 放进依赖里。
+   * 后者会形成"请求 → setState → effect 再跑 → 再请求"的循环，
+   * 而这种 bug 在开发时表现为"怎么一直在请求"，上线后表现为账单。
+   */
+  useEffect(() => {
+    if (rec.kind !== 'done') return
+    if (reasonMode !== 'auto') return
+    if (aiUnavailable) return
+
+    const batchNo = rec.data.batchNo
+    if (reasonRequestedFor.current === batchNo) return
+
+    reasonRequestedFor.current = batchNo
+    void loadReasons(batchNo)
+  }, [rec, reasonMode, aiUnavailable, loadReasons])
+
+  const changeReasonMode = useCallback((mode: ReasonMode) => {
+    setReasonMode(mode)
+    saveReasonMode(mode)
+  }, [])
 
   /**
    * 自动模式：拿定位 → 直接推荐。
@@ -375,6 +516,17 @@ export function TravelResultScreen({
             void run(patch)
           }}
           onPickScenario={applyScenario}
+          aiReason={{
+            texts: reasonTexts,
+            mode: reasonMode,
+            loading: reasonLoading,
+            error: reasonError,
+            unavailable: aiUnavailable,
+            onModeChange: changeReasonMode,
+            // 「重新生成」：regenerate=true 会真的再花一次 token，
+            // 所以这个按钮只在手动模式下出现（见 AiReasonBar）
+            onRequest: () => void loadReasons(rec.data.batchNo, true),
+          }}
         />
       )}
 
@@ -436,6 +588,7 @@ function RecommendationList({
   onRefresh,
   onCorrect,
   onPickScenario,
+  aiReason,
 }: {
   data: RecommendationResponse
   myFeedback: Record<number, Reaction>
@@ -446,6 +599,7 @@ function RecommendationList({
   onRefresh: () => void
   onCorrect: (patch: Partial<ContextForm>) => void
   onPickScenario: (scenario: Scenario) => void
+  aiReason: AiReasonState
 }) {
   const { appliedContext } = data
   const topScore = data.places[0]?.scorePercent ?? 0
@@ -510,6 +664,8 @@ function RecommendationList({
             <span className="batch-tag">第 {data.batchNo} 批</span>
           </h2>
 
+          <AiReasonBar state={aiReason} />
+
           {data.places.map((place) => (
             <PlaceCard
               key={place.recommendationId}
@@ -521,6 +677,7 @@ function RecommendationList({
               showDistance={place.distanceKm !== null}
               showState={appliedContext.states.length > 0}
               showWeather={appliedContext.weather !== null}
+              reason={aiReason.texts[place.recommendationId]}
             />
           ))}
         </>
@@ -617,6 +774,68 @@ function ContextBanner({
 }
 
 /**
+ * 「AI 解读」的模式开关 + 状态提示。
+ *
+ * <p>自动 / 手动两种模式打的是**同一个接口、同一份缓存**，所以来回切换
+ * 不会重复花钱，区别只是"什么时候花"：自动省一次点击，手动省 token。
+ *
+ * <p>⚠️ <b>AI 没启用时整条不渲染</b>（后端返回 501）。别人 clone 仓库、
+ * 不配 key 直接跑，结果页应该和没有这个功能时一模一样——
+ * 而不是出现一个灰掉的按钮或者一行红字，让人以为哪里坏了。
+ *
+ * <p>（也是出于同样的考虑，这里的模式开关<b>没有沿用虚线标签</b>的样式：
+ * 那个样式在这个界面里的含义是"这是系统猜的、可以否定"，
+ * 而模式选择是用户自己的设置，不是系统的判断。）
+ */
+function AiReasonBar({ state }: { state: AiReasonState }) {
+  if (state.unavailable) return null
+
+  const hasTexts = Object.keys(state.texts).length > 0
+  const showRequest = !state.loading && !state.error && (state.mode === 'manual' || hasTexts)
+
+  return (
+    <div className="ai-reason-bar">
+      <span className="ai-reason-mode">
+        AI 解读
+        <button
+          className={state.mode === 'auto' ? 'seg chosen' : 'seg'}
+          type="button"
+          title="列表出来就自动生成，不用你点"
+          onClick={() => state.onModeChange('auto')}
+        >
+          自动
+        </button>
+        <button
+          className={state.mode === 'manual' ? 'seg chosen' : 'seg'}
+          type="button"
+          title="你想看的时候再生成，省一点调用额度"
+          onClick={() => state.onModeChange('manual')}
+        >
+          手动
+        </button>
+      </span>
+
+      {state.loading && <span className="ai-reason-status">正在读你的处境…</span>}
+
+      {!state.loading && state.error && (
+        <>
+          <span className="ai-reason-status error">没能生成：{state.error}</span>
+          <button className="link-btn" type="button" onClick={state.onRequest}>
+            重试
+          </button>
+        </>
+      )}
+
+      {showRequest && (
+        <button className="link-btn" type="button" onClick={state.onRequest}>
+          {hasTexts ? '重新生成' : '让 AI 说说为什么'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/**
  * 「为什么是它」——把打分因子摊开给用户看。
  *
  * <p>默认折叠着：不想让每张卡片都堆满数字。但它是这个产品敢说
@@ -644,11 +863,14 @@ function WhyPanel({
   showDistance,
   showState,
   showWeather,
+  reason,
 }: {
   place: RecommendedPlace
   showDistance: boolean
   showState: boolean
   showWeather: boolean
+  /** AI 写的那句人话。没生成、或没启用 AI 时是 undefined */
+  reason?: string
 }) {
   const [open, setOpen] = useState(false)
   const b = place.scoreBreakdown
@@ -667,11 +889,30 @@ function WhyPanel({
   return (
     <div className="why">
       <button className="link-btn why-toggle" type="button" onClick={() => setOpen((v) => !v)}>
-        {open ? '收起' : '为什么是它？'}
+        {/* 有 AI 解读时在按钮上就点出来——否则用户不知道折叠的面板里
+            多了一句话，那段 token 就白花了 */}
+        {open ? '收起' : reason ? '为什么是它？· 含 AI 解读' : '为什么是它？'}
       </button>
 
       {open && (
         <div className="why-body">
+          {/*
+            ⚠️ AI 这段话放在**乘法式之上**，顺序不能反。
+
+            下面那一串是"账本"——准确、可验证，但读起来是数字。
+            这句话是"人话"——回答的是"为什么是它，而不是另外两个"，
+            那恰恰是账本答不了的问题（乘法式只能说明"它自己好不好"）。
+
+            先说人话再给账本，用户先拿到结论、再按需查账。
+            反过来就成了"先看一堆数字，最后才知道结论"。
+          */}
+          {reason && (
+            <p className="why-ai">
+              <span className="why-ai-tag">AI 解读</span>
+              {reason}
+            </p>
+          )}
+
           <div className="why-formula">
             {factors.map((factor, index) => (
               <Fragment key={factor.label}>
@@ -746,6 +987,7 @@ function PlaceCard({
   showDistance,
   showState,
   showWeather,
+  reason,
 }: {
   place: RecommendedPlace
   reaction: Reaction | undefined
@@ -754,6 +996,8 @@ function PlaceCard({
   showDistance: boolean
   showState: boolean
   showWeather: boolean
+  /** AI 写的那句人话，可能还没有 */
+  reason?: string
 }) {
   const openHours =
     place.openFrom && place.openTo ? `${place.openFrom} – ${place.openTo}` : '全天开放'
@@ -780,6 +1024,7 @@ function PlaceCard({
         showDistance={showDistance}
         showState={showState}
         showWeather={showWeather}
+        reason={reason}
       />
 
       <div className="feedback-row">
