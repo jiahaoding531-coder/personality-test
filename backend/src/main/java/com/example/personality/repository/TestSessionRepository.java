@@ -1,5 +1,6 @@
 package com.example.personality.repository;
 
+import com.example.personality.entity.QuestionScale;
 import com.example.personality.entity.TestSession;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -21,12 +22,12 @@ import java.util.List;
 public interface TestSessionRepository extends JpaRepository<TestSession, Long> {
 
     /**
-     * 某个用户的全部测试会话，按创建时间倒序（最近的在前）。
+     * 某个用户在<b>指定量表</b>下的全部测试会话，按创建时间倒序（最近的在前）。
      *
      * <p>生成的 SQL 大致是：
      * <pre>
      *   SELECT * FROM test_sessions
-     *   WHERE user_id = ?
+     *   WHERE user_id = ? AND scale = ?
      *   ORDER BY created_at DESC
      * </pre>
      *
@@ -34,6 +35,18 @@ public interface TestSessionRepository extends JpaRepository<TestSession, Long> 
      * {@code WHERE user_id = ?} 在 SQL 里天然排除 NULL，
      * 因为 {@code NULL = 任何值} 的结果是"未知"而不是 true。
      * 这正是我们想要的：历史记录只属于登录用户。
+     *
+     * <p><b>⚠️ 为什么必须带 scale，不能只按 user_id 查。</b>
+     *
+     * <p>{@code test_sessions} 表从 V8 起同时装着两种会话。历史列表的契约是
+     * "人格测试记录"（返回的是 5 个人格维度的分数），但旅行会话
+     * <b>在 personality_profiles 里没有对应记录</b>，查出来画像为空，
+     * 前端就会把一个已经提交过的旅行测试显示成「未完成」，
+     * 点进去还会因为人格画像不存在而报 404。
+     *
+     * <p>所以这里刻意<b>不提供</b>"只按 user_id 查"的方法——不然下次
+     * 又会有人不小心把两种会话一起捞出来。和 {@code QuestionRepository}
+     * 里不提供"取全部题目"是同一个道理。
      */
-    List<TestSession> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<TestSession> findByUserIdAndScaleOrderByCreatedAtDesc(Long userId, QuestionScale scale);
 }

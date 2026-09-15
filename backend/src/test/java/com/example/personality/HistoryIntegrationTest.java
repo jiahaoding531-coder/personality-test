@@ -154,6 +154,45 @@ class HistoryIntegrationTest extends IntegrationTestBase {
         assertEquals(0, fetchHistory(login).size(), "匿名会话的 user_id 是 NULL，不该归属到任何登录用户");
     }
 
+    /**
+     * <b>这条测试防的是一个真实出现过的缺陷。</b>
+     *
+     * <p>旅行测试和人格测试共用 test_sessions 表。历史接口返回的是
+     * {@code DimensionBrief}（5 个人格维度的分数），数据源是 {@code personality_profiles}——
+     * 而旅行会话的画像在 {@code travel_profiles} 里，在这里查不到。
+     *
+     * <p>不过滤的结果是：一个<b>已经提交过</b>的旅行测试，因为查不到画像而被前端
+     * 渲染成「未完成」，点进去还会因为人格画像不存在而报 404。
+     */
+    @Test
+    @DisplayName("旅行测试不进人格历史，但也不能把人格记录挤掉")
+    void travelSessionsAreExcludedFromHistory() throws Exception {
+        MockHttpSession login = registerAndLogin(uniqueUsername("traveler"), "password123");
+
+        // ① 先做一次人格测试并提交（历史里应该留下这一条）
+        TestSessionRef personality = createTestSession(login);
+        answerAllQuestions(personality, 3, login);
+        mockMvc.perform(withToken(post("/api/test-sessions/{id}/submit", personality.id())
+                .with(csrf()).session(login), personality))
+                .andExpect(status().isOk());
+
+        // ② 再做一次旅行测试并提交（历史里不该出现它）
+        TestSessionRef travel = createTravelSession(login);
+        answerAllTravelQuestions(travel, 5, login);
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", travel.id())
+                .with(csrf()).session(login), travel))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/me/test-sessions").session(login))
+                .andExpect(status().isOk())
+                // ⚠️ 关键是这个 1：过滤要是没写、或者写在分页截断之后，这里会变成 2，
+                // 而且其中一条是"没有维度的已提交会话"——前端就显示成「未完成」
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].sessionId").value(personality.id()))
+                // 人格记录的维度必须完好，防止"过滤写错把维度也弄丢了"
+                .andExpect(jsonPath("$[0].dimensions.length()").value(5));
+    }
+
     // ==========================================================
     // 辅助方法
     // ==========================================================
