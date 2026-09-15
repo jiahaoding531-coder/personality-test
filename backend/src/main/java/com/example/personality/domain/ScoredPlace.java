@@ -5,9 +5,10 @@ import java.util.List;
 /**
  * 一个地点的推荐结果。
  *
- * <h2>四个因子全都留下来了</h2>
+ * <h2>五个因子全都留下来了</h2>
  *
- * <p>{@code score = interestScore × distanceFactor × qualityFactor × stateFactor}。
+ * <p>{@code score = interestScore × distanceFactor × qualityFactor × stateFactor
+ * × weatherFactor}。
  * 把它们分别暴露出来，是为了能回答「<b>为什么是它，而不是别人</b>」——
  * 只给一个 62% 是回答不了这个问题的：62% 可能是"兴趣很合但有点远"，
  * 也可能是"兴趣一般但就在楼下"，两者的决策含义完全相反。
@@ -22,6 +23,8 @@ import java.util.List;
  * @param distanceFactor  距离衰减系数，0~1。没有定位时恒为 1.0
  * @param qualityFactor   质量修正系数，0.85~1.0。只往下扣，不往上加
  * @param stateFactor     当前状态的修正系数，0~1。没有状态时恒为 1.0
+ * @param weatherFactor   天气的修正系数，0~1。<b>没拿到天气时恒为 1.0</b>；
+ *                        天气不影响时（晴天、或全程室内）也是 1.0
  * @param topMatches      贡献最大的几个维度，用来解释"为什么推荐这个"
  */
 public record ScoredPlace(
@@ -32,6 +35,7 @@ public record ScoredPlace(
         double distanceFactor,
         double qualityFactor,
         double stateFactor,
+        double weatherFactor,
         List<MatchedDimension> topMatches
 ) {
 

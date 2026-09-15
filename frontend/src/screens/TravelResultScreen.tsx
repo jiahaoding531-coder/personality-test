@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 
 import { api } from '../api'
 import { BarChart } from '../components/BarChart'
@@ -516,6 +516,11 @@ function RecommendationList({
               place={place}
               reaction={myFeedback[place.recommendationId]}
               onFeedback={onFeedback}
+              // 「为什么是它」里该列出哪几个因子，取决于**这次有哪些输入**——
+              // 不是看因子等不等于 1.0（那两种 1.0 含义相反，见 WhyPanel 注释）
+              showDistance={place.distanceKm !== null}
+              showState={appliedContext.states.length > 0}
+              showWeather={appliedContext.weather !== null}
             />
           ))}
         </>
@@ -548,6 +553,10 @@ function RecommendationList({
  *
  * <p>这一行是自动模式能成立的前提：系统替用户猜了，就得摊开说清楚。
  * 推断出来的状态单独标注 + 一键否定，用户不用去翻「改一下」也能纠正。
+ *
+ * <p>天气也在这里，但<b>没有"不算"按钮</b>——这是个有意的区别：
+ * 状态是系统猜的，猜错了可以一键否定；天气是查来的事实，
+ * 用户能做的只是"知道它影响了排序"，而不是"告诉系统今天没下雨"。
  */
 function ContextBanner({
   context,
@@ -577,6 +586,20 @@ function ContextBanner({
         </>
       ) : null}
       推的。
+      {/*
+        天气：只在真的影响排序时才多说半句。
+        晴天也弹一句"已考虑天气"的话，这个提示很快就变成噪音，
+        用户会连真正重要的提示一起忽略。
+      */}
+      {context.weather && (
+        <>
+          {' '}
+          <span className="weather-note">
+            {context.weather.label}
+            {context.weather.affectsRecommendation && '，户外的地方已往后排'}
+          </span>
+        </>
+      )}
       {context.inferredStates.length > 0 && (
         <>
           {' '}
@@ -594,19 +617,52 @@ function ContextBanner({
 }
 
 /**
- * 「为什么是它」——把四个打分因子摊开给用户看。
+ * 「为什么是它」——把打分因子摊开给用户看。
  *
  * <p>默认折叠着：不想让每张卡片都堆满数字。但它是这个产品敢说
  * "决策助手"而不是"排序器"的关键——用户随时能查账。
  *
- * <p>公式画成 {@code 兴趣 × 距离 × 质量 × 状态 = 最终分} 而不是列四行，
+ * <p>公式画成 {@code 兴趣 × 距离 × 质量 × 状态 × 天气 = 最终分} 而不是列成几行，
  * 是因为**乘法本身就是信息**：任何一项掉到 0 整个结果就是 0，
  * 所以"再好的地方，太远了也不去"。
+ *
+ * <h2>⚠️ 判据是「有没有参与计算」，而不是「等不等于 1.0」</h2>
+ *
+ * <p>没有定位的时候，距离因子恒为 1.0。这时画一个「距离 100%」是**错的**——
+ * 它让用户以为"距离被考虑过、而且很合适"，而事实是根本没算距离。
+ * 所以没定位就整项去掉。
+ *
+ * <p>但反过来，<b>参与计算也可能恰好算出 1.0，而那一项是该显示的</b>：
+ * 下雨天推一个室内博物馆，天气因子正好是 1.0，含义是
+ * 「今天下雨，但这个地方不受影响」——这恰恰是最该说的一句。
+ *
+ * <p>两种情况数值完全一样，含义却相反。所以这里按<b>输入在不在</b>来判断
+ * （有没有定位、有没有状态、有没有天气），而绝不看因子本身的数值。
  */
-function WhyPanel({ place }: { place: RecommendedPlace }) {
+function WhyPanel({
+  place,
+  showDistance,
+  showState,
+  showWeather,
+}: {
+  place: RecommendedPlace
+  showDistance: boolean
+  showState: boolean
+  showWeather: boolean
+}) {
   const [open, setOpen] = useState(false)
   const b = place.scoreBreakdown
   const pct = (v: number) => Math.round(v * 100)
+
+  // 兴趣和质量永远参与（兴趣是主信号，质量是每个地点都有的属性），
+  // 另外三个要看这次有没有相应的输入。
+  const factors: { label: string; value: number }[] = [
+    { label: '兴趣匹配', value: b.interest },
+  ]
+  if (showDistance) factors.push({ label: '距离', value: b.distance })
+  factors.push({ label: '质量', value: b.quality })
+  if (showState) factors.push({ label: '此刻状态', value: b.state })
+  if (showWeather) factors.push({ label: '天气', value: b.weather })
 
   return (
     <div className="why">
@@ -617,21 +673,14 @@ function WhyPanel({ place }: { place: RecommendedPlace }) {
       {open && (
         <div className="why-body">
           <div className="why-formula">
-            <span>
-              兴趣匹配 <b>{pct(b.interest)}%</b>
-            </span>
-            <span className="why-op">×</span>
-            <span>
-              距离 <b>{pct(b.distance)}%</b>
-            </span>
-            <span className="why-op">×</span>
-            <span>
-              质量 <b>{pct(b.quality)}%</b>
-            </span>
-            <span className="why-op">×</span>
-            <span>
-              此刻状态 <b>{pct(b.state)}%</b>
-            </span>
+            {factors.map((factor, index) => (
+              <Fragment key={factor.label}>
+                {index > 0 && <span className="why-op">×</span>}
+                <span>
+                  {factor.label} <b>{pct(factor.value)}%</b>
+                </span>
+              </Fragment>
+            ))}
             <span className="why-op">=</span>
             <span className="why-final">{pct(b.finalScore)}%</span>
           </div>
@@ -648,7 +697,7 @@ function WhyPanel({ place }: { place: RecommendedPlace }) {
           )}
 
           <p className="why-note">
-            四项是<b>相乘</b>的：任何一项掉到 0，整体就是 0。
+            这几项是<b>相乘</b>的：任何一项掉到 0，整体就是 0。
             所以再合口味的地方，太远、太贵或者时间不够，都不会被推荐。
           </p>
         </div>
@@ -661,10 +710,17 @@ function PlaceCard({
   place,
   reaction,
   onFeedback,
+  showDistance,
+  showState,
+  showWeather,
 }: {
   place: RecommendedPlace
   reaction: Reaction | undefined
   onFeedback: (recommendationId: number, reaction: Reaction) => void
+  /** 这几个只影响「为什么是它」里列出哪几项，原样透传给 WhyPanel */
+  showDistance: boolean
+  showState: boolean
+  showWeather: boolean
 }) {
   const openHours =
     place.openFrom && place.openTo ? `${place.openFrom} – ${place.openTo}` : '全天开放'
@@ -686,7 +742,12 @@ function PlaceCard({
         <span>{openHours}</span>
       </div>
 
-      <WhyPanel place={place} />
+      <WhyPanel
+        place={place}
+        showDistance={showDistance}
+        showState={showState}
+        showWeather={showWeather}
+      />
 
       <div className="feedback-row">
         <button

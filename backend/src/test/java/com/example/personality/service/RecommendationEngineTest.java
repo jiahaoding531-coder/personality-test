@@ -6,6 +6,7 @@ import com.example.personality.domain.RecommendationContext;
 import com.example.personality.domain.ScoredPlace;
 import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
+import com.example.personality.domain.Weather;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -36,6 +37,15 @@ class RecommendationEngineTest {
     /** 一个「只剩很多时间、没有定位」的宽松场景，让时间/距离不干扰对兴趣匹配的验证。 */
     private static final RecommendationContext RELAXED =
             RecommendationContext.of(LocalTime.of(10, 0), 600);
+
+    /**
+     * 测试地点的默认室内程度：<b>完全户外</b>。
+     *
+     * <p>取 0 是为了和数据库里 {@code places.indoor} 的 DEFAULT 保持一致，
+     * 也是为了"万一哪天给这些测试加上了天气，变化会很明显"——
+     * 完全户外的地方受天气影响最大，测出来的差异不会被淹没。
+     */
+    private static final int OUTDOOR = 0;
 
     // ==========================================================
     // 当前状态：把"此刻的处境"折算成偏好修正
@@ -139,15 +149,15 @@ class RecommendationEngineTest {
 
         for (ScoredPlace scored : engine.recommend(neutralPreference(), places, ctx, 3)) {
             double product = scored.interestScore() * scored.distanceFactor()
-                    * scored.qualityFactor() * scored.stateFactor();
+                    * scored.qualityFactor() * scored.stateFactor() * scored.weatherFactor();
             assertEquals(scored.score(), product, 1e-9,
-                    scored.place().name() + " 的拆解对不上：四个因子相乘 = " + product
+                    scored.place().name() + " 的拆解对不上：五个因子相乘 = " + product
                             + "，但 score = " + scored.score());
         }
     }
 
     @Test
-    @DisplayName("没有定位、没有状态时，对应的两个因子恒为 1.0（乘法单位元）")
+    @DisplayName("没有定位、没有状态、没有天气时，对应的因子恒为 1.0（乘法单位元）")
     void neutralFactorsAreExactlyOne() {
         List<ScoredPlace> top = engine.recommend(neutralPreference(),
                 List.of(place("甲", traits(50, 50, 50, 50, 50, 50, 50))), RELAXED, 3);
@@ -155,6 +165,14 @@ class RecommendationEngineTest {
         assertEquals(1.0, top.get(0).distanceFactor(),
                 "没定位时距离因素应该完全失效，而不是给个 0.9");
         assertEquals(1.0, top.get(0).stateFactor(), "没状态时状态因素不该有任何影响");
+
+        // ⚠️ 这条是"接天气"这件事不影响既有行为的关键。
+        // 必须是**精确的** 1.0——不是"约等于"。
+        // 整个测试套件（一百多个用例）走的都是这条路径：没有天气 → 打分数值
+        // 与接天气之前完全一致。哪天它变成了 0.999，说明"拿不到天气"
+        // 被当成了一种天气，而不是"这一项不存在"。
+        assertEquals(1.0, top.get(0).weatherFactor(),
+                "没有天气时天气因素必须是精确的 1.0，否则所有既有分数都会漂移");
     }
 
     @Test
@@ -174,7 +192,7 @@ class RecommendationEngineTest {
     @Test
     @DisplayName("状态系数永远 ≤ 1——score ≤ 1 这条不变量不能被打破")
     void stateFactorNeverExceedsOne() {
-        // 这是防数据库 CHECK 约束的：score 是四个因子相乘，任何一个 > 1 都可能越界。
+        // 这是防数据库 CHECK 约束的：score 是五个因子相乘，任何一个 > 1 都可能越界。
         // 正偏向（饿了）如果直接乘上去会得到 1.76，所以公式里做了归一化。
         PlaceTraits mostFood = traits(0, 0, 100, 0, 0, 0, 0);
         PlaceTraits mostWalking = traits(0, 0, 0, 0, 0, 0, 100);
@@ -556,6 +574,125 @@ class RecommendationEngineTest {
     }
 
     // ==========================================================
+    // 天气：只压户外的地方
+    // ==========================================================
+
+    /**
+     * 这一组守的是「下雨天别去户外」这条常识能不能真的算进分里。
+     *
+     * <p>⚠️ 整个这一组都是纯计算，<b>不联网、不需要高德 key</b>——
+     * 天气在这里是一段构造出来的数据，怎么拿到它（以及拿不到怎么办）
+     * 是 {@code AmapWeatherProvider} 和 {@code WeatherService} 的事。
+     */
+
+    @Test
+    @DisplayName("【核心】下雨天，户外的地方被压下去，室内的几乎不受影响")
+    void rainSuppressesOutdoorPlacesButNotIndoorOnes() {
+        Weather rain = Weather.of("小雨", 20);
+
+        double outdoor = RecommendationEngine.weatherFactor(rain, 0);    // 完全户外
+        double halfIndoor = RecommendationEngine.weatherFactor(rain, 50); // 一半室内
+        double indoor = RecommendationEngine.weatherFactor(rain, 100);    // 全程室内
+
+        assertEquals(0.5, outdoor, 1e-9, "完全户外的地点在雨天应该砍半");
+        assertEquals(0.75, halfIndoor, 1e-9, "半室内的地方扣一半的惩罚");
+        assertEquals(1.0, indoor, 1e-9, "全程室内的地方完全不该受影响");
+    }
+
+    @Test
+    @DisplayName("【核心】下雨之后，室内博物馆反超户外景点")
+    void rainFlipsTheRankingBetweenOutdoorAndIndoor() {
+        // 两个地点除室内程度外完全一样——这样排序变化只可能来自天气
+        PlaceTraits same = traits(80, 80, 50, 70, 40, 50, 50);
+        PlaceCandidate outdoor = placeWithIndoor("露天景点", same, 0);
+        PlaceCandidate indoor = placeWithIndoor("室内展馆", same, 95);
+
+        RecommendationContext sunny = RELAXED.withWeather(Weather.of("晴", 22));
+        RecommendationContext rainy = RELAXED.withWeather(Weather.of("中雨", 18));
+
+        // 晴天：两者兴趣分相同，户外那个排在前面（同分时保持输入顺序）
+        List<ScoredPlace> before = engine.recommend(
+                neutralPreference(), List.of(outdoor, indoor), sunny, 2);
+        assertEquals("露天景点", before.get(0).place().name(), "晴天时两者应该不相上下");
+
+        // 下雨：室内那个反超
+        List<ScoredPlace> after = engine.recommend(
+                neutralPreference(), List.of(outdoor, indoor), rainy, 2);
+        assertEquals("室内展馆", after.get(0).place().name(),
+                "下雨之后室内的地方应该排到前面——这就是天气生效的方式");
+    }
+
+    @Test
+    @DisplayName("好天气不改变任何东西（晴天/多云/阴天都不惩罚）")
+    void goodWeatherChangesNothing() {
+        PlaceCandidate outdoor = placeWithIndoor("户外", traits(50, 50, 50, 50, 50, 50, 50), 0);
+
+        for (String condition : List.of("晴", "多云", "阴")) {
+            assertEquals(1.0, RecommendationEngine.weatherFactor(Weather.of(condition, 22), 0),
+                    condition + " 不该对户外地点有任何惩罚");
+        }
+    }
+
+    @Test
+    @DisplayName("认不出来的天气描述不惩罚——不确定的时候不要瞎猜")
+    void unknownWeatherDoesNotPenalize() {
+        // 高德有三十多种天气描述，将来还可能加新的。
+        // 认不出来就当作"没有信息"，而不是按最坏情况处理。
+        assertEquals(1.0, RecommendationEngine.weatherFactor(Weather.of("下开水", 25), 0));
+    }
+
+    @Test
+    @DisplayName("高温也压户外，但比下雨轻")
+    void extremeHeatPenalizesOutdoorButLessThanRain() {
+        double hot = RecommendationEngine.weatherFactor(Weather.of("晴", 38), 0);
+        double rain = RecommendationEngine.weatherFactor(Weather.of("小雨", 20), 0);
+
+        assertTrue(hot < 1.0, "38 度还推荐全程户外的地方是不合理的");
+        assertTrue(hot > rain,
+                "高温的惩罚应该比下雨轻——热还能忍，淋湿不能。高温 " + hot + " vs 雨 " + rain);
+    }
+
+    @Test
+    @DisplayName("weatherFactor 永远 ≤ 1——score ≤ 1 这条不变量不能被打破")
+    void weatherFactorNeverExceedsOne() {
+        // 数据库上有 CHECK (score BETWEEN 0 AND 1)，而 score 是五个因子相乘。
+        // 只要 weatherFactor 超过 1，存库时接口就会 500。
+        //
+        // 这里把"最坏情况"都试一遍：各种天气 × 各个室内程度 × 极端温度。
+        for (String condition : List.of("晴", "多云", "阴", "小雨", "暴雨", "雷阵雨伴有冰雹",
+                "小雪", "暴雪", "雾", "强沙尘暴", "下开水")) {
+            for (double temperature : List.of(-20.0, 0.0, 22.0, 35.0, 45.0)) {
+                for (int indoor = 0; indoor <= 100; indoor += 25) {
+                    double factor = RecommendationEngine.weatherFactor(
+                            Weather.of(condition, temperature), indoor);
+                    assertTrue(factor <= 1.0,
+                            String.format("weatherFactor 超过 1 了：%s %.0f° indoor=%d → %.4f",
+                                    condition, temperature, indoor, factor));
+                    assertTrue(factor >= 0.0,
+                            "weatherFactor 不该是负数：" + factor);
+                }
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("天气修正会体现在拆解里——雨天户外地点的 weatherFactor 明显小于 1")
+    void weatherFactorShowsUpInTheBreakdown() {
+        PlaceCandidate seaside = placeWithIndoor("海边栈道",
+                traits(80, 50, 50, 70, 40, 50, 50), 0);
+
+        ScoredPlace sunny = engine.recommend(neutralPreference(), List.of(seaside),
+                RELAXED.withWeather(Weather.of("晴", 22)), 3).get(0);
+        ScoredPlace rainy = engine.recommend(neutralPreference(), List.of(seaside),
+                RELAXED.withWeather(Weather.of("大雨", 18)), 3).get(0);
+
+        assertEquals(1.0, sunny.weatherFactor(), "晴天不该有任何影响");
+        assertTrue(rainy.weatherFactor() <= 0.5,
+                "暴雨里的户外地点应该被压得很低，实际：" + rainy.weatherFactor());
+        assertTrue(rainy.score() < sunny.score(), "雨天分数应该更低");
+    }
+
+    // ==========================================================
     // 测试夹具
     // ==========================================================
 
@@ -593,28 +730,38 @@ class RecommendationEngineTest {
 
     private static PlaceCandidate place(String name, PlaceTraits traits, int suggestedMinutes) {
         return new PlaceCandidate(1L, name, "NATURE", 30.2420, 120.1400, traits,
-                80, 0, suggestedMinutes, null, null, "测试地点");
+                OUTDOOR, 80, 0, suggestedMinutes, null, null, "测试地点");
     }
 
     private static PlaceCandidate place(String name, PlaceTraits traits,
                                         LocalTime openFrom, LocalTime openTo) {
         return new PlaceCandidate(1L, name, "MUSEUM", 30.2420, 120.1400, traits,
-                80, 0, 60, openFrom, openTo, "测试地点");
+                OUTDOOR, 80, 0, 60, openFrom, openTo, "测试地点");
     }
 
     private static PlaceCandidate placeAt(String name, double lat, double lon, PlaceTraits traits) {
         return new PlaceCandidate(1L, name, "NATURE", lat, lon, traits,
-                80, 0, 60, null, null, "测试地点");
+                OUTDOOR, 80, 0, 60, null, null, "测试地点");
     }
 
     private static PlaceCandidate placeWithQuality(String name, PlaceTraits traits, int quality) {
         return new PlaceCandidate(1L, name, "NATURE", 30.2420, 120.1400, traits,
-                quality, 0, 60, null, null, "测试地点");
+                OUTDOOR, quality, 0, 60, null, null, "测试地点");
     }
 
     /** 指定门票价格的地点。用来验证"预算上限"这条硬约束。 */
     private static PlaceCandidate placeWithTicket(String name, PlaceTraits traits, int ticketPrice) {
         return new PlaceCandidate(1L, name, "NATURE", 30.2420, 120.1400, traits,
-                80, ticketPrice, 60, null, null, "测试地点");
+                OUTDOOR, 80, ticketPrice, 60, null, null, "测试地点");
+    }
+
+    /**
+     * 带室内程度的地点，用来测天气。
+     *
+     * <p>{@code indoor}：0 = 完全户外，100 = 全程室内。
+     */
+    private static PlaceCandidate placeWithIndoor(String name, PlaceTraits traits, int indoor) {
+        return new PlaceCandidate(1L, name, "NATURE", 30.2420, 120.1400, traits,
+                indoor, 80, 0, 60, null, null, "测试地点");
     }
 }

@@ -250,7 +250,16 @@ export interface ScoreBreakdown {
   quality: number
   /** 当前状态的修正。没状态时恒为 1.0 */
   state: number
-  /** 四个因子相乘，等于 scorePercent / 100 */
+  /**
+   * 天气的修正。**没拿到天气时恒为 1.0**；晴天、或地点全程室内时也是 1.0。
+   *
+   * ⚠️ 判据是「有没有参与计算」，不是「是不是 1.0」。
+   * 没有天气时整项该去掉；但**下雨天推一个室内地点时这一项也等于 1.0**，
+   * 那个 1.0 是有信息量的——"今天下雨，但这个地方不受影响"。
+   * 所以要看 `appliedContext.weather` 在不在，而不是看这个数值。
+   */
+  weather: number
+  /** 五个因子相乘，等于 scorePercent / 100 */
   finalScore: number
 }
 
@@ -297,6 +306,29 @@ export interface AppliedContext {
   states: StateLabel[]
   /** 其中哪些是系统自己推断的。用户没说过，所以最该给一键改 */
   inferredStates: StateLabel[]
+  /**
+   * 这次用的天气。**可能是 null**——没配高德、上游超时、或者境外查不到城市。
+   *
+   * ⚠️ 和 states 的区别：状态是**用户说的**或系统按时间猜的（猜错了可以一键不算），
+   * 天气是**查来的事实**，只能告知，没有"不算"这个选项。
+   */
+  weather: WeatherLabel | null
+}
+
+export interface WeatherLabel {
+  /** 原始天气描述，比如「多云」「小雨」。比类别更具体，直接显示给用户看 */
+  condition: string
+  temperature: number
+  /** 拼好的展示串，比如「多云 26°」。格式由后端定，前端不重复实现一遍 */
+  label: string
+  /**
+   * 这次天气**到底有没有改变排序**。
+   *
+   * 晴天、多云、认不出来的天气都是 false——它们不产生任何惩罚。
+   * 温度计上显示「晴 30°」没问题，但要说"我按天气调整了推荐"就不诚实了。
+   * 只有 true 才值得给这句提示。
+   */
+  affectsRecommendation: boolean
 }
 
 export interface RecommendationResponse {

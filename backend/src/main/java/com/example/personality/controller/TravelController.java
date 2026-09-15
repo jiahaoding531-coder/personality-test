@@ -1,6 +1,6 @@
 package com.example.personality.controller;
 
-import com.example.personality.domain.LocationInfo;
+import com.example.personality.domain.AmbientContext;
 import com.example.personality.dto.AnswersSavedResponse;
 import com.example.personality.dto.FeedbackRequest;
 import com.example.personality.dto.FeedbackResponse;
@@ -172,13 +172,11 @@ public class TravelController {
 
         checkAccess(sessionId, sessionToken, principal);
 
-        // 事务外：网络调用
-        LocationInfo location = ambientService
-                .resolveLocation(request.latitude(), request.longitude())
-                .orElse(null);
+        // 事务外：两次网络往返（逆地理编码 → 天气）
+        AmbientContext ambient = ambientService.resolve(request.latitude(), request.longitude());
 
         // 事务内：只碰本地数据库
-        return recommendationService.recommend(sessionId, request, location);
+        return recommendationService.recommend(sessionId, request, ambient);
     }
 
     /**

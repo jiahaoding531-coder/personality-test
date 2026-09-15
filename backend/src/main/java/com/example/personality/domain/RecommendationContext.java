@@ -35,6 +35,13 @@ import java.util.Set;
  *                         是"去了也没用"的典型。
  * @param states           用户此刻的状态（累了 / 饿了 / 想散步），可以同时有多个。
  *                         空集合表示没特别说明。修正幅度见 {@link TravelState}。
+ * @param weather          此刻的天气。<b>可以为 null</b>——没配高德、上游超时、
+ *                         或者用户在境外查不到，都会是 null。
+ *                         <p>⚠️ null 时打分<b>完全不受影响</b>（天气系数恒为 1.0，
+ *                         也就是乘法单位元）。这是刻意的：天气是锦上添花的数据，
+ *                         拿不到就该当它不存在，而不是猜一个或报错。
+ *                         <p>气候属于"此刻的处境"而不是"用户是谁"，理由同
+ *                         {@link #states}——见 {@link Weather} 的类注释。
  */
 public record RecommendationContext(
         LocalTime now,
@@ -43,7 +50,8 @@ public record RecommendationContext(
         Double longitude,
         double maxDistanceKm,
         Integer maxTicketPrice,
-        Set<TravelState> states
+        Set<TravelState> states,
+        Weather weather
 ) {
 
     public static final double DEFAULT_MAX_DISTANCE_KM = 10.0;
@@ -56,7 +64,7 @@ public record RecommendationContext(
      */
     public static RecommendationContext of(LocalTime now, int remainingMinutes) {
         return new RecommendationContext(now, remainingMinutes, null, null,
-                DEFAULT_MAX_DISTANCE_KM, null, Set.of());
+                DEFAULT_MAX_DISTANCE_KM, null, Set.of(), null);
     }
 
     /**
@@ -85,7 +93,24 @@ public record RecommendationContext(
                                                      Integer maxTicketPrice,
                                                      Set<TravelState> states) {
         return new RecommendationContext(now, remainingMinutes, latitude, longitude,
-                maxDistanceKm, maxTicketPrice, states == null ? Set.of() : Set.copyOf(states));
+                maxDistanceKm, maxTicketPrice,
+                states == null ? Set.of() : Set.copyOf(states), null);
+    }
+
+    /**
+     * 补上天气，其余原样复制。
+     *
+     * <p>record 没有自带的 wither，而构造器有八个参数——再写一个
+     * "全参数工厂方法"只会让调用点更难读（八个位置参数，谁也看不出
+     * 第三个是什么）。所以给天气单独开一个：<b>它是唯一一个
+     * "来自外部、可能拿不到、事后才知道"的字段。</b>
+     *
+     * <p>用法是 {@code context.withWeather(weather)}：
+     * 前面那些参数在前端请求里就定下来了，天气要等一次网络往返。
+     */
+    public RecommendationContext withWeather(Weather weather) {
+        return new RecommendationContext(now, remainingMinutes, latitude, longitude,
+                maxDistanceKm, maxTicketPrice, states, weather);
     }
 
     /** 有没有定位。没有的话距离因素会失效（所有地点距离分一样）。 */

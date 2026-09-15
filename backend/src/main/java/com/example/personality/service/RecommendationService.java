@@ -1,11 +1,12 @@
 package com.example.personality.service;
 
-import com.example.personality.domain.LocationInfo;
+import com.example.personality.domain.AmbientContext;
 import com.example.personality.domain.PlaceCandidate;
 import com.example.personality.domain.RecommendationContext;
 import com.example.personality.domain.ScoredPlace;
 import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
+import com.example.personality.domain.Weather;
 import com.example.personality.dto.AppliedContext;
 import com.example.personality.dto.FeedbackResponse;
 import com.example.personality.dto.MatchReason;
@@ -136,15 +137,15 @@ public class RecommendationService {
      * 通过 {@link AmbientService} 取好，再当参数传进来。保持这个方法
      * "只碰本地数据库"——这样它的耗时是确定的、可预测的。
      *
-     * @param location 用户坐标对应的人话地名，由调用方在事务外查好。
-     *                 <b>可以为 null</b>（没定位、没配高德、或上游失败），
-     *                 这时响应里的 {@code locationLabel} 就是 null，其余一切照常
+     * @param ambient 地名 + 天气，由调用方在事务外用 {@link AmbientService} 查好。
+     *                <b>两个字段都可以为 null</b>（没定位、没配高德、或上游失败），
+     *                这时不给地名、天气因子恒为 1.0，其余一切照常
      * @throws com.example.personality.exception.ResourceNotFoundException 会话不存在，
      *         或还没提交（没画像就没法推荐）
      */
     @Transactional
     public RecommendationResponse recommend(Long sessionId, RecommendationRequest request,
-                                            LocationInfo location) {
+                                            AmbientContext ambient) {
 
         // ① 用户是谁：读这次会话的旅行画像（没画像会抛 404）
         TravelProfile profile = travelProfileService.loadProfile(sessionId);
@@ -195,6 +196,9 @@ public class RecommendationService {
             allStates.addAll(inferred);
         }
 
+        // 天气挂在处境上（而不是单独传给引擎）：它和"还剩多少时间""我累了"
+        // 是同一层的东西——"此刻的处境"，每次请求都可能不同，不持久化。
+        // 拿不到天气时这里是 null，引擎会把天气系数当作 1.0（等于这一项不存在）。
         RecommendationContext context = RecommendationContext.withLocation(
                 now,
                 request.remainingMinutesOrDefault(),
@@ -202,7 +206,8 @@ public class RecommendationService {
                 request.longitude(),
                 request.maxDistanceKmOrDefault(),
                 request.maxTicketPrice(),
-                allStates);
+                allStates)
+                .withWeather(ambient.weather());
 
         // ⑦ 交给算法。它不认识数据库，也不认识反馈——只做硬过滤 + 打分 + 排序
         List<ScoredPlace> top = engine.recommend(effective, candidates, context, TOP_N);
@@ -220,7 +225,7 @@ public class RecommendationService {
                 buildAppliedContext(context, inferred),
                 // 地名是调用方在事务外查好传进来的。取不到就是 null，
                 // 不在这里补救——补救意味着一次网络调用，而这里在事务里。
-                location == null ? null : blankToNull(location.label()));
+                ambient.location() == null ? null : blankToNull(ambient.location().label()));
     }
 
     /**
@@ -248,7 +253,30 @@ public class RecommendationService {
                 context.maxDistanceKm(),
                 context.maxTicketPrice(),
                 states,
-                inferredApplied);
+                inferredApplied,
+                toWeatherLabel(context.weather()));
+    }
+
+    /**
+     * 天气也摊开给用户看。
+     *
+     * <p>和 {@code inferredStates} 是同一条原则：<b>系统替用户做的判断，
+     * 都要能被看见。</b>"下雨天把户外景点往后排"是一个相当强的判断，
+     * 不说的话，用户只会觉得"这几个地方怎么跟我口味不搭"。
+     *
+     * <p>{@code affectsRecommendation} 单独标出来，是为了让前端能区分
+     * 「今天晴天，天气对结果没影响」和「下雨了，户外的地方都被压了」——
+     * 都显示成"已考虑天气"的话，这个提示很快会变成噪音。
+     */
+    private static AppliedContext.WeatherLabel toWeatherLabel(Weather weather) {
+        if (weather == null) {
+            return null;   // 没拿到天气，前端就不显示这一项
+        }
+        return new AppliedContext.WeatherLabel(
+                weather.condition(),
+                weather.temperature(),
+                weather.label(),
+                weather.affectsRecommendation());
     }
 
     /**
@@ -529,6 +557,7 @@ public class RecommendationService {
                         scored.distanceFactor(),
                         scored.qualityFactor(),
                         scored.stateFactor(),
+                        scored.weatherFactor(),
                         scored.score()),
                 scored.distanceKm(),
                 place.ticketPrice(),

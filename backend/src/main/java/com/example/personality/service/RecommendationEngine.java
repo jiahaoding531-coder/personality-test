@@ -6,6 +6,7 @@ import com.example.personality.domain.RecommendationContext;
 import com.example.personality.domain.ScoredPlace;
 import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
+import com.example.personality.domain.Weather;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -34,9 +35,10 @@ import java.util.Map;
  *   ③ 乘以距离衰减
  *   ④ 乘以质量修正（微调）
  *   ⑤ 乘以当前状态的修正
+ *   ⑥ 乘以天气的修正
  * </pre>
  *
- * <p>四个因子都会随结果一起返回（见 {@link ScoredPlace}），
+ * <p>五个因子都会随结果一起返回（见 {@link ScoredPlace}），
  * 前端据此能说清「为什么是它，而不是别人」。
  *
  * <p><b>为什么用「相乘」而不是「加权求和」？</b>
@@ -147,11 +149,18 @@ public class RecommendationEngine {
             // 没状态时恒等于 1.0，几乎零开销。
             double stateFactor = stateFactor(context.states(), place.traits());
 
-            double score = match.interest() * distanceFactor * qualityFactor * stateFactor;
+            // ---------- ⑥ 此刻的天气 ----------
+            // "下雨"在这里生效：越靠户外的地方扣得越狠，全程室内的不受影响。
+            // 没天气（后端没配高德 / 上游超时）时恒等于 1.0。
+            double weatherFactor = weatherFactor(context.weather(), place.indoor());
 
-            // 四个因子全都留给上层——只有最终分是回答不了"为什么是它"的
+            double score = match.interest() * distanceFactor * qualityFactor
+                    * stateFactor * weatherFactor;
+
+            // 五个因子全都留给上层——只有最终分是回答不了"为什么是它"的
             scored.add(new ScoredPlace(place, score, match.interest(),
-                    distanceKm, distanceFactor, qualityFactor, stateFactor, match.topMatches()));
+                    distanceKm, distanceFactor, qualityFactor, stateFactor, weatherFactor,
+                    match.topMatches()));
         }
 
         scored.sort(Comparator.comparingDouble(ScoredPlace::score).reversed());
@@ -204,6 +213,59 @@ public class RecommendationEngine {
             factor *= (1.0 + b * placeValue) / (1.0 + Math.max(b, 0.0));
         }
         return factor;
+    }
+
+    /**
+     * 「此刻的天气」折算成的一个乘性系数。
+     *
+     * <p>公式（惩罚幅度 p，地点室内程度 v）：
+     * <pre>
+     *   系数 = 1 - p × (1 - v/100)
+     * </pre>
+     *
+     * <p>直觉版：<b>越靠户外的地方，恶劣天气扣得越狠；全程室内的完全不受影响。</b>
+     * <ul>
+     *   <li>小雨（p=0.5）里的西湖·苏堤（v=0）→ 系数 0.50</li>
+     *   <li>小雨里的浙江省博物馆（v=95）→ 系数 0.975，几乎没动</li>
+     * </ul>
+     *
+     * <h2>⚠️ 两条不变量，改这个公式时都要保住</h2>
+     *
+     * <p><b>1. 系数必须 ≤ 1。</b>因为 {@code p ∈ [0,1]}、{@code v/100 ∈ [0,1]}，
+     * 所以 {@code p × (1 - v/100) ∈ [0,1]}，系数必然落在 {@code [0,1]}。
+     * 一旦让它超过 1，score 就可能大于 1，撞上数据库的
+     * {@code CHECK (score BETWEEN 0 AND 1)}，接口在存库时直接 500。
+     *
+     * <p><b>2. 没有天气时必须<b>恰好</b>等于 1.0。</b>不是"约等于"，
+     * 是精确的 1.0——它是乘法单位元，这样才能保证"拿不到天气"和
+     * "天气不影响打分"在数值上完全等价。既有的一百多个测试
+     * （全都不带天气）就是靠这条继续全绿的。
+     *
+     * <h2>为什么天气不排除地点，只降权</h2>
+     *
+     * <p>和 {@link #stateFactor} 里"我累了"的处理保持一致：天气是<b>软信号</b>。
+     * "我累了"是把费腿的地方往后排，不是把山全删掉；下雨也一样，
+     * 是把户外的地方往后排，而不是让所有公园消失。
+     *
+     * <p>真要排除，得是用户明确要求（"下雨就别给我推户外的"），
+     * 那是另一个产品决定，不该由算法替他做主。
+     */
+    static double weatherFactor(Weather weather, int indoor) {
+        if (weather == null) {
+            // 拿不到天气 = 这一项不存在。返回乘法单位元，对打分零影响。
+            return 1.0;
+        }
+
+        double penalty = weather.outdoorPenalty();
+        if (penalty <= 0) {
+            // 晴天、多云、阴天，以及认不出来的天气描述。
+            // 早退而不是算一遍得到 1.0，是为了让"这些情况不参与"这件事
+            // 在代码里是显式的——读的人不用自己代入公式验证。
+            return 1.0;
+        }
+
+        double outdoorness = 1.0 - indoor / 100.0;
+        return 1.0 - penalty * outdoorness;
     }
 
     /**

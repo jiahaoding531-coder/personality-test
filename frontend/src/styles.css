@@ -983,6 +983,19 @@ table.data td.num {
   font-size: 11px;
 }
 
+/* 天气。用实线边框而不是 `.inferred-tag` 的虚线——
+   虚线在这个界面里的含义是"这是猜的，可以否定"，而天气是查来的事实，
+   用户没法否定它。视觉上不该混。 */
+.weather-note {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 /* 「改一下」的折叠开关：是个次要动作，用链接样式 */
 .manual-toggle {
   display: block;

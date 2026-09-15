@@ -65,6 +65,20 @@ public class AmapProperties {
      */
     private Duration timeout = Duration.ofSeconds(5);
 
+    /**
+     * 天气的缓存时长。
+     *
+     * <p><b>这个缓存不是性能优化，是配额保护。</b>个人 Key 的天气接口有每日
+     * 调用上限，而推荐是"用户点一下就走一次"的高频操作——
+     * 不缓存的话，一个下午的反复调试就能把当天额度用光。
+     *
+     * <p>10 分钟是"够实时"和"够省"之间的折中：高德的实时天气本身也是
+     * 十几分钟更新一次，缓 10 分钟拿到的东西和现查几乎没有区别。
+     *
+     * <p>按 adcode（城市）缓存，所以同一个城市的所有用户共享一份。
+     */
+    private Duration weatherCacheTtl = Duration.ofMinutes(10);
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -95,5 +109,13 @@ public class AmapProperties {
 
     public void setTimeout(Duration timeout) {
         this.timeout = timeout;
+    }
+
+    public Duration getWeatherCacheTtl() {
+        return weatherCacheTtl;
+    }
+
+    public void setWeatherCacheTtl(Duration weatherCacheTtl) {
+        this.weatherCacheTtl = weatherCacheTtl;
     }
 }

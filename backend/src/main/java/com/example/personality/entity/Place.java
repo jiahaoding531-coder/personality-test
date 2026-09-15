@@ -58,6 +58,15 @@ public class Place {
     @Column(name = "walking", nullable = false)
     private int walking;
 
+    /**
+     * 室内程度 0~100。0 = 完全户外，100 = 全程室内。
+     *
+     * <p>由 V10 迁移加进来，用来让天气参与推荐打分——
+     * 见 {@link com.example.personality.domain.Weather}。
+     */
+    @Column(name = "indoor", nullable = false)
+    private int indoor;
+
     @Column(name = "ticket_price", nullable = false)
     private int ticketPrice;
 
@@ -101,7 +110,7 @@ public class Place {
         return new PlaceCandidate(
                 id, name, category, latitude, longitude,
                 new PlaceTraits(nature, culture, food, photography, hiddenGems, lively, walking),
-                quality, ticketPrice, suggestedMinutes,
+                indoor, quality, ticketPrice, suggestedMinutes,
                 openFrom, openTo, description);
     }
 
@@ -155,6 +164,10 @@ public class Place {
 
     public int getWalking() {
         return walking;
+    }
+
+    public int getIndoor() {
+        return indoor;
     }
 
     public int getTicketPrice() {

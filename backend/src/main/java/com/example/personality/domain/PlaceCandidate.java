@@ -20,6 +20,20 @@ public record PlaceCandidate(
         double latitude,
         double longitude,
         PlaceTraits traits,
+        /**
+         * 室内程度 0~100。<b>0 = 完全户外，100 = 全程室内。</b>
+         *
+         * <p>天气参与打分时用它决定"下雨天该不该降权"：越靠户外，
+         * 恶劣天气扣得越狠；全程室内的地点完全不受影响。
+         *
+         * <p>⚠️ 它<b>不在 {@link PlaceTraits} 里</b>，是刻意分开的。
+         * {@code PlaceTraits} 是按 {@link TravelDimension} 索引的——
+         * 那 8 个维度是"用户偏好"，每个都对应一道题。而"室内还是户外"
+         * 是地点的客观属性，<b>用户没有、也不该有"室内偏好"这一维度</b>
+         * （问"你多喜欢室内"没有意义，那取决于今天下不下雨）。
+         * 塞进去会破坏那个一一对应的关系。
+         */
+        int indoor,
         /** 综合质量分 0~100。和用户偏好无关，是这个地方本身好不好。 */
         int quality,
         /** 门票价格（元）。V0 只记录不参与计算，留给后续做预算筛选。 */
