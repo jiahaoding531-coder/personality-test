@@ -9,10 +9,11 @@ import type {
   RecommendationResponse,
   RecommendedPlace,
   TravelProfileResponse,
+  TravelState,
 } from '../types'
 
 /**
- * 旅行测试的结果页：8 维画像 + 定位 + Top 3 推荐 + 反馈。
+ * 旅行测试的结果页：8 维画像 + 当前状态 + Top 3 推荐 + 反馈。
  *
  * **为什么这个屏幕自己发请求，而不是像别的屏幕那样把状态交给 App？**
  * 因为推荐是"可以做也可以不做"的第二步：用户可能只想看看画像就走。
@@ -29,13 +30,51 @@ const DEMO_LAT = '30.2420'
 const DEMO_LNG = '120.1400'
 
 /**
- * 推荐结果的状态。
+ * 表单里所有"当前处境"的输入。
  *
- * ⚠️ 这里**没有** `loading` 这个 kind，加载中用独立的 `busy` 表示。
- * 因为"正在加载"和"已经拿到一批结果"不是互斥的——点"换一批"时两者同时成立。
- * 把它俩塞进一个联合类型，就必然要在加载时丢掉上一批数据，
- * 界面上表现为卡片全部消失再重新出现（闪一下）。
+ * 打包成一个对象而不是六个 useState：场景按钮要一次改好几项
+ * （比如"想散步"同时改状态和距离），合并起来才不会漏。
  */
+interface ContextForm {
+  latitude: string
+  longitude: string
+  remainingMinutes: string
+  maxDistanceKm: string
+  maxTicketPrice: string
+  states: TravelState[]
+}
+
+const EMPTY_FORM: ContextForm = {
+  latitude: '',
+  longitude: '',
+  remainingMinutes: '240',
+  maxDistanceKm: '',
+  maxTicketPrice: '',
+  states: [],
+}
+
+/**
+ * 场景快捷按钮。
+ *
+ * ⚠️ 这两类改动的**作用方式完全不同**，是后端刻意分开的：
+ * - `states` 是"此刻的状态"，只影响**排序**（"累了"→ 费腿的地方被压下去，
+ *   但不是把山全删掉）
+ * - 其余三项是**硬约束**，超出直接排除（"只剩 1 小时"就不会推需要 3 小时的地方）
+ */
+interface Scenario {
+  label: string
+  patch: Partial<ContextForm>
+}
+
+const SCENARIOS: Scenario[] = [
+  { label: '我想散步一下', patch: { states: ['WANT_WALK'], maxDistanceKm: '5' } },
+  { label: '我有点累了', patch: { states: ['TIRED'] } },
+  { label: '我想吃饭', patch: { states: ['HUNGRY'] } },
+  { label: '只剩 1 小时', patch: { remainingMinutes: '60' } },
+  { label: '不想走远', patch: { maxDistanceKm: '2' } },
+  { label: '预算不多', patch: { maxTicketPrice: '50' } },
+]
+
 type RecState =
   | { kind: 'idle' }
   | { kind: 'done'; data: RecommendationResponse }
@@ -50,11 +89,9 @@ export function TravelResultScreen({
   sessionToken?: string
   onRestart: () => void
 }) {
-  const [lat, setLat] = useState('')
-  const [lng, setLng] = useState('')
-  const [minutes, setMinutes] = useState('240')
+  const [form, setForm] = useState<ContextForm>(EMPTY_FORM)
   const [rec, setRec] = useState<RecState>({ kind: 'idle' })
-  /** 请求进行中。和 rec 是正交的：换一批时"有旧数据"和"正在加载"同时为真 */
+  /** 请求进行中。和 rec 正交：换一批时"有旧数据"和"正在加载"同时为真 */
   const [busy, setBusy] = useState(false)
   const [geoMessage, setGeoMessage] = useState<string | null>(null)
   const [locating, setLocating] = useState(false)
@@ -65,6 +102,81 @@ export function TravelResultScreen({
   const [lastAdjustments, setLastAdjustments] = useState<DimensionAdjustment[] | null>(null)
 
   const sessionId = profile.sessionId
+
+  const patchForm = useCallback((patch: Partial<ContextForm>) => {
+    setForm((f) => ({ ...f, ...patch }))
+  }, [])
+
+  /**
+   * 取推荐。
+   *
+   * @param override 本次要覆盖的表单值。场景按钮用它——`setState` 是异步的，
+   *                 点完按钮立刻发请求会拿到**旧值**，所以把要用的值直接传进来，
+   *                 不依赖 state 已经更新完。
+   * @param excludeSeen "换一批"传 true——排除看过、且没被点 👍 的地点。
+   */
+  const run = useCallback(
+    async (override: Partial<ContextForm> = {}, excludeSeen = false) => {
+      const values = { ...form, ...override }
+      const latitude = Number(values.latitude)
+      const longitude = Number(values.longitude)
+
+      // 前端先挡一道，省一次必然失败的往返。后端也会校验（400）。
+      if (
+        !values.latitude ||
+        !values.longitude ||
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude)
+      ) {
+        setRec({ kind: 'error', message: '请先填写经纬度，或点上面的按钮快速填入。' })
+        return
+      }
+
+      setBusy(true)
+      try {
+        const body: RecommendationRequest = { latitude, longitude }
+        const minutes = Number(values.remainingMinutes)
+        if (Number.isFinite(minutes) && minutes > 0) {
+          body.remainingMinutes = minutes
+        }
+        const distance = Number(values.maxDistanceKm)
+        if (values.maxDistanceKm && Number.isFinite(distance) && distance > 0) {
+          body.maxDistanceKm = distance
+        }
+        const budget = Number(values.maxTicketPrice)
+        if (values.maxTicketPrice && Number.isFinite(budget) && budget >= 0) {
+          body.maxTicketPrice = budget
+        }
+        if (values.states.length > 0) {
+          body.states = values.states
+        }
+        if (excludeSeen) {
+          body.excludeSeen = true
+        }
+
+        const data = await api.getRecommendations(sessionId, body, sessionToken)
+        setRec({ kind: 'done', data })
+        // 新的一批是全新的卡片，上一批的按钮状态不该跟过来
+        setMyFeedback({})
+        setLastAdjustments(null)
+      } catch (e: unknown) {
+        setRec({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+      } finally {
+        setBusy(false)
+      }
+    },
+    [form, sessionId, sessionToken],
+  )
+
+  /** 点场景按钮：写入表单 + 立刻按这组值重新推荐。 */
+  const applyScenario = useCallback(
+    (scenario: Scenario) => {
+      patchForm(scenario.patch)
+      // 把 patch 直接传给 run，不依赖 setForm 是否已经生效
+      void run(scenario.patch)
+    },
+    [patchForm, run],
+  )
 
   /** 用浏览器定位填进输入框。失败时给出可操作的提示，而不是只报错。 */
   const useMyLocation = useCallback(() => {
@@ -78,8 +190,10 @@ export function TravelResultScreen({
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLat(pos.coords.latitude.toFixed(4))
-        setLng(pos.coords.longitude.toFixed(4))
+        patchForm({
+          latitude: pos.coords.latitude.toFixed(4),
+          longitude: pos.coords.longitude.toFixed(4),
+        })
         setLocating(false)
         // 演示数据只有杭州。拿到真实定位时提醒一句，
         // 免得用户对"推荐结果为空"感到莫名其妙。
@@ -95,54 +209,12 @@ export function TravelResultScreen({
       },
       { timeout: 8000 },
     )
-  }, [])
+  }, [patchForm])
 
   const useDemoLocation = useCallback(() => {
-    setLat(DEMO_LAT)
-    setLng(DEMO_LNG)
+    patchForm({ latitude: DEMO_LAT, longitude: DEMO_LNG })
     setGeoMessage('已填入杭州西湖的坐标（59 个演示景点都在杭州）。')
-  }, [])
-
-  /**
-   * 取推荐。
-   *
-   * @param excludeSeen "换一批"时传 true——排除看过、且没被点 👍 的地点。
-   *                    不排除的话引擎没有记忆，同样的输入必然算出同样的输出。
-   */
-  const loadRecommendations = useCallback(
-    async (excludeSeen: boolean) => {
-      const latitude = Number(lat)
-      const longitude = Number(lng)
-
-      // 前端先挡一道，省一次必然失败的往返。后端也会校验（400）。
-      if (!lat || !lng || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-        setRec({ kind: 'error', message: '请先填写经纬度，或点上面的按钮快速填入。' })
-        return
-      }
-
-      setBusy(true)
-      try {
-        const body: RecommendationRequest = { latitude, longitude }
-        const parsedMinutes = Number(minutes)
-        if (Number.isFinite(parsedMinutes) && parsedMinutes > 0) {
-          body.remainingMinutes = parsedMinutes
-        }
-        if (excludeSeen) {
-          body.excludeSeen = true
-        }
-        const data = await api.getRecommendations(sessionId, body, sessionToken)
-        setRec({ kind: 'done', data })
-        // 新的一批是全新的卡片，上一批的按钮状态不该跟过来
-        setMyFeedback({})
-        setLastAdjustments(null)
-      } catch (e: unknown) {
-        setRec({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
-      } finally {
-        setBusy(false)
-      }
-    },
-    [lat, lng, minutes, sessionId, sessionToken],
-  )
+  }, [patchForm])
 
   const giveFeedback = useCallback(
     async (recommendationId: number, reaction: Reaction) => {
@@ -157,14 +229,28 @@ export function TravelResultScreen({
           delete next[recommendationId]
           return next
         })
-        setRec((r) =>
-          r.kind === 'done'
-            ? { kind: 'error', message: '反馈没能提交，请稍后再试。' }
-            : r,
-        )
       }
     },
     [sessionId, sessionToken],
+  )
+
+  const numberField = (
+    id: string,
+    label: string,
+    key: keyof ContextForm,
+    placeholder: string,
+    mode: 'decimal' | 'numeric',
+  ) => (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        value={form[key] as string}
+        onChange={(e) => patchForm({ [key]: e.target.value } as Partial<ContextForm>)}
+        placeholder={placeholder}
+        inputMode={mode}
+      />
+    </div>
   )
 
   return (
@@ -187,8 +273,9 @@ export function TravelResultScreen({
       <div className="card">
         <h2 className="section-title">现在，你附近最值得去哪</h2>
         <p className="lede">
-          推荐要结合你的位置——不知道你在哪，"最值得做什么"就无从谈起。
-          {lat && lng ? ' 定位已经填好了。' : ' 先告诉我在哪。'}
+          {form.latitude && form.longitude
+            ? '定位已经填好了。下面这些是"此刻的处境"——它们只影响这一次推荐，不会改变你的画像。'
+            : '推荐要结合你的位置。先告诉我在哪。'}
         </p>
 
         <div className="locate-actions">
@@ -202,45 +289,39 @@ export function TravelResultScreen({
 
         {geoMessage && <p className="hint">{geoMessage}</p>}
 
-        {/* 结构和 AuthScreen 的表单保持一致（div.field > label + input），
-            这样直接复用已有的 .field 样式，不用为这里再写一套输入框样式 */}
         <div className="field-row">
-          <div className="field">
-            <label htmlFor="travel-lat">纬度</label>
-            <input
-              id="travel-lat"
-              value={lat}
-              onChange={(e) => setLat(e.target.value)}
-              placeholder="30.2420"
-              inputMode="decimal"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="travel-lng">经度</label>
-            <input
-              id="travel-lng"
-              value={lng}
-              onChange={(e) => setLng(e.target.value)}
-              placeholder="120.1400"
-              inputMode="decimal"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="travel-minutes">还剩多少分钟</label>
-            <input
-              id="travel-minutes"
-              value={minutes}
-              onChange={(e) => setMinutes(e.target.value)}
-              placeholder="240"
-              inputMode="numeric"
-            />
-          </div>
+          {numberField('travel-lat', '纬度', 'latitude', '30.2420', 'decimal')}
+          {numberField('travel-lng', '经度', 'longitude', '120.1400', 'decimal')}
+        </div>
+
+        <p className="field-label">现在是什么情况？（点一下立刻重新推荐）</p>
+        <div className="scenario-row">
+          {SCENARIOS.map((s) => {
+            const active = isScenarioActive(s, form)
+            return (
+              <button
+                key={s.label}
+                className={active ? 'scenario-btn chosen' : 'scenario-btn'}
+                type="button"
+                disabled={busy}
+                onClick={() => applyScenario(s)}
+              >
+                {s.label}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="field-row">
+          {numberField('travel-minutes', '还剩多少分钟', 'remainingMinutes', '240', 'numeric')}
+          {numberField('travel-distance', '最远走多少公里', 'maxDistanceKm', '不限', 'decimal')}
+          {numberField('travel-budget', '门票最多多少钱', 'maxTicketPrice', '不限', 'numeric')}
         </div>
 
         <button
           className="btn btn-primary"
           type="button"
-          onClick={() => void loadRecommendations(false)}
+          onClick={() => void run()}
           disabled={busy}
         >
           {busy ? '正在计算…' : '给我 Top 3 推荐'}
@@ -257,7 +338,7 @@ export function TravelResultScreen({
           lastAdjustments={lastAdjustments}
           loading={busy}
           onFeedback={giveFeedback}
-          onRefresh={() => void loadRecommendations(true)}
+          onRefresh={() => void run({}, true)}
         />
       )}
 
@@ -268,6 +349,22 @@ export function TravelResultScreen({
       </div>
     </>
   )
+}
+
+/** 这个场景当前是不是"生效中"——用来把按钮标成选中态，让用户知道现在是什么情况。 */
+function isScenarioActive(scenario: Scenario, form: ContextForm): boolean {
+  const { patch } = scenario
+  if (patch.states) {
+    // 状态是数组，比长度和内容
+    return (
+      patch.states.length === form.states.length &&
+      patch.states.every((s) => form.states.includes(s))
+    )
+  }
+  if (patch.remainingMinutes) return form.remainingMinutes === patch.remainingMinutes
+  if (patch.maxDistanceKm) return form.maxDistanceKm === patch.maxDistanceKm
+  if (patch.maxTicketPrice) return form.maxTicketPrice === patch.maxTicketPrice
+  return false
 }
 
 function RecommendationList({
@@ -290,12 +387,12 @@ function RecommendationList({
       <div className="card">
         <h2 className="section-title">附近没有合适的推荐</h2>
         <p className="lede">
-          这不是出错了，而是几个条件同时没满足：10 公里内没有<b>正在营业</b>、
-          且停留时长装得进你还剩下的时间的景点。
+          这不是出错了，而是几个条件同时没满足：没有<b>正在营业</b>、
+          且停留时长装得进你还剩下的时间、门票也在预算内的地点。
         </p>
         <p className="note">
           如果你一路点"换一批"到这里，说明附近合适的地方都看过了——
-          把"还剩多少分钟"调大一点，或者放宽距离再试。
+          把"还剩多少分钟"调大、或者放宽距离和预算再试。
           演示数据只有杭州的 59 个景点，用"杭州西湖的坐标"最稳。
         </p>
         <button className="theme-btn" type="button" onClick={onRefresh}>

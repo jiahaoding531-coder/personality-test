@@ -192,6 +192,14 @@ export interface MatchReason {
 export type Reaction = 'LIKE' | 'DISLIKE'
 
 /**
+ * 此刻的状态——和长期画像是两回事。
+ *
+ * 用户说"我累了"不代表他从此不喜欢走路，所以状态**不会被存进画像**，
+ * 只作用于这一次推荐。后端的 `TravelState` 枚举定义了一一对应的取值。
+ */
+export type TravelState = 'TIRED' | 'HUNGRY' | 'WANT_WALK'
+
+/**
  * 反馈提交后服务端返回的"画像变化"。
  *
  * 为什么要返回它：画像是"下次推荐才用到"的东西，用户点完当场看不到任何变化，
@@ -259,6 +267,10 @@ export interface RecommendationRequest {
   remainingMinutes?: number
   /** 最大半径（公里）。不传后端默认 10 */
   maxDistanceKm?: number
+  /** 门票价格上限（元）。不传 = 不限 */
+  maxTicketPrice?: number
+  /** 此刻的状态（累了 / 饿了 / 想散步），可以传多个 */
+  states?: TravelState[]
   /**
    * 是否排除这个会话里已经推荐过、且没被点过 👍 的地点。
    *

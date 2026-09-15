@@ -952,6 +952,51 @@ table.data td.num {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- 场景快捷按钮 ---- */
+
+.field-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 18px 0 8px;
+}
+
+/* 场景按钮：比反馈按钮更轻，因为它们是"快速改一组参数"的快捷方式。
+   允许换行——六个按钮在窄屏上排成三行也正常。 */
+.scenario-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.scenario-btn {
+  font-size: 13px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.scenario-btn:hover:not(:disabled) {
+  background: var(--hover-wash);
+}
+
+.scenario-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 生效中的场景标成主色，让用户一眼知道"现在系统是按什么情况在推荐" */
+.scenario-btn.chosen {
+  border-color: var(--series-1);
+  color: var(--series-1);
+  background: var(--hover-wash);
+  font-weight: 600;
+}
+
 /* ---- 反馈按钮 ---- */
 
 .feedback-row {
