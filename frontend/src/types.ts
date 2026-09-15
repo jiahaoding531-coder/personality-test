@@ -188,8 +188,39 @@ export interface MatchReason {
   placeValue: number
 }
 
+/** 👍 或 👎 */
+export type Reaction = 'LIKE' | 'DISLIKE'
+
+/**
+ * 反馈提交后服务端返回的"画像变化"。
+ *
+ * 为什么要返回它：画像是"下次推荐才用到"的东西，用户点完当场看不到任何变化，
+ * 很容易以为按钮是坏的。把调整前后的分数给出来，前端就能显示成
+ * 「自然风光 50 → 40」，让反馈的影响立刻可见。
+ *
+ * ⚠️ 这些调整**不写回画像表**——问卷画像永远保持原样，
+ * 调整是每次推荐时实时算出来的。
+ */
+export interface FeedbackResponse {
+  recommendationId: number
+  reaction: Reaction
+  /** 被反馈影响到的维度。没被影响的不出现 */
+  adjustments: DimensionAdjustment[]
+}
+
+export interface DimensionAdjustment {
+  key: string
+  name: string
+  /** 问卷算出来的原始分 */
+  questionnaireScore: number
+  /** 叠加反馈修正后、推荐实际使用的分数 */
+  effectiveScore: number
+}
+
 export interface RecommendedPlace {
   rank: number
+  /** 点 👍/👎 时要带上它——反馈挂在"某一次推荐的某一条"上，不是挂在地点上 */
+  recommendationId: number
   placeId: number
   name: string
   category: string
@@ -228,6 +259,13 @@ export interface RecommendationRequest {
   remainingMinutes?: number
   /** 最大半径（公里）。不传后端默认 10 */
   maxDistanceKm?: number
+  /**
+   * 是否排除这个会话里已经推荐过、且没被点过 👍 的地点。
+   *
+   * "换一批"必须传 `true`——引擎没有记忆，同样的输入必然算出同样的输出，
+   * 不排除的话按钮就是个摆设。不传时后端按 `false` 处理。
+   */
+  excludeSeen?: boolean
 }
 
 /** 后端统一的错误响应结构，见 ApiErrorResponse.java */

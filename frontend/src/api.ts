@@ -2,7 +2,9 @@ import type {
   AiReportResponse,
   AnswersSavedResponse,
   ApiErrorBody,
+  FeedbackResponse,
   QuestionsResponse,
+  Reaction,
   RecommendationRequest,
   RecommendationResponse,
   SessionResponse,
@@ -279,6 +281,30 @@ export const api = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
+        },
+        sessionToken,
+      ),
+    ),
+
+  /**
+   * 对某一条推荐点 👍 / 👎。
+   *
+   * 响应里带回画像被调整的结果，用来告诉用户"这次点击确实有影响"。
+   * 重复提交同一条是合法的——改主意走 UPDATE，不会留下两条记录。
+   */
+  giveFeedback: (
+    sessionId: number,
+    recommendationId: number,
+    reaction: Reaction,
+    sessionToken?: string,
+  ) =>
+    request<FeedbackResponse>(
+      `/api/travel/sessions/${sessionId}/recommendations/${recommendationId}/feedback`,
+      withSessionToken(
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reaction }),
         },
         sessionToken,
       ),

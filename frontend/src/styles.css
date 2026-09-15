@@ -952,6 +952,53 @@ table.data td.num {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- 反馈按钮 ---- */
+
+.feedback-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* 默认是"还没表态"的弱化状态——不抢推荐内容本身的注意力 */
+.fb-btn {
+  font-size: 13px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.fb-btn:hover {
+  background: var(--hover-wash);
+}
+
+/* 选中的那个用主色描边 + 更深的字色。
+   刻意不做填充：两个按钮都填满会显得卡片很吵，而反馈本身是次要动作。 */
+.fb-btn.chosen {
+  border-color: var(--series-1);
+  color: var(--series-1);
+  background: var(--hover-wash);
+  font-weight: 600;
+}
+
+/* 画像调整提示里的小标签："自然风光 50 → 40" */
+.adjust-chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--hover-wash);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
 /* 尊重系统的「减少动态效果」设置。
    前庭功能障碍的用户会因动画不适，这是无障碍的基本要求，
    不是可选项。 */
