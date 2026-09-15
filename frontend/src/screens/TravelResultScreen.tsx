@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ApiError, api } from '../api'
 import { AiKeyPanel } from '../components/AiKeyPanel'
@@ -6,6 +6,7 @@ import { BarChart } from '../components/BarChart'
 import type {
   AppliedContext,
   DimensionAdjustment,
+  InterpretResponse,
   Reaction,
   RecommendationRequest,
   RecommendationResponse,
@@ -114,6 +115,13 @@ interface ContextForm {
   maxDistanceKm: string
   maxTicketPrice: string
   states: TravelState[]
+  /**
+   * 词表覆盖不了时，AI 从自然语言里解析出来的**原始维度倾向**。
+   *
+   * 键是维度名（`CROWD_TOLERANCE`），不是中文——因为要原样回传给后端。
+   * 展示时现查 `DIMENSION_LABELS`。
+   */
+  biases: Record<string, number>
 }
 
 const EMPTY_FORM: ContextForm = {
@@ -123,6 +131,7 @@ const EMPTY_FORM: ContextForm = {
   maxDistanceKm: '',
   maxTicketPrice: '',
   states: [],
+  biases: {},
 }
 
 interface Scenario {
@@ -130,14 +139,46 @@ interface Scenario {
   patch: Partial<ContextForm>
 }
 
+/**
+ * 快捷场景按钮。
+ *
+ * <p>它们是"一句话输入"的快捷方式——点了立刻重新推荐，不用等 AI。
+ * 两套并存：按钮快、零成本；输入框能表达按钮覆盖不了的东西。
+ *
+ * <p>⚠️ 每个 patch 都带 `biases: {}` ——点快捷按钮意味着**换一种处境**，
+ * 上一次用自然语言说出来的倾向必须清掉。不清的话，
+ * 用户先说了"想找带猫的咖啡馆"、再点"我有点累了"，
+ * 那个"小众↑"还在偷偷生效，而他完全不知道。
+ */
 const SCENARIOS: Scenario[] = [
-  { label: '我想散步一下', patch: { states: ['WANT_WALK'], maxDistanceKm: '5' } },
-  { label: '我有点累了', patch: { states: ['TIRED'] } },
-  { label: '我想吃饭', patch: { states: ['HUNGRY'] } },
-  { label: '只剩 1 小时', patch: { remainingMinutes: '60' } },
-  { label: '不想走远', patch: { maxDistanceKm: '2' } },
-  { label: '预算不多', patch: { maxTicketPrice: '50' } },
+  { label: '我想散步一下', patch: { states: ['WANT_WALK'], maxDistanceKm: '5', biases: {} } },
+  { label: '我有点累了', patch: { states: ['TIRED'], biases: {} } },
+  { label: '我想吃饭', patch: { states: ['HUNGRY'], biases: {} } },
+  { label: '想安静点', patch: { states: ['QUIET'], biases: {} } },
+  { label: '只剩 1 小时', patch: { remainingMinutes: '60', biases: {} } },
+  { label: '不想走远', patch: { maxDistanceKm: '2', biases: {} } },
+  { label: '预算不多', patch: { maxTicketPrice: '50', biases: {} } },
 ]
+
+/**
+ * 自然语言输入的状态。
+ *
+ * <p>用可辨识联合而不是几个独立 boolean——理由见 `AiPanel` 的注释：
+ * 几个 boolean 能组合出"正在加载而且同时出错了"这种不可能的状态。
+ *
+ * <p>⚠️ `noServerAi` 和 `keyRejected` 单独成状态，而不是并进 `error`：
+ * 它们的处理方式完全不同——不是"出错了重试"，而是"**填个 key 就能用**"。
+ * 混进 error 显示一句"理解失败"，就把一条可走的路说成了死路。
+ */
+type NlState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'done'; result: InterpretResponse }
+  /** 解析出来是空的——"这句我没听懂"。是正常结果，不是故障 */
+  | { kind: 'nothing'; summary: string }
+  | { kind: 'noServerAi' }
+  | { kind: 'keyRejected' }
+  | { kind: 'error'; message: string }
 
 type RecState =
   | { kind: 'idle' }
@@ -162,6 +203,19 @@ export function TravelResultScreen({
   const [myFeedback, setMyFeedback] = useState<Record<number, Reaction>>({})
   const [lastAdjustments, setLastAdjustments] = useState<DimensionAdjustment[] | null>(null)
 
+  // ---- 自然语言输入 ----
+  const [nlText, setNlText] = useState('')
+  const [nlState, setNlState] = useState<NlState>({ kind: 'idle' })
+
+  /**
+   * 请求序号，用来**丢弃过期响应**。
+   *
+   * ⚠️ 和「换一批」是同一类问题：连着提交两次，先发的可能后回来，
+   * 把第一次的理解结果盖在第二次上面。界面上看不出错——
+   * 两段话都是通顺的，只是对不上用户最后一次说的话。
+   */
+  const nlSeq = useRef(0)
+
   // ---- AI 理由 ----
   const [reasonTexts, setReasonTexts] = useState<Record<number, string>>({})
   const [reasonMode, setReasonMode] = useState<ReasonMode>(loadReasonMode)
@@ -185,6 +239,21 @@ export function TravelResultScreen({
   const reasonRequestedFor = useRef<number | null>(null)
 
   const sessionId = profile.sessionId
+
+  /**
+   * 维度名 → 中文。
+   *
+   * <p>从后端给的画像里现取，**前端不另维护一份翻译表**——
+   * 文字全由后端定，加一个维度或改一个中文名，前端不用跟着改。
+   * （自然语言解析出来的原始倾向要用它才能显示成"人群耐受 ↓"。）
+   */
+  const dimensionLabels = useMemo(() => {
+    const labels: Record<string, string> = {}
+    for (const d of profile.dimensions) {
+      labels[d.key] = d.name
+    }
+    return labels
+  }, [profile.dimensions])
 
   /**
    * 进页面时自动跑一次的守卫。
@@ -247,6 +316,10 @@ export function TravelResultScreen({
         }
         if (values.states.length > 0) {
           body.states = values.states
+        }
+        // 自然语言解析出来的原始倾向。没说过就没有，不必传空对象。
+        if (Object.keys(values.biases).length > 0) {
+          body.biases = values.biases
         }
         if (options.excludeSeen) {
           body.excludeSeen = true
@@ -344,6 +417,74 @@ export function TravelResultScreen({
     setReasonMode(mode)
     saveReasonMode(mode)
   }, [])
+
+  /**
+   * 把用户打的那句话发给后端解析，然后把解析结果**摊开**，再按它重新推荐。
+   *
+   * <p>顺序很重要：先 setNlState（把理解结果亮出来），再 run（重新推荐）。
+   * 反过来也能跑，但用户会先看到推荐变了、过了一会儿才看到"我理解成什么"——
+   * 那一刻他已经开始怀疑推荐了。
+   */
+  const submitNaturalLanguage = useCallback(async () => {
+    const text = nlText.trim()
+    if (!text) {
+      return
+    }
+
+    const seq = ++nlSeq.current
+    setNlState({ kind: 'loading' })
+
+    try {
+      const result = await api.interpret(sessionId, text, sessionToken)
+
+      // ⚠️ 回来的时候用户可能又提交了一句。见 nlSeq 的注释。
+      if (seq !== nlSeq.current) {
+        return
+      }
+
+      if (!result.usable) {
+        // 解析出来是空的。**不重新推荐**——拿一个空条件去跑，
+        // 用户会以为"说了等于没说"，而其实是我们没听懂。
+        // 如实说，让他换个说法。
+        setNlState({ kind: 'nothing', summary: result.summary })
+        return
+      }
+
+      setNlState({ kind: 'done', result })
+
+      // 把解析结果填进表单，再按它重新推荐。
+      // ⚠️ biases 每次都要一起给：这次说了什么就是什么，不能留着上一次的。
+      const patch: Partial<ContextForm> = {
+        states: result.states.map((s) => s.key),
+        biases: result.biases,
+      }
+      if (result.remainingMinutes !== null) {
+        patch.remainingMinutes = String(result.remainingMinutes)
+      }
+      if (result.maxDistanceKm !== null) {
+        patch.maxDistanceKm = String(result.maxDistanceKm)
+      }
+      if (result.maxTicketPrice !== null) {
+        patch.maxTicketPrice = String(result.maxTicketPrice)
+      }
+
+      patchForm(patch)
+      void run(patch)
+    } catch (e: unknown) {
+      if (seq !== nlSeq.current) {
+        return
+      }
+      if (e instanceof ApiError && e.status === 501) {
+        setNlState({ kind: 'noServerAi' })
+        return
+      }
+      if (e instanceof ApiError && e.status === 400) {
+        setNlState({ kind: 'keyRejected' })
+        return
+      }
+      setNlState({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+    }
+  }, [nlText, sessionId, sessionToken, patchForm, run])
 
   /**
    * 访客刚填完自己的 key —— 立刻替他重试一次。
@@ -519,6 +660,42 @@ export function TravelResultScreen({
               {numberField('travel-lat', '纬度', 'latitude', form, patchForm, '30.2420', 'decimal')}
               {numberField('travel-lng', '经度', 'longitude', form, patchForm, '120.1400', 'decimal')}
             </div>
+
+            {/*
+              自然语言输入。放在快捷按钮**上面**——它是更一般的表达方式，
+              按钮是它的快捷方式，而不是反过来。
+            */}
+            <p className="field-label">或者，直接用一句话说</p>
+            <div className="nl-row">
+              <textarea
+                className="nl-input"
+                rows={2}
+                maxLength={200}
+                placeholder="比如：我有点累了，想找个安静的地方坐坐，还有一个小时"
+                value={nlText}
+                onChange={(e) => setNlText(e.target.value)}
+                disabled={nlState.kind === 'loading'}
+              />
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={nlState.kind === 'loading' || !nlText.trim()}
+                onClick={() => void submitNaturalLanguage()}
+              >
+                {nlState.kind === 'loading' ? '理解中…' : '按这句重新推荐'}
+              </button>
+            </div>
+
+            <NlFeedback
+              state={nlState}
+              dimensionLabels={dimensionLabels}
+              onRetry={() => void submitNaturalLanguage()}
+              onKeySaved={() => void submitNaturalLanguage()}
+              onDismiss={() => {
+                setNlState({ kind: 'idle' })
+                setNlText('')
+              }}
+            />
 
             <p className="field-label">现在是什么情况？（点一下立刻重新推荐）</p>
             <div className="scenario-row">
@@ -820,6 +997,139 @@ function ContextBanner({
         </>
       )}
     </p>
+  )
+}
+
+/**
+ * 「我把你这句话理解成什么了」。
+ *
+ * <h2>⚠️ 这个组件是这个功能的信誉所在</h2>
+ *
+ * <p>理解完就直接拿去重新推荐了。如果用户看不到系统理解成了什么，
+ * 一次误解会表现成"这推荐怎么莫名其妙的"——他只会觉得这东西乱来，
+ * 而完全想不到是它把"想安静"听成了别的。所以这里必须**摊开**：
+ * 复述一句、列出解析出的每个条件、把用不上的如实说出来。
+ *
+ * <p>和项目里一直贯彻的那条原则是同一条：
+ * <b>系统替用户做的判断，都要摊开给他看。</b>
+ */
+function NlFeedback({
+  state,
+  dimensionLabels,
+  onRetry,
+  onKeySaved,
+  onDismiss,
+}: {
+  state: NlState
+  /** 维度名 → 中文。从画像里现取，前端不另维护一份翻译表 */
+  dimensionLabels: Record<string, string>
+  onRetry: () => void
+  onKeySaved: () => void
+  onDismiss: () => void
+}) {
+  if (state.kind === 'idle' || state.kind === 'loading') {
+    return null
+  }
+
+  if (state.kind === 'noServerAi') {
+    return (
+      <div className="nl-feedback">
+        <p>这台服务器没有配 AI，没法理解自然语言。</p>
+        <AiKeyPanel defaultOpen onSaved={onKeySaved} hint="填上你自己的 API Key 就能用了。" />
+      </div>
+    )
+  }
+
+  if (state.kind === 'keyRejected') {
+    return (
+      <div className="nl-feedback error">
+        <p>你填的 AI Key 被厂商拒绝了（可能填错、过期或额度用尽）。</p>
+        <AiKeyPanel defaultOpen onSaved={onKeySaved} hint="换一个 key 再试试。" />
+      </div>
+    )
+  }
+
+  if (state.kind === 'error') {
+    return (
+      <div className="nl-feedback error">
+        <p>没能理解：{state.message}</p>
+        <button className="link-btn" type="button" onClick={onRetry}>
+          重试
+        </button>
+      </div>
+    )
+  }
+
+  if (state.kind === 'nothing') {
+    // "这句我没听懂"是一个正常结果，不是故障。
+    // ⚠️ 这时**不要重新推荐**——拿一个空条件去跑，用户会以为"说了等于没说"，
+    //    而其实是我们没理解。如实说，让他换个说法。
+    return (
+      <div className="nl-feedback">
+        <p>{state.summary || '这句话里我没提取出可用的条件。'}</p>
+        <p className="nl-hint">换个说法试试，比如「我有点累了，不想走太远」。</p>
+        <button className="link-btn" type="button" onClick={onDismiss}>
+          好，我重说
+        </button>
+      </div>
+    )
+  }
+
+  const { result } = state
+  const biasEntries = Object.entries(result.biases)
+
+  return (
+    <div className="nl-feedback">
+      <p className="nl-summary">
+        <span className="nl-tag">我理解成</span>
+        {result.summary}
+      </p>
+
+      <div className="nl-chips">
+        {result.states.map((s) => (
+          <span className="nl-chip" key={s.key}>
+            {s.label}
+          </span>
+        ))}
+        {result.remainingMinutes !== null && (
+          <span className="nl-chip">还剩 {result.remainingMinutes} 分钟</span>
+        )}
+        {result.maxDistanceKm !== null && (
+          <span className="nl-chip">最远 {result.maxDistanceKm} 公里</span>
+        )}
+        {result.maxTicketPrice !== null && (
+          <span className="nl-chip">门票 {result.maxTicketPrice} 元以内</span>
+        )}
+        {biasEntries.map(([key, value]) => (
+          <span className="nl-chip" key={key}>
+            {dimensionLabels[key] ?? key}
+            {value >= 0 ? '↑' : '↓'}
+          </span>
+        ))}
+      </div>
+
+      {/*
+        ⚠️ 用不上的部分要如实说出来。这一条是诚实的落点：
+        说不出来就说"这句我没用上"，比假装听懂强——用户据此才知道系统的边界在哪。
+
+        （这里只列出来，不做成可点的东西：那些条件我们确实没有对应维度，
+         能做的只有诚实地告诉他。）
+      */}
+      {result.unrecognized.length > 0 && (
+        <p className="nl-unrecognized">
+          这句我没能用上：
+          {result.unrecognized.map((item, i) => (
+            <span className="nl-chip muted" key={i}>
+              {item}
+            </span>
+          ))}
+        </p>
+      )}
+
+      <button className="link-btn" type="button" onClick={onDismiss}>
+        重来
+      </button>
+    </div>
   )
 }
 

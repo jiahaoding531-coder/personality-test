@@ -1,6 +1,7 @@
 package com.example.personality.ai;
 
 import com.example.personality.domain.ScoredPlace;
+import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
 import com.example.personality.domain.Weather;
 import org.springframework.stereotype.Component;
@@ -130,11 +131,37 @@ public class TravelReasonPromptBuilder {
             sb.append('\n');
         }
 
+        appendCustomBiases(sb, input.customBiases());
+
         Weather weather = input.weather();
         if (weather != null) {
             sb.append("- 天气：").append(weather.condition())
               .append(' ').append(formatNumber(weather.temperature())).append(" 度\n");
         }
+        sb.append('\n');
+    }
+
+    /**
+     * 用户原话里那些**词表装不下**的部分。
+     *
+     * <p>比如"想找个特别小众的地方"——没有对应的状态名，被解析成了
+     * "少一点热闹、多一点小众"。这里把它翻译回人话告诉模型，
+     * 让写出来的理由能呼应上。
+     *
+     * <p>⚠️ 这一段不能省。用户特意打了一句话，理由里却只字不提，
+     * 他会觉得"我说了它根本没听"——而那句话往往是他最在意的。
+     *
+     * <p>翻译成"少一点热闹"这种方向性描述，而不是把 {@code -0.50} 原样给它：
+     * 数字对模型没有意义，而且系统提示词本来就要求它不要提数字。
+     */
+    private void appendCustomBiases(StringBuilder sb, Map<TravelDimension, Double> biases) {
+        if (biases == null || biases.isEmpty()) {
+            return;
+        }
+        sb.append("- 用户还特别提到（原话里没有现成的说法，按倾向理解）：");
+        biases.forEach((dimension, value) -> sb.append('\n')
+                .append("    · ").append(dimension.label())
+                .append(value >= 0 ? " 要更多一些" : " 要更少一些"));
         sb.append('\n');
     }
 

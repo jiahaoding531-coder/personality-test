@@ -1,5 +1,6 @@
 package com.example.personality.entity;
 
+import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,7 +14,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -100,6 +104,23 @@ public class RecommendationBatch {
     @Column(name = "inferred_states", nullable = false, length = 128)
     private String inferredStates = "";
 
+    /**
+     * 自然语言解析出来的**原始维度偏向**，逗号串，形如
+     * {@code "CROWD_TOLERANCE:-0.80,PHOTOGRAPHY:0.60"}。
+     *
+     * <p>用户说出词表覆盖不了的话（"想找个特别小众的地方"）时，AI 会把它们
+     * 翻译成这样一串权重。常见的话（"我累了"）仍然落进 {@link #states}——
+     * 那边有名字、可读、能显示给用户。
+     *
+     * <p>⚠️ 和 {@link #states} 是**两列**，不合并：一个存的是"有身份的名字"，
+     * 一个是"裸的数值"，混在一起展示和解析都会变得很难写。
+     *
+     * <p>⚠️ 它**不打"系统推断"标记**。文本是用户自己打的，AI 只是翻译；
+     * 这和 {@link #inferredStates}（系统按时间猜的）是两回事。
+     */
+    @Column(name = "custom_biases", nullable = false, length = 256)
+    private String customBiases = "";
+
     @Column(name = "weather_condition", length = 64)
     private String weatherCondition;
 
@@ -124,6 +145,7 @@ public class RecommendationBatch {
                                          LocalTime contextTime, int remainingMinutes,
                                          BigDecimal maxDistanceKm, Integer maxTicketPrice,
                                          Set<TravelState> states, Set<TravelState> inferredStates,
+                                         Map<TravelDimension, Double> customBiases,
                                          String weatherCondition, Double weatherTemperature) {
         RecommendationBatch batch = new RecommendationBatch();
         batch.sessionId = sessionId;
@@ -135,6 +157,7 @@ public class RecommendationBatch {
         batch.maxTicketPrice = maxTicketPrice;
         batch.states = joinStates(states);
         batch.inferredStates = joinStates(inferredStates);
+        batch.customBiases = joinBiases(customBiases);
         batch.weatherCondition = weatherCondition;
         batch.weatherTemperature = weatherTemperature == null
                 ? null
@@ -150,6 +173,25 @@ public class RecommendationBatch {
     }
 
     /**
+     * 把「维度 → 偏向」拼成 `CROWD_TOLERANCE:-0.80,PHOTOGRAPHY:0.60`。
+     *
+     * <p>⚠️ 用 {@code Locale.ROOT} 且固定两位小数。不指定 Locale 的话，
+     * 在某些区域设置下小数点是**逗号**（比如德语区），拼出来的字符串会变成
+     * {@code CROWD_TOLERANCE:-0,80,PHOTOGRAPHY:0,60}——逗号既是分隔符又是小数点，
+     * 整个格式就地崩溃，而且只在那些区域的机器上崩。
+     */
+    private static String joinBiases(Map<TravelDimension, Double> biases) {
+        if (biases == null || biases.isEmpty()) {
+            return "";
+        }
+        return biases.entrySet().stream()
+                .filter(e -> e.getKey() != null && e.getValue() != null)
+                .map(e -> e.getKey().name() + ":"
+                        + String.format(Locale.ROOT, "%.2f", e.getValue()))
+                .collect(Collectors.joining(","));
+    }
+
+    /**
      * 把逗号分隔的枚举名读回状态集合。
      *
      * <p><b>认不出来的名字直接跳过，不抛异常。</b>这个值是从数据库读回来的，
@@ -162,6 +204,40 @@ public class RecommendationBatch {
 
     public Set<TravelState> inferredStateSet() {
         return parseStates(inferredStates);
+    }
+
+    /**
+     * 把逗号串读回「维度 → 偏向」。
+     *
+     * <p><b>⚠️ 这里对脏数据格外宽容，因为它的来源不止我们自己。</b>
+     * 解析失败的条目一律**丢掉**而不是抛异常：一个维度名拼错、
+     * 或者数值格式不对，不该让整个推荐理由功能挂掉——
+     * 少一个偏向，用户至多看到一句解释没那么贴切的话。
+     */
+    public Map<TravelDimension, Double> customBiasMap() {
+        if (customBiases == null || customBiases.isBlank()) {
+            return Map.of();
+        }
+        Map<TravelDimension, Double> result = new EnumMap<>(TravelDimension.class);
+        for (String entry : customBiases.split(",")) {
+            String trimmed = entry.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            int separator = trimmed.indexOf(':');
+            if (separator <= 0 || separator == trimmed.length() - 1) {
+                continue;
+            }
+            TravelDimension.fromName(trimmed.substring(0, separator)).ifPresent(dimension -> {
+                try {
+                    result.put(dimension,
+                            Double.parseDouble(trimmed.substring(separator + 1).trim()));
+                } catch (NumberFormatException ignored) {
+                    // 数值坏掉就跳过这一条
+                }
+            });
+        }
+        return result;
     }
 
     private static Set<TravelState> parseStates(String raw) {

@@ -6,6 +6,8 @@ import com.example.personality.domain.AmbientContext;
 import com.example.personality.dto.AnswersSavedResponse;
 import com.example.personality.dto.FeedbackRequest;
 import com.example.personality.dto.FeedbackResponse;
+import com.example.personality.dto.InterpretRequest;
+import com.example.personality.dto.InterpretResponse;
 import com.example.personality.dto.RecommendationRequest;
 import com.example.personality.dto.RecommendationResponse;
 import com.example.personality.dto.SessionResponse;
@@ -19,6 +21,7 @@ import com.example.personality.service.AmbientService;
 import com.example.personality.service.RecommendationService;
 import com.example.personality.service.TestSessionService;
 import com.example.personality.service.TravelProfileService;
+import com.example.personality.service.TravelIntentService;
 import com.example.personality.service.TravelReasonService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -64,6 +67,7 @@ public class TravelController {
     private final RecommendationService recommendationService;
     private final AmbientService ambientService;
     private final TravelReasonService travelReasonService;
+    private final TravelIntentService travelIntentService;
     private final AiCredentialsResolver aiCredentialsResolver;
     private final SessionAccessGuard accessGuard;
 
@@ -72,6 +76,7 @@ public class TravelController {
                             RecommendationService recommendationService,
                             AmbientService ambientService,
                             TravelReasonService travelReasonService,
+                            TravelIntentService travelIntentService,
                             AiCredentialsResolver aiCredentialsResolver,
                             SessionAccessGuard accessGuard) {
         this.testSessionService = testSessionService;
@@ -79,6 +84,7 @@ public class TravelController {
         this.recommendationService = recommendationService;
         this.ambientService = ambientService;
         this.travelReasonService = travelReasonService;
+        this.travelIntentService = travelIntentService;
         this.aiCredentialsResolver = aiCredentialsResolver;
         this.accessGuard = accessGuard;
     }
@@ -261,5 +267,40 @@ public class TravelController {
         // 服务层拿到的是**已经解析好的凭据**，不用关心它从哪来，
         // 也因此不会把 HTTP 请求头这个概念漏进业务逻辑里。
         return travelReasonService.generate(sessionId, regenerate, credentials);
+    }
+
+    /**
+     * {@code POST /api/travel/sessions/{id}/interpret} —— 把用户的一句大白话
+     * 翻译成结构化条件（状态 / 剩余时间 / 走多远 / 预算）。
+     *
+     * <p>用法：结果页那个"说说你现在什么情况"的输入框调它，拿到解析结果后
+     * <b>摊开给用户看一眼</b>，再拿去重新推荐。
+     *
+     * <h2>⚠️ 为什么这个接口挂在会话上（它其实不读会话数据）</h2>
+     *
+     * <p>解析一句话和"你是哪个会话"确实没关系。挂在这里有两个实际理由：
+     * <ol>
+     *   <li><b>它要花钱调模型</b>，需要一个天然的滥用闸门。
+     *       会话校验就是现成的那个，和其它两个 AI 接口用的是同一套</li>
+     *   <li>前端手上永远有 sessionId，多挂一层不增加任何负担</li>
+     * </ol>
+     *
+     * <p>凭据同样走 BYOK 那两个头；没凭据时返回 501，前端会引导访客填自己的 key。
+     */
+    @PostMapping("/sessions/{sessionId}/interpret")
+    public InterpretResponse interpret(
+            @PathVariable Long sessionId,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @AuthenticationPrincipal AppUserPrincipal principal,
+            @Valid @RequestBody InterpretRequest request,
+            @RequestHeader(value = AiCredentialsResolver.PROVIDER_HEADER, required = false)
+            String aiProvider,
+            @RequestHeader(value = AiCredentialsResolver.KEY_HEADER, required = false)
+            String aiKey) {
+
+        checkAccess(sessionId, sessionToken, principal);
+        AiCredentials credentials = aiCredentialsResolver.require(aiProvider, aiKey);
+
+        return travelIntentService.interpret(credentials, request.text());
     }
 }

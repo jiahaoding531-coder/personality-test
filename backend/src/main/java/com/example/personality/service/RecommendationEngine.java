@@ -147,7 +147,7 @@ public class RecommendationEngine {
             // ---------- ⑤ 此刻的状态 ----------
             // "我累了"就是在这里生效的：越费腿的地方这个系数越小。
             // 没状态时恒等于 1.0，几乎零开销。
-            double stateFactor = stateFactor(context.states(), place.traits());
+            double stateFactor = stateFactor(context.states(), context.extraBias(), place.traits());
 
             // ---------- ⑥ 此刻的天气 ----------
             // "下雨"在这里生效：越靠户外的地方扣得越狠，全程室内的不受影响。
@@ -219,25 +219,90 @@ public class RecommendationEngine {
      *
      * <p>没有状态时直接返回 1.0（乘法单位元），对原有打分零影响。
      */
-    static double stateFactor(Set<TravelState> states, PlaceTraits traits) {
-        if (states == null || states.isEmpty()) {
+    static double stateFactor(Set<TravelState> states, Map<TravelDimension, Double> extraBias,
+                              PlaceTraits traits) {
+        Map<TravelDimension, Double> bias = mergeBias(states, extraBias);
+        if (bias.isEmpty()) {
             return 1.0;
-        }
-
-        // 多个状态可能作用于同一个维度（比如"累了"和"想散步"都影响 walking），
-        // 偏向直接相加——两个相反的偏向会互相抵消，这是对的
-        Map<TravelDimension, Double> bias = new EnumMap<>(TravelDimension.class);
-        for (TravelState state : states) {
-            state.attributeBias().forEach((dimension, value) -> bias.merge(dimension, value, Double::sum));
         }
 
         double factor = 1.0;
         for (Map.Entry<TravelDimension, Double> entry : bias.entrySet()) {
-            double b = entry.getValue();
+            double b = clampBias(entry.getValue());
             double placeValue = traits.valueOf(entry.getKey()) / 100.0;
             factor *= (1.0 + b * placeValue) / (1.0 + Math.max(b, 0.0));
         }
         return factor;
+    }
+
+    // ==========================================================
+    // 偏向的合并与限幅
+    // ==========================================================
+
+    /**
+     * 偏向（每个维度）允许的最大绝对值。
+     *
+     * <h2>⚠️ 为什么必须有这个上限</h2>
+     *
+     * <p>看公式：{@code 系数 = (1 + b × v) / (1 + max(b, 0))}，其中 {@code v} 是
+     * 地点在该维度的属性值（0~1）。
+     *
+     * <p><b>{@code b} 只要低于 -1，分子就会变成负数，整个系数跟着变负</b>，
+     * 五个因子相乘得到负分——直接撞上数据库的
+     * {@code CHECK (score BETWEEN 0 AND 1)}，接口 500。
+     *
+     * <p>为什么取 1 就安全：
+     * <ul>
+     *   <li>{@code b ∈ [-1, 0]}：{@code 系数 = 1 + b·v}，因为 {@code b·v ∈ [-1, 0]}，
+     *       所以系数落在 {@code [0, 1]}</li>
+     *   <li>{@code b ∈ (0, 1]}：{@code 系数 = (1 + b·v)/(1 + b)}，分子分母都涨，
+     *       上下界分别是 {@code (1+b)/(1+b)=1} 和 {@code 1/(1+b) > 0}</li>
+     * </ul>
+     *
+     * <h2>在放开原始权重之前，这件事是"侥幸"的</h2>
+     *
+     * <p>词表（{@link TravelState}）里的偏向都是 ±0.8，而且恰好**没有两个状态
+     * 影响同一个维度**，所以求和后最多 ±0.8，天然越不过 -1。
+     *
+     * <p>但那是数据凑巧，不是代码保证——接入自然语言解析之后，
+     * AI 可以直接给出任意维度的任意权重，{@code -0.8 + (-0.9) = -1.7}
+     * 随手就能造出来。所以现在**显式地**按维度求和后夹住，
+     * 命名状态和原始权重走同一条路。侥幸安全变成显式保证。
+     */
+    private static final double MAX_BIAS = 1.0;
+
+    /**
+     * 把命名状态和自然语言解析出来的原始权重合并成一个「维度 → 偏向」的表。
+     *
+     * <p>同一个维度上的偏向<b>直接相加</b>：两个相反的偏向会互相抵消，
+     * 这是对的（"想散步"和"累了"同时说，就抵消成没意见）。
+     */
+    private static Map<TravelDimension, Double> mergeBias(Set<TravelState> states,
+                                                          Map<TravelDimension, Double> extraBias) {
+        Map<TravelDimension, Double> bias = new EnumMap<>(TravelDimension.class);
+
+        if (states != null) {
+            for (TravelState state : states) {
+                state.attributeBias().forEach((dimension, value) -> bias.merge(dimension, value, Double::sum));
+            }
+        }
+        if (extraBias != null) {
+            // 两边都可能给同一个维度加偏向，所以也是 merge 而不是 put
+            extraBias.forEach((dimension, value) -> {
+                if (dimension != null && value != null) {
+                    bias.merge(dimension, value, Double::sum);
+                }
+            });
+        }
+        return bias;
+    }
+
+    /** 把偏向夹进 [-MAX_BIAS, MAX_BIAS]。非法值（NaN）当作 0，也就是"没影响"。 */
+    private static double clampBias(double value) {
+        if (Double.isNaN(value)) {
+            return 0.0;
+        }
+        return Math.max(-MAX_BIAS, Math.min(MAX_BIAS, value));
     }
 
     /**

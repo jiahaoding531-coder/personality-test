@@ -1,11 +1,13 @@
 package com.example.personality.ai;
 
 import com.example.personality.domain.ScoredPlace;
+import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
 import com.example.personality.domain.Weather;
 
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -35,6 +37,10 @@ import java.util.Set;
  * @param inferredStates <b>其中哪些是系统推断的。</b>
  *                       提示词会把它单独标出来——"你说了你累了"和"系统猜你累了"
  *                       是两回事，转述时不能混
+ * @param customBiases   用户说了词表覆盖不了的话时，AI 解析出来的原始维度偏向。
+ *                       比如"想找个特别小众的地方" → {@code {CROWD_TOLERANCE: -0.5, HIDDEN_GEMS: 0.6}}。
+ *                       <p>⚠️ 不能漏掉它：用户特意打了一句话，写理由时却只字不提，
+ *                       他会觉得"我说了它根本没听"。而那句话往往恰恰是他最在意的。
  * @param weather        当时的天气。没配高德或查不到时为 null
  * @param places         要解释的地点，按名次升序
  */
@@ -46,6 +52,7 @@ public record TravelReasonInput(
         Integer maxTicketPrice,
         Set<TravelState> states,
         Set<TravelState> inferredStates,
+        Map<TravelDimension, Double> customBiases,
         Weather weather,
         List<ExplainedPlace> places
 ) {

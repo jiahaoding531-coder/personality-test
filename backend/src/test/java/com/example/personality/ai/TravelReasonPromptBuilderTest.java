@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -115,6 +116,7 @@ class TravelReasonPromptBuilderTest {
                 "杭州市西湖区北山街附近", LocalTime.of(18, 0), 240, 10.0, null,
                 Set.of(TravelState.TIRED),   // 生效的状态
                 Set.of(),                    // 但没有一个是推断的
+                Map.of(),                    // 也没有词表外的原始偏向
                 null,
                 List.of(place(1, "西湖·苏堤")));
 
@@ -145,6 +147,32 @@ class TravelReasonPromptBuilderTest {
     }
 
     @Test
+    @DisplayName("词表覆盖不了的部分也要告诉模型——用户特意打了那句话")
+    void userPrompt_includesCustomBiases() {
+        // 用户特意打了一句话，理由里却只字不提，他会觉得"我说了它根本没听"。
+        // 而那句话往往恰恰是他最在意的。
+        String prompt = builder.userPrompt(input(Weather.of("阴", 24)));
+
+        assertTrue(prompt.contains("用户还特别提到"), "缺了原始偏向这一段");
+        assertTrue(prompt.contains(TravelDimension.CROWD_TOLERANCE.label()), "要说出是哪个维度");
+        // ⚠️ 给的是方向（"要更少一些"）而不是 -0.50 这个数字：
+        //    数字对模型没有意义，而且系统提示词本来就要求它不要提数字
+        assertTrue(prompt.contains("要更少一些"), "负偏向要翻译成「更少」而不是给数字");
+        assertTrue(prompt.contains("要更多一些"), "正偏向要翻译成「更多」");
+    }
+
+    @Test
+    @DisplayName("没有原始偏向时不出现那一段")
+    void userPrompt_omitsCustomBiasesWhenAbsent() {
+        TravelReasonInput noBiases = new TravelReasonInput(
+                "杭州市西湖区北山街附近", LocalTime.of(18, 0), 240, 10.0, null,
+                Set.of(TravelState.TIRED), Set.of(), Map.of(), null,
+                List.of(place(1, "西湖·苏堤")));
+
+        assertFalse(builder.userPrompt(noBiases).contains("用户还特别提到"));
+    }
+
+    @Test
     @DisplayName("没有天气时不能编一个天气出来")
     void userPrompt_omitsWeatherWhenAbsent() {
         String prompt = builder.userPrompt(input(null));
@@ -166,6 +194,8 @@ class TravelReasonPromptBuilderTest {
                 Set.of(TravelState.TIRED),
                 // 标成"系统推断的"——用来验证提示词会不会把它标出来
                 Set.of(TravelState.TIRED),
+                // 词表覆盖不了的那部分（"想找个特别小众的地方"之类）
+                Map.of(TravelDimension.CROWD_TOLERANCE, -0.5, TravelDimension.HIDDEN_GEMS, 0.6),
                 weather,
                 List.of(place(1, "西湖·苏堤"), place(2, "楼外楼（孤山店）")));
     }

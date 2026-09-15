@@ -984,6 +984,105 @@ table.data td.num {
 }
 
 /* ============================================================
+   自然语言输入
+   ============================================================ */
+
+.nl-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.nl-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  /* 只允许纵向拉伸：横向拉会把整个卡片撑破 */
+  resize: vertical;
+}
+
+.nl-input:disabled {
+  opacity: 0.6;
+}
+
+.nl-feedback {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--series-1);
+  border-radius: 0 8px 8px 0;
+  background: var(--hover-wash);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.nl-feedback.error {
+  border-left-color: #c0392b;
+}
+
+.nl-feedback p {
+  margin: 0 0 6px;
+}
+
+.nl-summary {
+  color: var(--text-primary);
+}
+
+.nl-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 11px;
+  vertical-align: 1px;
+}
+
+.nl-hint {
+  color: var(--text-secondary);
+}
+
+.nl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+/* 解析出来的条件。用实线而不是虚线——虚线在这个界面里的含义是
+   "这是系统猜的、可以否定"，而这些是用户自己说的话被翻译过来的。 */
+.nl-chip {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* "这句我没用上"的那些。刻意做得比正常条件更弱——
+   它们是**没有生效**的东西，不该和生效的条件一样显眼。 */
+.nl-chip.muted {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.nl-unrecognized {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* ============================================================
    AI Key 设置（BYOK）
    ============================================================ */
 

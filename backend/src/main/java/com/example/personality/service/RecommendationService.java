@@ -213,7 +213,10 @@ public class RecommendationService {
                 request.maxDistanceKmOrDefault(),
                 request.maxTicketPrice(),
                 allStates)
-                .withWeather(ambient.weather());
+                .withWeather(ambient.weather())
+                // 自然语言解析出来的原始偏向。和 states 是同一件事的两种表达，
+                // 引擎会把两者合并后一起算（并在那里统一限幅）
+                .withExtraBias(request.biasesOrEmpty());
 
         // ⑦ 交给算法。它不认识数据库，也不认识反馈——只做硬过滤 + 打分 + 排序
         List<ScoredPlace> top = engine.recommend(effective, candidates, context, TOP_N);
@@ -240,6 +243,7 @@ public class RecommendationService {
                 context.maxTicketPrice(),
                 context.states(),
                 inferred,
+                context.extraBias(),
                 context.weather() == null ? null : context.weather().condition(),
                 context.weather() == null ? null : context.weather().temperature()));
 
@@ -480,6 +484,7 @@ public class RecommendationService {
                 batch.getMaxTicketPrice(),
                 batch.stateSet(),
                 batch.inferredStateSet(),
+                batch.customBiasMap(),
                 weather,
                 places);
     }

@@ -61,4 +61,31 @@ public enum TravelDimension implements ScaleDimension {
     public boolean affectsPlaceChoice() {
         return this != PLANNING;
     }
+
+    /**
+     * 按枚举名查维度，认不出来返回空。
+     *
+     * <p>用来解析**外部输入**给的维度名——目前只有一个来源：AI 从自然语言里
+     * 解析出来的原始权重（见 {@code TextIntentGenerator}）。
+     *
+     * <p>⚠️ 认不出来必须返回空由调用方丢弃，**不要退回默认值**。
+     * 大模型偶尔会编一个不存在的维度名（比如 {@code FOODIE}），
+     * 悄悄把它当成 {@code FOOD} 的话，用户看到的解释和他的本意就对不上了，
+     * 而且没有任何提示。
+     *
+     * <p>大小写不敏感只是为了让外部输入少踩格式的坑，不是放宽校验——
+     * 名字对不上就是对不上。
+     */
+    public static java.util.Optional<TravelDimension> fromName(String name) {
+        if (name == null || name.isBlank()) {
+            return java.util.Optional.empty();
+        }
+        String normalized = name.trim().toUpperCase(java.util.Locale.ROOT);
+        for (TravelDimension dimension : values()) {
+            if (dimension.name().equals(normalized)) {
+                return java.util.Optional.of(dimension);
+            }
+        }
+        return java.util.Optional.empty();
+    }
 }

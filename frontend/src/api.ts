@@ -4,6 +4,7 @@ import type {
   AnswersSavedResponse,
   ApiErrorBody,
   FeedbackResponse,
+  InterpretResponse,
   QuestionsResponse,
   Reaction,
   RecommendationRequest,
@@ -322,6 +323,28 @@ export const api = {
       withSessionToken(
         // 同上：访客填过 key 就自动带上，调用点不用管
         { method: 'POST', headers: aiRequestHeaders() },
+        sessionToken,
+      ),
+    ),
+
+  /**
+   * 把用户打的一句大白话翻译成结构化条件。
+   *
+   * ⚠️ 拿到结果后**必须摊开给用户看**再拿去重新推荐：理解了就直接用，
+   * 一次误解会表现成"这推荐怎么莫名其妙的"，用户完全想不到问题出在哪。
+   *
+   * ⚠️ 可能返回 **501**（这台服务器没配 AI）或 **400**（填的 key 被拒）。
+   * 两个的含义不同，前端给的话也该不同。
+   */
+  interpret: (sessionId: number, text: string, sessionToken?: string) =>
+    request<InterpretResponse>(
+      `/api/travel/sessions/${sessionId}/interpret`,
+      withSessionToken(
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...aiRequestHeaders() },
+          body: JSON.stringify({ text }),
+        },
         sessionToken,
       ),
     ),

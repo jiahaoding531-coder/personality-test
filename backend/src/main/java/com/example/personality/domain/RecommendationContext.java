@@ -1,6 +1,7 @@
 package com.example.personality.domain;
 
 import java.time.LocalTime;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -42,6 +43,14 @@ import java.util.Set;
  *                         拿不到就该当它不存在，而不是猜一个或报错。
  *                         <p>气候属于"此刻的处境"而不是"用户是谁"，理由同
  *                         {@link #states}——见 {@link Weather} 的类注释。
+ * @param extraBias        词表覆盖不到时，由 AI 从自然语言里解析出来的**原始维度偏向**。
+ *                         比如用户说"想找个特别小众的地方"，词表里没有对应的状态，
+ *                         就落到这里：{@code {CROWD_TOLERANCE: -0.5, HIDDEN_GEMS: 0.6}}。
+ *                         <p>和 {@link #states} 是同一件事的两种表达——都是"此刻想要什么"
+ *                         对地点属性的临时修正，引擎会把两者**合并**后一起算。
+ *                         区别只是：状态有名字（可读、能显示给用户），原始偏向没有。
+ *                         <p>空 Map 表示没有。取值由引擎按维度求和后夹到 [-1, 1]，
+ *                         调用方不用自己限制范围——见 {@code RecommendationEngine.stateFactor}。
  */
 public record RecommendationContext(
         LocalTime now,
@@ -51,7 +60,8 @@ public record RecommendationContext(
         double maxDistanceKm,
         Integer maxTicketPrice,
         Set<TravelState> states,
-        Weather weather
+        Weather weather,
+        Map<TravelDimension, Double> extraBias
 ) {
 
     public static final double DEFAULT_MAX_DISTANCE_KM = 10.0;
@@ -64,7 +74,7 @@ public record RecommendationContext(
      */
     public static RecommendationContext of(LocalTime now, int remainingMinutes) {
         return new RecommendationContext(now, remainingMinutes, null, null,
-                DEFAULT_MAX_DISTANCE_KM, null, Set.of(), null);
+                DEFAULT_MAX_DISTANCE_KM, null, Set.of(), null, Map.of());
     }
 
     /**
@@ -94,14 +104,14 @@ public record RecommendationContext(
                                                      Set<TravelState> states) {
         return new RecommendationContext(now, remainingMinutes, latitude, longitude,
                 maxDistanceKm, maxTicketPrice,
-                states == null ? Set.of() : Set.copyOf(states), null);
+                states == null ? Set.of() : Set.copyOf(states), null, Map.of());
     }
 
     /**
      * 补上天气，其余原样复制。
      *
-     * <p>record 没有自带的 wither，而构造器有八个参数——再写一个
-     * "全参数工厂方法"只会让调用点更难读（八个位置参数，谁也看不出
+     * <p>record 没有自带的 wither，而构造器有九个参数——再写一个
+     * "全参数工厂方法"只会让调用点更难读（九个位置参数，谁也看不出
      * 第三个是什么）。所以给天气单独开一个：<b>它是唯一一个
      * "来自外部、可能拿不到、事后才知道"的字段。</b>
      *
@@ -110,7 +120,21 @@ public record RecommendationContext(
      */
     public RecommendationContext withWeather(Weather weather) {
         return new RecommendationContext(now, remainingMinutes, latitude, longitude,
-                maxDistanceKm, maxTicketPrice, states, weather);
+                maxDistanceKm, maxTicketPrice, states, weather, extraBias);
+    }
+
+    /**
+     * 补上自然语言解析出来的原始维度偏向，其余原样复制。
+     *
+     * <p>和 {@link #withWeather} 同一个理由：构造器参数太多，
+     * 每加一个"事后才知道"的字段就多开一个 wither，比再加一层位置参数清楚。
+     *
+     * <p>传 null 或空 Map 都表示没有，这里兜底，调用方不用判空。
+     */
+    public RecommendationContext withExtraBias(Map<TravelDimension, Double> bias) {
+        return new RecommendationContext(now, remainingMinutes, latitude, longitude,
+                maxDistanceKm, maxTicketPrice, states, weather,
+                bias == null ? Map.of() : Map.copyOf(bias));
     }
 
     /** 有没有定位。没有的话距离因素会失效（所有地点距离分一样）。 */

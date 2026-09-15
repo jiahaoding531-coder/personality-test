@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -190,19 +191,116 @@ class RecommendationEngineTest {
     }
 
     @Test
-    @DisplayName("状态系数永远 ≤ 1——score ≤ 1 这条不变量不能被打破")
+    @DisplayName("状态系数永远落在 [0, 1]——score 那两条 CHECK 都不能被打破")
     void stateFactorNeverExceedsOne() {
-        // 这是防数据库 CHECK 约束的：score 是五个因子相乘，任何一个 > 1 都可能越界。
-        // 正偏向（饿了）如果直接乘上去会得到 1.76，所以公式里做了归一化。
+        // 这是防数据库 CHECK 约束的：score = 五个因子相乘。
+        // 系数 > 1 会让 score 超过上界；系数 < 0 会让 score 变成负数——
+        // 两条都会让存库直接失败、接口 500。
         PlaceTraits mostFood = traits(0, 0, 100, 0, 0, 0, 0);
         PlaceTraits mostWalking = traits(0, 0, 0, 0, 0, 0, 100);
 
         assertTrue(RecommendationEngine.stateFactor(
-                java.util.Set.of(TravelState.HUNGRY), mostFood) <= 1.0);
+                java.util.Set.of(TravelState.HUNGRY), Map.of(), mostFood) <= 1.0);
         assertTrue(RecommendationEngine.stateFactor(
-                java.util.Set.of(TravelState.WANT_WALK), mostWalking) <= 1.0);
-        assertEquals(1.0, RecommendationEngine.stateFactor(java.util.Set.of(), mostFood),
+                java.util.Set.of(TravelState.WANT_WALK), Map.of(), mostWalking) <= 1.0);
+        assertEquals(1.0, RecommendationEngine.stateFactor(java.util.Set.of(), Map.of(), mostFood),
                 "没有状态时应该是乘法单位元");
+    }
+
+    // ==========================================================
+    // ⚠️ 原始权重（自然语言解析出来的）的限幅
+    // ==========================================================
+
+    /**
+     * 这一组守的是**放开原始权重之后最容易出事的那条路**。
+     *
+     * <p>偏向只要低于 -1，打分系数就是**负数**，分数跟着变负，
+     * 直接撞上数据库的 {@code CHECK (score BETWEEN 0 AND 1)}。
+     *
+     * <p>在接入自然语言之前这件事是"侥幸安全"的——词表里的值都在 ±0.8，
+     * 而且恰好没有两个状态影响同一个维度。AI 能直接给权重之后，
+     * {@code -0.8 + (-0.9) = -1.7} 随手就能造出来，所以引擎显式夹住了。
+     */
+
+    @Test
+    @DisplayName("【核心】极端权重也不能算出负分——这是数据库 CHECK 的唯一防线")
+    void extremeBiasNeverProducesNegativeFactor() {
+        PlaceTraits maxed = traits(100, 100, 100, 100, 100, 100, 100);
+
+        // 故意给远超合理范围的值，包括能凑出"求和后远低于 -1"的组合
+        double[] extreme = {-5.0, -2.0, -1.5, -1.0, -0.99, 0.0, 1.0, 5.0, 100.0};
+
+        for (TravelDimension dimension : TravelDimension.values()) {
+            if (!dimension.affectsPlaceChoice()) {
+                continue;
+            }
+            for (double value : extreme) {
+                double factor = RecommendationEngine.stateFactor(
+                        Set.of(), Map.of(dimension, value), maxed);
+
+                assertTrue(factor >= 0.0,
+                        String.format("%s=%.1f 时系数变成了负数：%.4f——"
+                                + "这会让 score 变负，撞上 CHECK (score BETWEEN 0 AND 1)",
+                                dimension, value, factor));
+                assertTrue(factor <= 1.0,
+                        String.format("%s=%.1f 时系数超过 1：%.4f", dimension, value, factor));
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("同一个维度上多个偏向会相加，但求和后仍然夹住")
+    void summedBiasIsClampedToo() {
+        PlaceTraits maxed = traits(100, 100, 100, 100, 100, 100, 100);
+
+        // 命名状态和原始权重落在同一个维度上，且都是负的——加起来 -1.6
+        double factor = RecommendationEngine.stateFactor(
+                Set.of(TravelState.TIRED),                       // WALKING: -0.8
+                Map.of(TravelDimension.WALKING, -0.8),           // 再来 -0.8
+                maxed);
+
+        assertTrue(factor >= 0.0, "求和后没夹住，算出了负数：" + factor);
+    }
+
+    @Test
+    @DisplayName("非法的权重（NaN / 无穷）当作没影响，而不是把整个打分毁掉")
+    void nonFiniteBiasIsTreatedAsNoEffect() {
+        // 这些值理论上到不了这里（解析层会挡），但真到了也不该让
+        // 整个推荐挂掉——NaN 一旦混进分数，排序会变成完全随机的结果
+        PlaceTraits maxed = traits(100, 100, 100, 100, 100, 100, 100);
+
+        assertEquals(1.0, RecommendationEngine.stateFactor(
+                Set.of(), Map.of(TravelDimension.NATURE, Double.NaN), maxed), 1e-9);
+    }
+
+    @Test
+    @DisplayName("原始权重真的在起作用——不是被夹成 0 就完事了")
+    void extraBiasActuallyAffectsTheRanking() {
+        // 限幅不能把功能限没了。给"热闹"一个负偏向，人多的那个应该被压下去。
+        PlaceTraits quiet = traits(50, 50, 50, 50, 50, 10, 50);
+        PlaceTraits busy = traits(50, 50, 50, 50, 50, 95, 50);
+
+        double quietFactor = RecommendationEngine.stateFactor(
+                Set.of(), Map.of(TravelDimension.CROWD_TOLERANCE, -0.8), quiet);
+        double busyFactor = RecommendationEngine.stateFactor(
+                Set.of(), Map.of(TravelDimension.CROWD_TOLERANCE, -0.8), busy);
+
+        assertTrue(busyFactor < quietFactor,
+                "给了'想安静'之后，热闹的地方该被压得更狠："
+                        + busyFactor + " vs " + quietFactor);
+        assertTrue(quietFactor > 0.9, "本来就不吵的地方不该被误伤：" + quietFactor);
+    }
+
+    @Test
+    @DisplayName("新加的词表值确实有效——「想安静点」压住人多的")
+    void newQuietStateWorks() {
+        PlaceTraits busy = traits(50, 50, 50, 50, 50, 95, 50);
+
+        double normal = RecommendationEngine.stateFactor(Set.of(), Map.of(), busy);
+        double quiet = RecommendationEngine.stateFactor(Set.of(TravelState.QUIET), Map.of(), busy);
+
+        assertEquals(1.0, normal);
+        assertTrue(quiet < 0.5, "「想安静点」应该把人多的压得很低，实际：" + quiet);
     }
 
     // ==========================================================

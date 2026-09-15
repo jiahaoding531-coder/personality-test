@@ -1,13 +1,16 @@
 package com.example.personality.dto;
 
 import com.example.personality.domain.RecommendationContext;
+import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -74,7 +77,24 @@ public record RecommendationRequest(
          *
          * <p>不传默认 false（保持既有行为不变）。
          */
-        Boolean autoInfer
+        Boolean autoInfer,
+
+        /**
+         * 词表覆盖不了时，由 AI 从自然语言里解析出来的**原始维度偏向**。
+         *
+         * <p>比如用户说"想找个特别小众的地方"，词表里没有对应的状态，
+         * 就落到这里：{@code {"CROWD_TOLERANCE": -0.5, "HIDDEN_GEMS": 0.6}}。
+         *
+         * <p>⚠️ <b>不在这里校验取值范围。</b>引擎会把同一个维度上的偏向
+         * 求和后夹到 [-1, 1]（见 {@code RecommendationEngine.stateFactor}），
+         * 那是唯一能保证 {@code score} 不越界的地方——在这里再验一遍，
+         * 只会让"以哪一处为准"变得含糊。
+         *
+         * <p>这里只限个数：会影响地点选择的维度就 7 个，
+         * 多给的一律是噪音。
+         */
+        @Size(max = 8, message = "biases 最多 8 项")
+        Map<TravelDimension, Double> biases
 ) {
 
     /** 不传剩余时长时的默认值：4 小时。够逛两个景点，是比较典型的半日行程。 */
@@ -106,5 +126,10 @@ public record RecommendationRequest(
 
     public boolean autoInferOrDefault() {
         return Boolean.TRUE.equals(autoInfer);
+    }
+
+    /** 原始偏向，没传就是空（"没特别说"和"说了没有"在这里是一回事）。 */
+    public Map<TravelDimension, Double> biasesOrEmpty() {
+        return biases == null ? Map.of() : biases;
     }
 }

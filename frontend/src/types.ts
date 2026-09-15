@@ -204,7 +204,18 @@ export type Reaction = 'LIKE' | 'DISLIKE'
  * 用户说"我累了"不代表他从此不喜欢走路，所以状态**不会被存进画像**，
  * 只作用于这一次推荐。后端的 `TravelState` 枚举定义了一一对应的取值。
  */
-export type TravelState = 'TIRED' | 'HUNGRY' | 'WANT_WALK'
+export type TravelState =
+  | 'TIRED'
+  | 'HUNGRY'
+  | 'WANT_WALK'
+  // 下面四个是接入「自然语言状态输入」时补的。
+  // ⚠️ 改了这里要同步后端 domain/TravelState.java——两边对不上时，
+  //    后端会认不出前端发的状态名并**静默丢掉**（那是刻意的容错设计），
+  //    表现为"点了没反应"，很难查。
+  | 'QUIET'
+  | 'PHOTO'
+  | 'CULTURE'
+  | 'NATURE'
 
 /**
  * 反馈提交后服务端返回的"画像变化"。
@@ -356,6 +367,34 @@ export interface PlaceReason {
   reason: string
 }
 
+/**
+ * 「我理解成什么了」——AI 把用户的一句大白话翻译成的结构化条件。
+ *
+ * ⚠️ 拿到之后**必须摊开给用户看**。理解了就直接拿去重新推荐的话，
+ * 一次误解会表现成"这推荐怎么莫名其妙的"——用户只会觉得这东西乱来，
+ * 而完全想不到是它把"想安静"听成了别的。
+ */
+export interface InterpretResponse {
+  /** 理解出的状态，带中文名 */
+  states: { key: TravelState; label: string }[]
+  /**
+   * 词表覆盖不了的部分，AI 直接给的原始倾向。
+   *
+   * 键是**维度名**（`CROWD_TOLERANCE`），不是中文——因为前端要把它
+   * 原样回传在 recommendations 请求的 `biases` 里。展示时现查中文。
+   */
+  biases: Record<string, number>
+  remainingMinutes: number | null
+  maxDistanceKm: number | null
+  maxTicketPrice: number | null
+  /** 听懂了但用不上的部分。要显示出来——用户据此才知道系统的边界在哪 */
+  unrecognized: string[]
+  /** AI 的一句话复述 */
+  summary: string
+  /** 有没有解析出任何能用的条件。false 时该提示"换个说法" */
+  usable: boolean
+}
+
 export interface WeatherLabel {
   /** 原始天气描述，比如「多云」「小雨」。比类别更具体，直接显示给用户看 */
   condition: string
@@ -424,6 +463,16 @@ export interface RecommendationRequest {
    * 不排除的话按钮就是个摆设。不传时后端按 `false` 处理。
    */
   excludeSeen?: boolean
+  /**
+   * 词表覆盖不了时，AI 从自然语言里解析出来的**原始维度倾向**。
+   *
+   * 键是维度名（`CROWD_TOLERANCE`），值在 -1~1：
+   * 负数是"这个方面越少越好"，正数是"越多越好"。
+   *
+   * ⚠️ 前端**不用自己夹范围**。后端引擎会按维度求和后夹到 [-1, 1]——
+   * 那是唯一能保证分数不越界的地方，在这里再夹一遍只会让"以哪处为准"变得含糊。
+   */
+  biases?: Record<string, number>
 }
 
 /** 后端统一的错误响应结构，见 ApiErrorResponse.java */
