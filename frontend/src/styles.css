@@ -824,6 +824,134 @@ table.data td.num {
   font-size: 14px;
 }
 
+/* ---------- 旅行测试结果页 ---------- */
+
+/* 卡片里的小标题（"现在，你附近最值得去哪"） */
+.section-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 批次标签。"第 2 批"不放显眼位置，但用户点 👍/👎 时要能说清评的是哪一批 */
+.batch-tag {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+/* 定位按钮那一行：窄屏允许换行，否则两个按钮会挤成一团 */
+.locate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0 4px;
+}
+
+/* 经纬度和剩余时长三个输入框并排。窄屏自动换行——
+   三个数字输入框在手机上横排会窄到没法点。 */
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.field-row .field {
+  flex: 1 1 140px;
+  margin-bottom: 0;
+}
+
+/* 错误提示复用 .hint 的盒子样式，只把边框换成主色以示区别 */
+.hint-error {
+  border-color: var(--series-1);
+  color: var(--text-primary);
+}
+
+/* ---- 推荐卡片 ---- */
+
+.place-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-top: 14px;
+  background: var(--surface-1);
+}
+
+.place-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+/* 名次弱化处理——它是排序信息，不是内容本身 */
+.place-rank {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.place-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+/* 分数用主色，是卡片里最该被一眼看到的数字 */
+.place-score {
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--series-1);
+}
+
+.place-desc {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* 距离 / 门票 / 时长 / 营业时间 */
+.place-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 推荐理由用左侧竖线做成引用块的观感——
+   它是"解释"，视觉层级要低于地点本身 */
+.reasons {
+  margin: 12px 0 0;
+  padding: 0 0 0 14px;
+  list-style: none;
+  border-left: 2px solid var(--grid);
+}
+
+.reasons li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.reasons li b {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 /* 尊重系统的「减少动态效果」设置。
    前庭功能障碍的用户会因动画不适，这是无障碍的基本要求，
    不是可选项。 */

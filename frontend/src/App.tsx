@@ -8,7 +8,14 @@ import { HistoryScreen } from './screens/HistoryScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { TestScreen } from './screens/TestScreen'
-import type { Question, ScaleOption, SessionResultResponse, UserResponse } from './types'
+import { TravelResultScreen } from './screens/TravelResultScreen'
+import type {
+  Question,
+  ScaleOption,
+  SessionResultResponse,
+  TravelProfileResponse,
+  UserResponse,
+} from './types'
 
 /**
  * 当前在哪一屏。
@@ -18,7 +25,16 @@ import type { Question, ScaleOption, SessionResultResponse, UserResponse } from 
  * （比如同时「加载中」又「有错误」又「要展示结果」）。
  * 联合类型只允许 7 种合法状态，编译器帮你排除掉那些不可能的情况。
  */
-type Screen = 'home' | 'loading' | 'test' | 'result' | 'error' | 'auth' | 'history'
+type Screen =
+  | 'home'
+  | 'loading'
+  | 'test'
+  | 'result'
+  | 'error'
+  | 'auth'
+  | 'history'
+  | 'travel-test'
+  | 'travel-result'
 
 /** 一次测试流程中的全部数据。 */
 interface Flow {
@@ -46,10 +62,38 @@ const EMPTY_FLOW: Flow = {
   result: null,
 }
 
+/**
+ * 一次旅行测试流程中的全部数据。
+ *
+ * 和 {@link Flow} 一样是"把一次流程的数据打包成一个对象"——
+ * 而不是散着加五六个 useState。这样 `restart` 只需要重置一个对象，
+ * 也不会出现"重置了题号却忘了清答案"这种半残状态。
+ *
+ * 答题页复用同一个 `TestScreen`，所以 questions/options/answers 的形状完全一致。
+ */
+interface TravelFlow {
+  sessionId: number | null
+  accessToken: string | null
+  questions: Question[]
+  options: ScaleOption[]
+  answers: Record<number, number>
+  profile: TravelProfileResponse | null
+}
+
+const EMPTY_TRAVEL_FLOW: TravelFlow = {
+  sessionId: null,
+  accessToken: null,
+  questions: [],
+  options: [],
+  answers: {},
+  profile: null,
+}
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [loadingText, setLoadingText] = useState('')
   const [flow, setFlow] = useState<Flow>(EMPTY_FLOW)
+  const [travelFlow, setTravelFlow] = useState<TravelFlow>(EMPTY_TRAVEL_FLOW)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
 
   /**
@@ -149,8 +193,57 @@ export default function App() {
     setFlow((f) => ({ ...f, answers: { ...f.answers, [questionId]: score } }))
   }, [])
 
+  const recordTravelAnswer = useCallback((questionId: number, score: number) => {
+    setTravelFlow((f) => ({ ...f, answers: { ...f.answers, [questionId]: score } }))
+  }, [])
+
+  // ---------------------------------------------------------------
+  // 旅行偏好测试：建会话 + 取 8 道旅行题
+  // ---------------------------------------------------------------
+  const startTravelTest = useCallback(async () => {
+    setLoadingText('正在准备旅行测试…')
+    setScreen('loading')
+    try {
+      // 和人格测试一样，两个请求互不依赖，并发发出
+      const [session, bank] = await Promise.all([
+        api.createTravelSession(),
+        api.getTravelQuestions(),
+      ])
+      setTravelFlow({
+        sessionId: session.sessionId,
+        accessToken: session.accessToken,
+        questions: bank.questions,
+        options: bank.options,
+        answers: {},
+        profile: null,
+      })
+      setScreen('travel-test')
+    } catch (e: unknown) {
+      fail('无法开始旅行测试', e)
+    }
+  }, [fail])
+
+  /** 提交旅行测试，得到 8 维画像。 */
+  const finishTravelTest = useCallback(async () => {
+    const { sessionId, accessToken, questions, answers } = travelFlow
+    if (sessionId === null) return
+
+    setLoadingText('正在计算旅行画像…')
+    setScreen('loading')
+    try {
+      const payload = questions.map((q) => ({ questionId: q.id, score: answers[q.id] ?? 0 }))
+      await api.saveTravelAnswers(sessionId, payload, accessToken ?? undefined)
+      const profile = await api.submitTravel(sessionId, accessToken ?? undefined)
+      setTravelFlow((f) => ({ ...f, profile }))
+      setScreen('travel-result')
+    } catch (e: unknown) {
+      fail('计算失败', e)
+    }
+  }, [travelFlow, fail])
+
   const restart = useCallback(() => {
     setFlow(EMPTY_FLOW)
+    setTravelFlow(EMPTY_TRAVEL_FLOW)
     setScreen('home')
   }, [])
 
@@ -199,7 +292,9 @@ export default function App() {
         </div>
       </div>
 
-      {screen === 'home' && <HomeScreen onStart={startTest} />}
+      {screen === 'home' && (
+        <HomeScreen onStart={startTest} onStartTravel={startTravelTest} />
+      )}
 
       {screen === 'auth' && (
         <AuthScreen
@@ -236,6 +331,26 @@ export default function App() {
           result={flow.result}
           onRestart={restart}
           sessionToken={flow.accessToken ?? undefined}
+        />
+      )}
+
+      {/* 旅行答题直接复用 TestScreen——它只吃"题目 + 选项 + 答案回调"，
+          对是哪套量表完全不感知，8 道旅行题原样能用，不需要另写一个答题页。 */}
+      {screen === 'travel-test' && (
+        <TestScreen
+          questions={travelFlow.questions}
+          options={travelFlow.options}
+          answers={travelFlow.answers}
+          onAnswer={recordTravelAnswer}
+          onFinish={finishTravelTest}
+        />
+      )}
+
+      {screen === 'travel-result' && travelFlow.profile && (
+        <TravelResultScreen
+          profile={travelFlow.profile}
+          sessionToken={travelFlow.accessToken ?? undefined}
+          onRestart={restart}
         />
       )}
 

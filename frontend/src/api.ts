@@ -3,9 +3,12 @@ import type {
   AnswersSavedResponse,
   ApiErrorBody,
   QuestionsResponse,
+  RecommendationRequest,
+  RecommendationResponse,
   SessionResponse,
   SessionResultResponse,
   SessionSummary,
+  TravelProfileResponse,
   UserResponse,
 } from './types'
 
@@ -210,6 +213,75 @@ export const api = {
     request<AiReportResponse>(
       `/api/test-sessions/${sessionId}/ai-report${regenerate ? '?regenerate=true' : ''}`,
       withSessionToken({ method: 'POST' }, sessionToken),
+    ),
+
+  // ---------- 旅行偏好测试（TravelMind） ----------
+
+  /**
+   * 取旅行偏好题（8 道）。
+   *
+   * `?scale=TRAVEL` 不能省——不带参数时后端默认返回人格那 20 道题，
+   * 这是为了让老调用方不受影响。
+   */
+  getTravelQuestions: () => request<QuestionsResponse>('/api/questions?scale=TRAVEL'),
+
+  /** 开一次旅行测试会话。和人格测试共用一张表，只是 scale 不同 */
+  createTravelSession: () => request<SessionResponse>('/api/travel/sessions', emptyJsonPost()),
+
+  saveTravelAnswers: (
+    sessionId: number,
+    answers: { questionId: number; score: number }[],
+    sessionToken?: string,
+  ) =>
+    request<AnswersSavedResponse>(
+      `/api/travel/sessions/${sessionId}/answers`,
+      withSessionToken(
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers }),
+        },
+        sessionToken,
+      ),
+    ),
+
+  /** 提交并计分，得到 8 维旅行画像。重复提交返回 409 */
+  submitTravel: (sessionId: number, sessionToken?: string) =>
+    request<TravelProfileResponse>(
+      `/api/travel/sessions/${sessionId}/submit`,
+      withSessionToken({ method: 'POST' }, sessionToken),
+    ),
+
+  getTravelProfile: (sessionId: number, sessionToken?: string) =>
+    request<TravelProfileResponse>(
+      `/api/travel/sessions/${sessionId}/profile`,
+      withSessionToken({}, sessionToken),
+    ),
+
+  /**
+   * 拿 Top 3 推荐。
+   *
+   * **是 POST 不是 GET**：每次调用都会在服务端新写一批推荐记录
+   * （用户反馈要挂上去），有副作用，不符合 GET 的幂等语义。
+   *
+   * ⚠️ 定位必填。59 个模拟 POI 全在杭州，用真实定位多半会返回空列表——
+   * 这不是 bug，是"模拟数据只有一个城市"的必然结果。
+   */
+  getRecommendations: (
+    sessionId: number,
+    body: RecommendationRequest,
+    sessionToken?: string,
+  ) =>
+    request<RecommendationResponse>(
+      `/api/travel/sessions/${sessionId}/recommendations`,
+      withSessionToken(
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+        sessionToken,
+      ),
     ),
 }
 

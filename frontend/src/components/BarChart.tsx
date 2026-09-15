@@ -1,30 +1,45 @@
 import { useState, type CSSProperties } from 'react'
 
-import type { DimensionResult } from '../types'
-
 /**
- * 5 个人格维度的横向条形图。
+ * 横向条形图：人格画像（5 维）和旅行画像（8 维）共用。
  *
  * **为什么是横向条形图而不是雷达图？**
  * 雷达图是人格测试的常见做法，但它有两个硬伤：面积会随维度排列顺序
- * 变化而产生视觉误导，而五个维度的顺序本身是任意的；而且人眼比较
+ * 变化而产生视觉误导，而维度的顺序本身是任意的；而且人眼比较
  * 角度/面积远不如比较长度准确。数据可视化里「比较量级」对应的标准形式
  * 就是条形图。
  *
- * **为什么五根柱子用同一个颜色而不是深浅渐变？**
- * 五个维度之间没有天然顺序，用颜色深浅编码等于把柱长重复编码一遍，
+ * **为什么所有柱子用同一个颜色而不是深浅渐变？**
+ * 各维度之间没有天然顺序，用颜色深浅编码等于把柱长重复编码一遍，
  * 白白浪费了颜色这个通道。一个系列 = 一种颜色。
  *
  * 图表本身**不需要图例**——只有一种颜色，标题已经说明画的是什么。
  */
 
+/**
+ * 图表需要的最小数据形状。
+ *
+ * ⚠️ **刻意不写成 {@link DimensionResult}**：那样旅行画像就用不了这个组件
+ * （旅行维度只有 key/name/score，没有档位标签和解读文案）。
+ * 用结构最小类型之后，`DimensionResult[]` 依然满足它（TS 是结构类型），
+ * 所以人格那边的调用处一行都不用改。
+ */
+export interface BarDatum {
+  key: string
+  name: string
+  /** 0 ~ 100 */
+  score: number
+  /** 档位中文（偏低/中等/偏高）。**旅行画像不传**，于是不显示这一列 */
+  levelLabel?: string
+}
+
 interface TipState {
   x: number
   y: number
-  dimension: DimensionResult
+  datum: BarDatum
 }
 
-export function BarChart({ dimensions }: { dimensions: DimensionResult[] }) {
+export function BarChart({ dimensions }: { dimensions: BarDatum[] }) {
   const [tip, setTip] = useState<TipState | null>(null)
 
   return (
@@ -34,7 +49,7 @@ export function BarChart({ dimensions }: { dimensions: DimensionResult[] }) {
           <div
             key={d.key}
             className="bar-row"
-            onMouseMove={(e) => setTip({ x: e.clientX, y: e.clientY, dimension: d })}
+            onMouseMove={(e) => setTip({ x: e.clientX, y: e.clientY, datum: d })}
             onMouseLeave={() => setTip(null)}
           >
             <div className="dim-name">{d.name}</div>
@@ -58,7 +73,8 @@ export function BarChart({ dimensions }: { dimensions: DimensionResult[] }) {
               触屏设备没有 hover，键盘用户也未必能触发。
             */}
             <div className="val">{d.score.toFixed(2)}</div>
-            <div className="lvl">{d.levelLabel}</div>
+            {/* 没有档位标签就不渲染这一列（旅行画像就是这样） */}
+            {d.levelLabel && <div className="lvl">{d.levelLabel}</div>}
           </div>
         ))}
       </div>
@@ -79,7 +95,7 @@ export function BarChart({ dimensions }: { dimensions: DimensionResult[] }) {
 }
 
 /** 悬停提示。用 fixed 定位，跟随鼠标但不会超出视口右边缘。 */
-function Tip({ x, y, dimension }: TipState) {
+function Tip({ x, y, datum }: TipState) {
   const TIP_WIDTH = 200
   const left = Math.min(x + 14, window.innerWidth - TIP_WIDTH - 12)
   const top = Math.max(8, y - 58)
@@ -87,10 +103,11 @@ function Tip({ x, y, dimension }: TipState) {
   return (
     <div className="tip" style={{ left, top }}>
       <div>
-        <b>{dimension.name}</b>
+        <b>{datum.name}</b>
       </div>
       <div>
-        分数 {dimension.score.toFixed(2)} · {dimension.levelLabel}
+        分数 {datum.score.toFixed(2)}
+        {datum.levelLabel ? ` · ${datum.levelLabel}` : ''}
       </div>
     </div>
   )

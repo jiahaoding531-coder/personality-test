@@ -150,6 +150,86 @@ export interface SessionSummary {
   dimensions: DimensionBrief[]
 }
 
+// ============================================================
+// 旅行偏好测试（TravelMind）
+// ============================================================
+
+/**
+ * 旅行画像里的单个维度。
+ *
+ * ⚠️ 注意这里**没有** `level` / `levelLabel` / `description`——和人格的
+ * {@link DimensionResult} 不一样。因为旅行每维度只有 1 道题，分数只能落在
+ * 0/25/50/75/100 五档，再套"偏低/中等/偏高"三档等于把分数重复说一遍。
+ * 后端也是这么定义的：`TravelProfileResponse.TravelDimensionResult`。
+ */
+export interface TravelDimensionResult {
+  key: string
+  name: string
+  score: number
+}
+
+export interface TravelProfileResponse {
+  sessionId: number
+  status: SessionStatus
+  createdAt: string
+  submittedAt: string | null
+  /** 固定是 'TRAVEL' */
+  scale: string
+  dimensions: TravelDimensionResult[]
+}
+
+/** 一条「为什么推荐它」的依据 */
+export interface MatchReason {
+  dimensionKey: string
+  dimensionLabel: string
+  /** 你在这次画像里给这个维度打的分（0~100） */
+  userPreference: number
+  /** 这个地点在该属性上的得分（0~100） */
+  placeValue: number
+}
+
+export interface RecommendedPlace {
+  rank: number
+  placeId: number
+  name: string
+  category: string
+  description: string
+  /** 综合得分，0~100 的整数 */
+  scorePercent: number
+  /** 距离用户多少公里。**全天开放的地点是 null** */
+  distanceKm: number | null
+  ticketPrice: number
+  suggestedMinutes: number
+  /** 'HH:mm'。**null 表示全天开放**（公园、街区） */
+  openFrom: string | null
+  openTo: string | null
+  reasons: MatchReason[]
+}
+
+export interface RecommendationResponse {
+  sessionId: number
+  /** 这是该会话的第几批推荐。点 👍/👎 时要连它一起带上 */
+  batchNo: number
+  generatedAt: string
+  /** 可能是空数组——附近没有营业中的地点时，这是正常结果不是错误 */
+  places: RecommendedPlace[]
+}
+
+/**
+ * 请求推荐时传的「当前处境」。
+ *
+ * ⚠️ 经纬度**必填**：旅行助手不知道你在哪，推荐就没有意义。
+ * 后端会校验，不传返回 400。
+ */
+export interface RecommendationRequest {
+  latitude: number
+  longitude: number
+  /** 还剩多少分钟。不传后端默认 240（4 小时） */
+  remainingMinutes?: number
+  /** 最大半径（公里）。不传后端默认 10 */
+  maxDistanceKm?: number
+}
+
 /** 后端统一的错误响应结构，见 ApiErrorResponse.java */
 export interface ApiErrorBody {
   timestamp: string
