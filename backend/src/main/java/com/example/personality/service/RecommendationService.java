@@ -4,6 +4,8 @@ import com.example.personality.domain.PlaceCandidate;
 import com.example.personality.domain.RecommendationContext;
 import com.example.personality.domain.ScoredPlace;
 import com.example.personality.domain.TravelDimension;
+import com.example.personality.domain.TravelState;
+import com.example.personality.dto.AppliedContext;
 import com.example.personality.dto.FeedbackResponse;
 import com.example.personality.dto.MatchReason;
 import com.example.personality.dto.RecommendationRequest;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -83,6 +86,8 @@ public class RecommendationService {
     private final RecommendationRepository recommendationRepository;
     private final RecommendationFeedbackRepository feedbackRepository;
     private final TestSessionRepository sessionRepository;
+    private final Clock clock;
+    private final ContextInferrer inferrer;
     private final RecommendationEngine engine;
     private final TravelPreferenceAdjuster adjuster;
 
@@ -91,6 +96,8 @@ public class RecommendationService {
                                  RecommendationRepository recommendationRepository,
                                  RecommendationFeedbackRepository feedbackRepository,
                                  TestSessionRepository sessionRepository,
+                                 Clock clock,
+                                 ContextInferrer inferrer,
                                  RecommendationEngine engine,
                                  TravelPreferenceAdjuster adjuster) {
         this.travelProfileService = travelProfileService;
@@ -98,6 +105,8 @@ public class RecommendationService {
         this.recommendationRepository = recommendationRepository;
         this.feedbackRepository = feedbackRepository;
         this.sessionRepository = sessionRepository;
+        this.clock = clock;
+        this.inferrer = inferrer;
         this.engine = engine;
         this.adjuster = adjuster;
     }
@@ -147,16 +156,31 @@ public class RecommendationService {
                 .map(Place::toCandidate)
                 .toList();
 
-        // ⑥ 此刻什么情况：现在几点、还剩多久、人在哪、最多走多远、
-        //    预算上限、以及用户主动说的状态（累了 / 饿了 / 想散步）
+        // ⑥ 此刻什么情况：现在几点、还剩多久、人在哪、最多走多远、预算上限
+        // 走注入的 Clock 而不是 LocalTime.now()：见 ClockConfig 的说明——
+        // 直接取系统时间会让自动推断没法测、也没法演示
+        LocalTime now = LocalTime.now(clock);
+
+        // 用户说过的状态 + 系统自己推断的状态。
+        //
+        // ⚠️ 拼在一起是有意的：**用户说的优先，系统只在他没说的时候补**。
+        // 饭点推出来"想吃饭"、而用户又明确点了"我有点累了"时，
+        // 两个状态会同时生效（一个是猜的、一个是他说的），
+        // 而不是让系统用猜的把用户的话盖掉。
+        Set<TravelState> inferred = inferrer.inferStates(now);
+        Set<TravelState> allStates = new LinkedHashSet<>(request.statesOrEmpty());
+        if (request.autoInferOrDefault()) {
+            allStates.addAll(inferred);
+        }
+
         RecommendationContext context = RecommendationContext.withLocation(
-                LocalTime.now(),
+                now,
                 request.remainingMinutesOrDefault(),
                 request.latitude(),
                 request.longitude(),
                 request.maxDistanceKmOrDefault(),
                 request.maxTicketPrice(),
-                request.statesOrEmpty());
+                allStates);
 
         // ⑦ 交给算法。它不认识数据库，也不认识反馈——只做硬过滤 + 打分 + 排序
         List<ScoredPlace> top = engine.recommend(effective, candidates, context, TOP_N);
@@ -170,7 +194,36 @@ public class RecommendationService {
                 sessionId,
                 batchNo,
                 generatedAt(saved),
-                toPlaces(top, saved));
+                toPlaces(top, saved),
+                buildAppliedContext(context, inferred));
+    }
+
+    /**
+     * 把"这次实际用了什么处境"整理出来给前端。
+     *
+     * <p>{@code inferredStates} 只包含<b>真的生效了的</b>推断结果——
+     * 用户没开 {@code autoInfer} 时这里是空列表。不能把"推断过但没用上"的也算进去，
+     * 那会让前端的提示与事实不符，用户照着改反而改错。
+     *
+     * <p>这是"系统替用户猜"能够成立的前提：猜了什么必须摊开给人看。
+     */
+    private static AppliedContext buildAppliedContext(RecommendationContext context,
+                                                      Set<TravelState> inferred) {
+        List<AppliedContext.StateLabel> states = context.states().stream()
+                .map(state -> new AppliedContext.StateLabel(state.name(), state.label()))
+                .toList();
+        List<AppliedContext.StateLabel> inferredApplied = inferred.stream()
+                .filter(context.states()::contains)
+                .map(state -> new AppliedContext.StateLabel(state.name(), state.label()))
+                .toList();
+
+        return new AppliedContext(
+                context.now().toString(),
+                context.remainingMinutes(),
+                context.maxDistanceKm(),
+                context.maxTicketPrice(),
+                states,
+                inferredApplied);
     }
 
     /**

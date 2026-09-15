@@ -19,16 +19,20 @@ import java.util.List;
  * 删推荐会级联删掉用户反馈，而反馈是整个项目里最该攒下来的数据。
  * 完整理由见 V9 迁移脚本。
  *
- * @param sessionId   会话 ID
- * @param batchNo     这是该会话的第几批推荐，从 1 开始
- * @param generatedAt 这批推荐的生成时间
- * @param places      Top N，按分数降序。<b>可能是空列表</b>——比如定位附近
- *                    10 公里内没有营业中的地点时，这是正常结果，不是错误
+ * @param sessionId      会话 ID
+ * @param batchNo        这是该会话的第几批推荐，从 1 开始
+ * @param generatedAt    这批推荐的生成时间
+ * @param places         Top N，按分数降序。<b>可能是空列表</b>——比如定位附近
+ *                       10 公里内没有营业中的地点时，这是正常结果，不是错误
+ * @param appliedContext <b>这次是按什么处境算的</b>，含"哪些是系统自己推断的"。
+ *                       前端必须把它显示出来——系统一旦开始替用户猜，
+ *                       就得说清楚猜了什么，否则用户莫名其妙，也没法纠正
  */
 public record RecommendationResponse(
         Long sessionId,
         int batchNo,
         Instant generatedAt,
-        List<RecommendedPlace> places
+        List<RecommendedPlace> places,
+        AppliedContext appliedContext
 ) {
 }

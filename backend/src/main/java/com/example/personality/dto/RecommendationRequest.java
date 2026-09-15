@@ -63,7 +63,18 @@ public record RecommendationRequest(
         Integer maxTicketPrice,
 
         /** 此刻的状态（累了 / 饿了 / 想散步）。可以同时传多个，也可以不传。 */
-        Set<TravelState> states
+        Set<TravelState> states,
+
+        /**
+         * 让系统自己推断处境，而不是等用户填。
+         *
+         * <p>为 true 时，服务端会按当前时间推断（比如饭点推断"想吃饭"），
+         * 并把推断结果<b>原样回传</b>在 {@code appliedContext.inferredStates} 里——
+         * 系统猜了什么必须让用户看得见，否则猜错了会莫名其妙。
+         *
+         * <p>不传默认 false（保持既有行为不变）。
+         */
+        Boolean autoInfer
 ) {
 
     /** 不传剩余时长时的默认值：4 小时。够逛两个景点，是比较典型的半日行程。 */
@@ -91,5 +102,9 @@ public record RecommendationRequest(
     /** 状态，没传就是空集合（"没特别说明"和"说了没有状态"在这里是一回事）。 */
     public Set<TravelState> statesOrEmpty() {
         return states == null ? Set.of() : states;
+    }
+
+    public boolean autoInferOrDefault() {
+        return Boolean.TRUE.equals(autoInfer);
     }
 }

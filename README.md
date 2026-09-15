@@ -3,7 +3,7 @@
 > 两条完整可跑的链路：
 > **人格测试 → 5 维画像 → AI 个性化反馈**，
 > 以及 **旅行偏好测试 → 8 维画像 → 结合定位的 Top 3 推荐**。
-> 两套前端（零构建静态页 + React），145 个自动化测试，CI 全绿。
+> 两套前端（零构建静态页 + React），154 个自动化测试，CI 全绿。
 
 [![CI](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml/badge.svg)](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
@@ -66,7 +66,7 @@ Session Cookie 认证、测试历史、速率限制、Top 3 旅行推荐。详�
 | 构建 | Maven Wrapper | **无需单独安装 Maven** |
 | AI | DeepSeek（OpenAI 兼容协议） | 可选启用，默认关闭时用桩实现 |
 | 前端 | React 19 + TypeScript + Vite | 独立目录 `frontend/`，另有一个零构建的静态页 |
-| 测试 | JUnit 5 + MockMvc | 145 个：60 个纯逻辑单测 + 85 个集成测试 |
+| 测试 | JUnit 5 + MockMvc | 154 个：65 个纯逻辑单测 + 89 个集成测试 |
 | CI | GitHub Actions | push/PR 自动跑测试 + 类型检查 |
 
 ---
@@ -450,19 +450,19 @@ personality-test/
 ## 测试
 
 ```bash
-cd backend && ./mvnw test        # 145 个测试
+cd backend && ./mvnw test        # 154 个测试
 cd frontend && npm run typecheck # 类型检查（前端还没有单测，见路线图）
 ```
 
 ```
-Tests run: 145, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 154, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 分成两层，**各自解决不同的问题**：
 
 | 层 | 数量 | 需要数据库 | 耗时 | 测什么 |
 |---|---|---|---|---|
-| **纯逻辑单元测试** | 60 | ❌ | 0.15 秒 | 计分算法（两套量表）、推荐引擎、提示词约束 |
+| **纯逻辑单元测试** | 65 | ❌ | 0.15 秒 | 计分算法（两套量表）、推荐引擎、提示词约束 |
 | **集成测试** | 81 | ✅ | ~30 秒 | HTTP 契约、安全规则、事务、用户隔离 |
 
 **纯逻辑单元测试不需要数据库** —— 它们直接 `new ScoringService()` /
@@ -641,11 +641,29 @@ psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 > （"下次来不用重新答题"）是另一个产品问题——"什么是用户的当前画像"——
 > 值得单独想，没有塞进这一轮。
 
-### V1.2 计划中
+### V1.2 ✅ 默认自动模式：不再让用户填表单
+
+- [x] 进页面**自动拿定位、直接出推荐**——一个字段都不用填
+- [x] **按时间推断处境**：饭点推断「想吃饭」（`ContextInferrer`，纯逻辑可单测）
+- [x] 推断**可见可撤销**：结果上方写着「我按 12:30、想吃饭（我猜的）推的」+ 一键否定
+- [x] **没把握才追问**：最高分低于 35% 或候选不足 3 个时，才问一句
+- [x] 手动表单折叠成「改一下」兜底（定位被拒 / 想纠正系统猜的东西）
+- [x] 时间走注入的 `Clock`——否则这个功能中午跑绿、下午跑红
+
+> ⚠️ **现在只推得动时间，别的都推不了**：天气没接、真实 POI 没有、
+> 手机的移动状态要 App 才拿得到。**宁可少推也不装作能推**——
+> 猜错了比不猜更糟，用户会莫名其妙。
+>
+> 特别是"天黑了推室内"这种看起来很自然的规则：地点的类别是
+> `NATURE`/`MUSEUM`/`FOOD`，**根本没有"室内/户外"字段**，硬推就是瞎猜。
+
+### V1.3 计划中
 
 - [ ] **画像跨会话复用**：现在每次打开都要重答 8 道题
 - [ ] **反馈归因改进**：让用户说"为什么不喜欢"（太远/太累/太贵/不合口味），
       而不是系统按"贡献最大的维度"猜
+- [ ] **「为什么没选其他」**：Top 3 的分数和维度对比数据都有了，不用 AI 也能做结构化版
+- [ ] **导航前确认**：去这里 / 换一个 / 我先看看别的（半小时的活）
 - [ ] **AI 生成推荐理由**：`recommendations.reason` 字段已预留，把结构化的
       `reasons` 喂给 DeepSeek 生成自然语言解释——计划书第七节明确划给 AI 的职责
 - [ ] 导航（拼一个高德/苹果地图 URL 跳转，半小时的活）
