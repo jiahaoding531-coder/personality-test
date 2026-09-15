@@ -312,11 +312,24 @@ class TestSessionFlowIntegrationTest extends IntegrationTestBase {
         answerAllQuestions(session, 3, null);
         submitRequest(session).andExpect(status().isOk());
 
+        // ⚠️ 这段文案不是随手写的，它是**用户真的会看到的那句话**。
+        //
+        // 以前 501 的意思是"这站没有 AI"，文案是"将在 V0.2 实现"——
+        // 用户看到就走了，因为那是一句绝路。
+        //
+        // 接入访客自带 key 之后，同样一个 501 的含义变成了
+        // "这站没**替你**配 AI，但**你可以填自己的**"。所以文案必须
+        // 说出那条路，而且要说清 key 存在哪（否则没人敢把凭证粘进来）。
+        //
+        // 断言这几件事，是为了防止有人日后顺手把它改回一句"功能未实现"——
+        // 那一改，这个功能的全部意义就没了，而且不会有任何报错。
         mockMvc.perform(withToken(post("/api/test-sessions/{id}/ai-report", session.id())
                         .with(csrf()), session))
                 .andExpect(status().isNotImplemented())
                 .andExpect(jsonPath("$.message")
-                        .value(org.hamcrest.Matchers.containsString("V0.2")));
+                        .value(org.hamcrest.Matchers.containsString("自己的")))
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.containsString("浏览器")));
     }
 
     // ==========================================================
