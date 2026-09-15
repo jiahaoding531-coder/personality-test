@@ -3,7 +3,7 @@
 > 两条完整可跑的链路：
 > **人格测试 → 5 维画像 → AI 个性化反馈**，
 > 以及 **旅行偏好测试 → 8 维画像 → 结合定位的 Top 3 推荐**。
-> 两套前端（零构建静态页 + React），142 个自动化测试，CI 全绿。
+> 两套前端（零构建静态页 + React），145 个自动化测试，CI 全绿。
 
 [![CI](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml/badge.svg)](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
@@ -66,7 +66,7 @@ Session Cookie 认证、测试历史、速率限制、Top 3 旅行推荐。详�
 | 构建 | Maven Wrapper | **无需单独安装 Maven** |
 | AI | DeepSeek（OpenAI 兼容协议） | 可选启用，默认关闭时用桩实现 |
 | 前端 | React 19 + TypeScript + Vite | 独立目录 `frontend/`，另有一个零构建的静态页 |
-| 测试 | JUnit 5 + MockMvc | 142 个：60 个纯逻辑单测 + 82 个集成测试 |
+| 测试 | JUnit 5 + MockMvc | 145 个：60 个纯逻辑单测 + 85 个集成测试 |
 | CI | GitHub Actions | push/PR 自动跑测试 + 类型检查 |
 
 ---
@@ -450,12 +450,12 @@ personality-test/
 ## 测试
 
 ```bash
-cd backend && ./mvnw test        # 142 个测试
+cd backend && ./mvnw test        # 145 个测试
 cd frontend && npm run typecheck # 类型检查（前端还没有单测，见路线图）
 ```
 
 ```
-Tests run: 142, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 145, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 分成两层，**各自解决不同的问题**：
@@ -627,10 +627,23 @@ psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 > 兴趣分是归一化加权平均，调小某个维度的权重**不改变排序**。
 > 语义也错了：应该是"费腿的地方要变差"（关于地点），不是"我没那么在乎走路了"（关于你）。
 
-### V1.1 计划中
+### V1.1 ✅ 跨会话记忆（反馈部分）
 
-- [ ] **跨会话记忆**：现在画像挂在 `session_id` 上，用户点"重新测一次"就全部归零。
-      "用得越多越准"目前只在一个会话内成立
+- [x] 👍/👎 的修正**跨会话累积**——换个会话重新测，之前的反馈依然生效
+- [x] "换一批"的排除**仍限本会话**（否则隔天来点一次会把历史全排掉）
+- [x] 只取最近 20 条反馈，避免旧偏见撞上 ±40 封顶后锁死
+
+> ⚠️ **匿名用户没有跨会话记忆**——没有稳定的用户身份，"上次"无从谈起。
+> 这和"历史记录只有登录用户才有"是同一条边界。
+>
+> ⚠️ **画像本身仍挂在 `session_id` 上**：用户重新测一次，画像是新的
+> （这本来就该重算），继承下来的是**反馈修正**。让画像本身也跨会话复用
+> （"下次来不用重新答题"）是另一个产品问题——"什么是用户的当前画像"——
+> 值得单独想，没有塞进这一轮。
+
+### V1.2 计划中
+
+- [ ] **画像跨会话复用**：现在每次打开都要重答 8 道题
 - [ ] **反馈归因改进**：让用户说"为什么不喜欢"（太远/太累/太贵/不合口味），
       而不是系统按"贡献最大的维度"猜
 - [ ] **AI 生成推荐理由**：`recommendations.reason` 字段已预留，把结构化的

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -26,6 +27,18 @@ public interface RecommendationRepository extends JpaRepository<Recommendation, 
 
     /** 某个会话<b>某一批</b>的推荐，按名次升序（第 1 名在最前）。 */
     List<Recommendation> findBySessionIdAndBatchNoOrderByRankNoAsc(Long sessionId, int batchNo);
+
+    /**
+     * 多个会话的推荐记录，按会话、批次、名次升序。
+     *
+     * <p>用来算"这个用户历史上收到过哪些反馈"——<b>反馈修正要跨会话累积</b>，
+     * 不能只算当前这一次测试的，否则用户点一次"重新测一次"，
+     * 之前攒下的偏好修正就全没了，"用得越多越准"也就无从谈起。
+     *
+     * <p>方法名里的 {@code SessionIdIn} 对应 SQL 的 {@code WHERE session_id IN (...)}：
+     * 一次查完，而不是逐个会话去查——那会变成 N+1。
+     */
+    List<Recommendation> findBySessionIdInOrderByBatchNoAscRankNoAsc(Collection<Long> sessionIds);
 
     /** 这个会话有没有推荐过。用于判断"重新推荐"还是"读缓存"。 */
     boolean existsBySessionId(Long sessionId);

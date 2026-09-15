@@ -10,13 +10,16 @@ import com.example.personality.dto.RecommendationRequest;
 import com.example.personality.dto.RecommendationResponse;
 import com.example.personality.dto.RecommendedPlace;
 import com.example.personality.entity.Place;
+import com.example.personality.entity.QuestionScale;
 import com.example.personality.entity.Recommendation;
 import com.example.personality.entity.RecommendationFeedback;
+import com.example.personality.entity.TestSession;
 import com.example.personality.entity.TravelProfile;
 import com.example.personality.exception.ResourceNotFoundException;
 import com.example.personality.repository.PlaceRepository;
 import com.example.personality.repository.RecommendationFeedbackRepository;
 import com.example.personality.repository.RecommendationRepository;
+import com.example.personality.repository.TestSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +29,7 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -60,6 +64,17 @@ public class RecommendationService {
     /** 计划书第十二节：「最终输出 Top 3，而不是 Top 100」。 */
     private static final int TOP_N = 3;
 
+    /**
+     * 参与修正的反馈最多取最近多少条。
+     *
+     * <p>为什么不全部算：修正量有 ±40 的封顶，一旦撞顶就再也动不了了——
+     * 用户改了口味，系统却因为几百条旧反馈而锁死。
+     *
+     * <p>语义上也更对："此刻的偏好"应该由<b>最近的</b>反馈决定，
+     * 而不是被历史的平均淹没。取 20 大约是六七批推荐的反馈量。
+     */
+    private static final int RECENT_FEEDBACK_LIMIT = 20;
+
     /** 营业时间的展示格式。数据库里是 TIME，输出成 "HH:mm" 给前端直接用。 */
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -67,6 +82,7 @@ public class RecommendationService {
     private final PlaceRepository placeRepository;
     private final RecommendationRepository recommendationRepository;
     private final RecommendationFeedbackRepository feedbackRepository;
+    private final TestSessionRepository sessionRepository;
     private final RecommendationEngine engine;
     private final TravelPreferenceAdjuster adjuster;
 
@@ -74,12 +90,14 @@ public class RecommendationService {
                                  PlaceRepository placeRepository,
                                  RecommendationRepository recommendationRepository,
                                  RecommendationFeedbackRepository feedbackRepository,
+                                 TestSessionRepository sessionRepository,
                                  RecommendationEngine engine,
                                  TravelPreferenceAdjuster adjuster) {
         this.travelProfileService = travelProfileService;
         this.placeRepository = placeRepository;
         this.recommendationRepository = recommendationRepository;
         this.feedbackRepository = feedbackRepository;
+        this.sessionRepository = sessionRepository;
         this.engine = engine;
         this.adjuster = adjuster;
     }
@@ -114,7 +132,8 @@ public class RecommendationService {
         }
 
         // ③ 这个会话的历史：收到过哪些反馈、看过哪些地点
-        SessionHistory history = loadHistory(sessionId, placesById, questionnaire);
+        SessionHistory history = loadHistory(sessionId,
+                resolveScopeSessionIds(sessionId, userIdOf(sessionId)), placesById, questionnaire);
 
         // ④ 用反馈修正过的偏好。没有反馈时它和问卷画像完全一样
         Map<TravelDimension, Integer> effective = adjuster.effectivePreference(
@@ -206,7 +225,8 @@ public class RecommendationService {
             placesById.put(place.getId(), place);
         }
 
-        SessionHistory history = loadHistory(sessionId, placesById, questionnaire);
+        SessionHistory history = loadHistory(sessionId,
+                resolveScopeSessionIds(sessionId, userIdOf(sessionId)), placesById, questionnaire);
         Map<TravelDimension, Integer> effective = adjuster.effectivePreference(
                 questionnaire, history.signals());
 
@@ -226,59 +246,122 @@ public class RecommendationService {
     // ==========================================================
 
     /**
-     * 把这个会话的推荐记录和反馈读出来，折算成两样东西：
+     * 把这个用户的推荐记录和反馈读出来，折算成两样东西：
      * <b>修正信号</b>（喂给 {@link TravelPreferenceAdjuster}）和
-     * <b>已经看过且没被点赞的地点</b>（喂给"换一批"的排除逻辑）。
+     * <b>本会话已经看过且没被点赞的地点</b>（喂给"换一批"的排除逻辑）。
+     *
+     * <h2>⚠️ 修正和排除，作用范围刻意不同</h2>
+     *
+     * <ul>
+     *   <li><b>修正（👍/👎 的影响）跨会话累积</b>——用户在这一次测试里点过的反馈，
+     *       下次做新测试时依然算数。这正是"用得越多越准"的实现方式；
+     *       只算当前会话的话，用户点一次"重新测一次"就把积累全清零了。</li>
+     *   <li><b>排除（"换一批"）只看当前会话</b>——它的语义是"这批我已经看过了，
+     *       给我新的"。如果跨会话排除，用户隔天再来点"换一批"，
+     *       会把历史上所有看过的地方全部排掉，很快就没得推了。</li>
+     * </ul>
      *
      * <p>归因用的是<b>问卷画像</b>而不是有效画像——这样同一条反馈
      * 在任何时刻都会归到同一个维度上，历史才是可解释的。
+     *
+     * @param scopeSessionIds 修正的作用范围：登录用户是"他的全部旅行会话"，
+     *                        匿名用户只有当前这一个会话
      */
-    private SessionHistory loadHistory(Long sessionId,
+    private SessionHistory loadHistory(Long sessionId, List<Long> scopeSessionIds,
                                        Map<Long, Place> placesById,
                                        Map<TravelDimension, Integer> questionnaire) {
 
-        List<Recommendation> seen = recommendationRepository
-                .findBySessionIdOrderByBatchNoAscRankNoAsc(sessionId);
-        if (seen.isEmpty()) {
+        List<Recommendation> seenInScope = recommendationRepository
+                .findBySessionIdInOrderByBatchNoAscRankNoAsc(scopeSessionIds);
+        if (seenInScope.isEmpty()) {
             return new SessionHistory(List.of(), Set.of());
         }
 
         Map<Long, Long> placeIdByRecommendationId = new HashMap<>();
-        Set<Long> seenPlaceIds = new LinkedHashSet<>();
-        for (Recommendation recommendation : seen) {
+        Set<Long> seenPlaceIdsHere = new LinkedHashSet<>();
+        for (Recommendation recommendation : seenInScope) {
             placeIdByRecommendationId.put(recommendation.getId(), recommendation.getPlaceId());
-            seenPlaceIds.add(recommendation.getPlaceId());
+            // 只有当前会话的才算"看过"，跨会话的历史不参与"换一批"的排除
+            if (sessionId.equals(recommendation.getSessionId())) {
+                seenPlaceIdsHere.add(recommendation.getPlaceId());
+            }
         }
 
         List<RecommendationFeedback> feedbacks = feedbackRepository
                 .findByRecommendationIdIn(placeIdByRecommendationId.keySet());
 
+        // 只取最近的若干条。⚠️ 不加这个窗口的话会出问题：
+        // 修正量有 ±40 的封顶，一旦撞顶就再也动不了了——
+        // 用户改了口味，系统却因为半年前的反馈而锁死。
+        // 取最近的在语义上也更对："此刻的偏好"应该由最近的反馈决定。
+        List<RecommendationFeedback> recent = feedbacks.stream()
+                .sorted(Comparator.comparing(RecommendationFeedback::getCreatedAt).reversed())
+                .limit(RECENT_FEEDBACK_LIMIT)
+                .toList();
+
         List<TravelPreferenceAdjuster.FeedbackSignal> signals = new ArrayList<>();
-        Set<Long> likedPlaceIds = new LinkedHashSet<>();
-        for (RecommendationFeedback feedback : feedbacks) {
+        Set<Long> likedPlaceIdsHere = new LinkedHashSet<>();
+        for (RecommendationFeedback feedback : recent) {
             Long placeId = placeIdByRecommendationId.get(feedback.getRecommendationId());
             Place place = placeId == null ? null : placesById.get(placeId);
             if (place == null) {
                 continue;   // 地点被删了之类的极端情况，跳过而不是崩掉
             }
             boolean liked = feedback.getReaction() == RecommendationFeedback.Reaction.LIKE;
-            if (liked) {
-                likedPlaceIds.add(placeId);
+            if (liked && seenPlaceIdsHere.contains(placeId)) {
+                likedPlaceIdsHere.add(placeId);
             }
             signals.add(new TravelPreferenceAdjuster.FeedbackSignal(
                     adjuster.dominantDimension(questionnaire, place.toCandidate().traits()),
                     liked));
         }
 
-        // 看过、但没被点赞的地点 → "换一批"时排除。
+        // 本会话看过、但没被点赞的地点 → "换一批"时排除。
         // 点过 👍 的不排除：用户喜欢它，应该还能再被推荐到。
-        Set<Long> seenButNotLiked = new LinkedHashSet<>(seenPlaceIds);
-        seenButNotLiked.removeAll(likedPlaceIds);
+        Set<Long> seenButNotLiked = new LinkedHashSet<>(seenPlaceIdsHere);
+        seenButNotLiked.removeAll(likedPlaceIdsHere);
 
         return new SessionHistory(signals, seenButNotLiked);
     }
 
-    /** 一个会话的推荐历史折算出的两样东西。 */
+    /**
+     * 会话属于哪个用户。匿名会话返回 null。
+     *
+     * <p>只查这一次，拿到的 userId 决定反馈修正的作用范围（见
+     * {@link #resolveScopeSessionIds}）。会话不存在时返回 null 而不是抛异常——
+     * 调用方（{@code recommend}）在此之前已经通过 loadProfile 校验过会话了，
+     * 这里再抛一次只会让错误信息变模糊。
+     */
+    private Long userIdOf(Long sessionId) {
+        return sessionRepository.findById(sessionId)
+                .map(TestSession::getUserId)
+                .orElse(null);
+    }
+
+    /**
+     * 修正的作用范围：登录用户是他<b>全部</b>的旅行会话，匿名用户只有当前这个。
+     *
+     * <p>匿名用户没有稳定的身份，跨会话记忆无从谈起——这是能力的边界，
+     * 不是遗漏。和"历史记录只有登录用户才有"是同一个道理。
+     */
+    private List<Long> resolveScopeSessionIds(Long sessionId, Long userId) {
+        if (userId == null) {
+            return List.of(sessionId);
+        }
+        List<TestSession> travelSessions = sessionRepository
+                .findByUserIdAndScaleOrderByCreatedAtDesc(userId, QuestionScale.TRAVEL);
+
+        List<Long> ids = new ArrayList<>(travelSessions.size() + 1);
+        ids.add(sessionId);   // 兜底：当前会话一定在范围内
+        for (TestSession session : travelSessions) {
+            if (!session.getId().equals(sessionId)) {
+                ids.add(session.getId());
+            }
+        }
+        return ids;
+    }
+
+    /** 一次推荐折算出的两样东西。 */
     private record SessionHistory(
             List<TravelPreferenceAdjuster.FeedbackSignal> signals,
             Set<Long> seenButNotLiked) {

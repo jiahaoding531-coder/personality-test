@@ -3,11 +3,14 @@ package com.example.personality;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.JsonNode;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,7 +63,7 @@ class TravelFeedbackIntegrationTest extends IntegrationTestBase {
     void dislikeLowersTheAttributedDimension() throws Exception {
         Session s = preparedSession();
 
-        JsonNode body = feedback(s, s.firstRecommendationId(), "DISLIKE");
+        JsonNode body = feedback(s.ref(), s.firstRecommendationId(), "DISLIKE");
 
         JsonNode adjustment = body.get("adjustments").get(0);
         int before = adjustment.get("questionnaireScore").asInt();
@@ -74,8 +77,8 @@ class TravelFeedbackIntegrationTest extends IntegrationTestBase {
     void repeatedDislikeAccumulates() throws Exception {
         Session s = preparedSession();
 
-        feedback(s, s.firstRecommendationId(), "DISLIKE");
-        JsonNode body = feedback(s, s.secondRecommendationId(), "DISLIKE");
+        feedback(s.ref(), s.firstRecommendationId(), "DISLIKE");
+        JsonNode body = feedback(s.ref(), s.secondRecommendationId(), "DISLIKE");
 
         // 两条推荐的归因维度不一定相同，所以这里断言的是"总调整量"而不是某个维度
         int totalShift = 0;
@@ -93,10 +96,10 @@ class TravelFeedbackIntegrationTest extends IntegrationTestBase {
     void changingReactionOverwrites() throws Exception {
         Session s = preparedSession();
 
-        JsonNode disliked = feedback(s, s.firstRecommendationId(), "DISLIKE");
+        JsonNode disliked = feedback(s.ref(), s.firstRecommendationId(), "DISLIKE");
         int dislikedAfter = disliked.get("adjustments").get(0).get("effectiveScore").asInt();
 
-        JsonNode liked = feedback(s, s.firstRecommendationId(), "LIKE");
+        JsonNode liked = feedback(s.ref(), s.firstRecommendationId(), "LIKE");
         int likedAfter = liked.get("adjustments").get(0).get("effectiveScore").asInt();
 
         assertEquals(disliked.get("adjustments").get(0).get("questionnaireScore").asInt() + 10,
@@ -123,7 +126,7 @@ class TravelFeedbackIntegrationTest extends IntegrationTestBase {
         Set<String> disliked = new HashSet<>();
         for (JsonNode place : first.get("places")) {
             disliked.add(place.get("name").asString());
-            feedback(s, place.get("recommendationId").asLong(), "DISLIKE");
+            feedback(s.ref(), place.get("recommendationId").asLong(), "DISLIKE");
         }
         assertEquals(3, disliked.size());
 
@@ -162,7 +165,7 @@ class TravelFeedbackIntegrationTest extends IntegrationTestBase {
         JsonNode first = recommend(s.ref(), false);
         JsonNode favourite = first.get("places").get(0);
         String favouriteName = favourite.get("name").asString();
-        feedback(s, favourite.get("recommendationId").asLong(), "LIKE");
+        feedback(s.ref(), favourite.get("recommendationId").asLong(), "LIKE");
 
         // 连换几批，把其余候选都排掉
         for (int i = 0; i < 3; i++) {
@@ -178,6 +181,114 @@ class TravelFeedbackIntegrationTest extends IntegrationTestBase {
         }
         assertTrue(favouriteStillThere,
                 "点过 👍 的地点不该被排除——" + favouriteName + " 应该还能出现");
+    }
+
+    // ==========================================================
+    // 跨会话记忆：反馈不跟着会话走，跟着用户走
+    // ==========================================================
+
+    /**
+     * <b>这条守的是「用得越多越准」。</b>
+     *
+     * <p>没有它的话，用户每点一次"重新测一次"，之前积累的反馈就全部清零——
+     * 系统永远停留在第一次的水平。
+     */
+    @Test
+    @DisplayName("【核心】换个会话重新推荐 → 上一个会话的反馈依然生效")
+    void feedbackSurvivesANewSession() throws Exception {
+        MockHttpSession login = registerAndLogin(uniqueUsername("memory"), "Passw0rd!");
+
+        // 第一次测试：答中性卷（8 个维度全是 50），连换三批、每批都全否掉，
+        // 让归因覆盖到尽量多的维度
+        TestSessionRef first = createTravelSession(login);
+        answerAllTravelQuestions(first, 3, login);
+        submitTravel(first, login);
+        for (int round = 0; round < 3; round++) {
+            JsonNode batch = recommend(first, round > 0);
+            for (JsonNode place : batch.get("places")) {
+                feedback(first, place.get("recommendationId").asLong(), "DISLIKE");
+            }
+        }
+
+        // 第二次测试：全新会话、重新答同一套题、重新提交。
+        // 问卷分应该还是 50（画像本身不被反馈改动），但推荐依据里应该能看到下调
+        TestSessionRef second = createTravelSession(login);
+        answerAllTravelQuestions(second, 3, login);
+        submitTravel(second, login);
+        JsonNode secondBatch = recommend(second, false);
+
+        // ⚠️ 这里断言的是「有效偏好被下调了」，不是「那些地方不再出现」——
+        // 跨会话继承的是**修正**（👎 让维度 -10），不是**排除**
+        // （"这批看过了"只在本会话内成立，否则隔天来点换一批会把历史全排掉）
+        List<Integer> preferences = reasonPreferences(secondBatch);
+        assertFalse(preferences.isEmpty(), "推荐里应该有依据");
+        assertTrue(preferences.stream().anyMatch(v -> v < 50),
+                "新会话应该记得上一个会话的 👎——推荐依据里应该出现低于 50 的值，实际："
+                        + preferences);
+    }
+
+    @Test
+    @DisplayName("匿名用户的反馈只在本会话内生效——没有身份就没有跨会话记忆")
+    void anonymousFeedbackDoesNotLeakAcrossSessions() throws Exception {
+        // 匿名做两次测试，第一次全否掉
+        TestSessionRef first = createTravelSession(null);
+        answerAllTravelQuestions(first, 3, null);
+        submitTravel(first, null);
+        JsonNode firstBatch = recommend(first, false);
+        for (JsonNode place : firstBatch.get("places")) {
+            feedback(first, place.get("recommendationId").asLong(), "DISLIKE");
+        }
+
+        // 另一次匿名测试：没有 userId 可关联，所以应该"不记得"
+        TestSessionRef second = createTravelSession(null);
+        answerAllTravelQuestions(second, 3, null);
+        submitTravel(second, null);
+        JsonNode secondBatch = recommend(second, false);
+
+        Set<String> firstNames = new HashSet<>();
+        for (JsonNode place : firstBatch.get("places")) {
+            firstNames.add(place.get("name").asString());
+        }
+        Set<String> secondNames = new HashSet<>();
+        for (JsonNode place : secondBatch.get("places")) {
+            secondNames.add(place.get("name").asString());
+        }
+        // 这里断言的是"两次结果一样"——匿名会话之间没有任何共享状态
+        assertEquals(firstNames, secondNames,
+                "匿名会话之间不该互相影响：没有稳定的用户身份，跨会话记忆无从谈起");
+    }
+
+    @Test
+    @DisplayName("别人的反馈不会影响我的推荐——画像修正不能跨用户串味")
+    void otherUsersFeedbackDoesNotAffectMe() throws Exception {
+        MockHttpSession alice = registerAndLogin(uniqueUsername("alice_mem"), "Passw0rd!");
+        MockHttpSession bob = registerAndLogin(uniqueUsername("bob_mem"), "Passw0rd!");
+
+        // Alice 连否三批，把自己的有效画像改得面目全非
+        TestSessionRef aliceSession = createTravelSession(alice);
+        answerAllTravelQuestions(aliceSession, 3, alice);
+        submitTravel(aliceSession, alice);
+        for (int round = 0; round < 3; round++) {
+            JsonNode batch = recommend(aliceSession, round > 0);
+            for (JsonNode place : batch.get("places")) {
+                feedback(aliceSession, place.get("recommendationId").asLong(), "DISLIKE");
+            }
+        }
+        assertTrue(reasonPreferences(recommend(aliceSession, false)).stream().anyMatch(v -> v < 50),
+                "Alice 自己应该已经受影响——否则这条测试证明不了什么");
+
+        // Bob 答同一套题、做一次全新测试
+        TestSessionRef bobSession = createTravelSession(bob);
+        answerAllTravelQuestions(bobSession, 3, bob);
+        submitTravel(bobSession, bob);
+        JsonNode bobBatch = recommend(bobSession, false);
+
+        // Bob 的问卷是中性卷（全 50），又没有任何自己的反馈，
+        // 所以推荐依据里的偏好分必须**原样是 50**
+        List<Integer> bobPreferences = reasonPreferences(bobBatch);
+        assertFalse(bobPreferences.isEmpty());
+        assertTrue(bobPreferences.stream().allMatch(v -> v == 50),
+                "Bob 的推荐不该被 Alice 的反馈影响，实际偏好分：" + bobPreferences);
     }
 
     // ==========================================================
@@ -262,15 +373,42 @@ class TravelFeedbackIntegrationTest extends IntegrationTestBase {
                 new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8));
     }
 
-    private JsonNode feedback(Session s, long recommendationId, String reaction) throws Exception {
+    private JsonNode feedback(TestSessionRef ref, long recommendationId, String reaction)
+            throws Exception {
         MvcResult result = mockMvc.perform(withToken(post(
                         "/api/travel/sessions/{id}/recommendations/{rid}/feedback",
-                        s.sessionId(), recommendationId).with(csrf())
+                        ref.id(), recommendationId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(Map.of("reaction", reaction))), s.ref()))
+                        .content(json(Map.of("reaction", reaction))), ref))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(
                 new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8));
+    }
+
+    /**
+     * 把推荐结果里所有「推荐依据」的用户偏好分取出来。
+     *
+     * <p>这是观察<b>有效画像</b>的窗口：问卷答的是全 50，所以只要看到不等于 50 的值，
+     * 就说明反馈修正在起作用。比"某个地点有没有出现"可靠得多——
+     * 排序会受很多因素影响，而这个数字直接反映修正有没有被算进去。
+     */
+    private static List<Integer> reasonPreferences(JsonNode batch) {
+        List<Integer> values = new ArrayList<>();
+        for (JsonNode place : batch.get("places")) {
+            for (JsonNode reason : place.get("reasons")) {
+                values.add(reason.get("userPreference").asInt());
+            }
+        }
+        return values;
+    }
+
+    /** 提交旅行测试（成功即返回）。 */
+    private void submitTravel(TestSessionRef ref, MockHttpSession loginSession) throws Exception {
+        var request = withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref);
+        if (loginSession != null) {
+            request = request.session(loginSession);
+        }
+        mockMvc.perform(request).andExpect(status().isOk());
     }
 }
