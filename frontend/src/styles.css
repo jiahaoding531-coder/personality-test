@@ -984,6 +984,87 @@ table.data td.num {
 }
 
 /* ============================================================
+   AI Key 设置（BYOK）
+   ============================================================ */
+
+.ai-key-collapsed {
+  display: inline-block;
+}
+
+.ai-key-panel {
+  margin: 10px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-1);
+}
+
+.ai-key-hint {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ai-key-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ai-key-label {
+  flex: 0 0 62px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ai-key-select,
+.ai-key-input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.ai-key-input {
+  /* key 是一长串没有空格的字符，等宽字体更容易核对首尾几位 */
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.5px;
+}
+
+/* 那段"key 去哪了"的说明。
+   字号比正文小一点、颜色弱一点，但**不能弱到看不见**——
+   用户把凭证交给一个陌生站点之前，有权把这段读完。 */
+.ai-key-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.ai-key-note b {
+  color: var(--text-primary);
+}
+
+.ai-key-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ai-key-saved {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--series-1);
+}
+
+/* ============================================================
    AI 推荐理由
    ============================================================ */
 

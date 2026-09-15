@@ -1,5 +1,6 @@
 package com.example.personality.service;
 
+import com.example.personality.ai.AiCredentials;
 import com.example.personality.ai.TravelReasonGenerator;
 import com.example.personality.dto.TravelReasonResponse;
 import com.example.personality.entity.Recommendation;
@@ -62,7 +63,8 @@ public class TravelReasonService {
      * @throws com.example.personality.exception.AiServiceException
      *         调用上游失败、或返回的内容解析不出来 → HTTP 502
      */
-    public TravelReasonResponse generate(Long sessionId, boolean regenerate) {
+    public TravelReasonResponse generate(Long sessionId, boolean regenerate,
+                                         AiCredentials credentials) {
 
         // ---------- ① 短事务：重建"这批是怎么算的" ----------
         RecommendationService.ReasonContext context =
@@ -70,14 +72,18 @@ public class TravelReasonService {
 
         int placeCount = context.input().places().size();
 
-        // 已经都有理由了，而且用户没要求重新生成 → 直接吃缓存
+        // 已经都有理由了，而且用户没要求重新生成 → 直接吃缓存。
+        // ⚠️ 这条路径上**一次大模型都不调**，所以哪怕凭据是坏的也不会报错——
+        //    用户看到的还是上次那份结果。这是对的：缓存里的东西本来就已经生成好了。
         if (!regenerate && context.existingReasons().size() >= placeCount) {
-            return toResponse(sessionId, context, context.existingReasons(), true);
+            return toResponse(sessionId, context, context.existingReasons(), true,
+                    credentials.providerName());
         }
 
         // ---------- ② 事务外：调用大模型（几秒） ----------
+        // 凭据随调用传进去，不存在这个单例 Bean 的任何字段里
         List<TravelReasonGenerator.RankedReason> generated =
-                reasonGenerator.generateReasons(context.input());
+                reasonGenerator.generateReasons(credentials, context.input());
 
         // 名次 → 理由。模型偶尔会同一个名次给两条，保留先出现的那个。
         Map<Integer, String> byRank = new LinkedHashMap<>();
@@ -88,7 +94,7 @@ public class TravelReasonService {
         // ---------- ③ 短事务：回填到推荐记录 ----------
         recommendationService.attachReasons(sessionId, context.batchNo(), byRank);
 
-        return toResponse(sessionId, context, byRank, false);
+        return toResponse(sessionId, context, byRank, false, credentials.providerName());
     }
 
     /**
@@ -104,7 +110,8 @@ public class TravelReasonService {
     private TravelReasonResponse toResponse(Long sessionId,
                                             RecommendationService.ReasonContext context,
                                             Map<Integer, String> reasonByRank,
-                                            boolean cached) {
+                                            boolean cached,
+                                            String providerName) {
         Map<Integer, Long> idByRank = new LinkedHashMap<>();
         for (Recommendation row : recommendationRepository
                 .findBySessionIdAndBatchNoOrderByRankNoAsc(sessionId, context.batchNo())) {
@@ -124,7 +131,7 @@ public class TravelReasonService {
         return new TravelReasonResponse(
                 sessionId,
                 context.batchNo(),
-                reasonGenerator.providerName(),
+                providerName,
                 cached,
                 reasons);
     }

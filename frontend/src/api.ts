@@ -1,3 +1,4 @@
+import { aiRequestHeaders } from './aiSettings'
 import type {
   AiReportResponse,
   AnswersSavedResponse,
@@ -210,12 +211,20 @@ export const api = {
 
   /**
    * 生成 AI 解读。
+   *
+   * ⚠️ 会自动带上访客自己的 AI Key（如果填过）。
+   * 加在这里而不是让每个调用点自己传：漏传的表现是"填了 key 却还是用服务端的"，
+   * 不报错、也没有任何提示，很难查。收在一个地方就不会漏。
+   *
    * @param regenerate false 时已有报告直接返回旧结果，不重复消耗 token
    */
   generateAiReport: (sessionId: number, regenerate = false, sessionToken?: string) =>
     request<AiReportResponse>(
       `/api/test-sessions/${sessionId}/ai-report${regenerate ? '?regenerate=true' : ''}`,
-      withSessionToken({ method: 'POST' }, sessionToken),
+      withSessionToken(
+        { method: 'POST', headers: aiRequestHeaders() },
+        sessionToken,
+      ),
     ),
 
   // ---------- 旅行偏好测试（TravelMind） ----------
@@ -310,7 +319,11 @@ export const api = {
   getTravelReasons: (sessionId: number, regenerate: boolean, sessionToken?: string) =>
     request<TravelReasonResponse>(
       `/api/travel/sessions/${sessionId}/recommendations/reasons?regenerate=${regenerate}`,
-      withSessionToken({ method: 'POST' }, sessionToken),
+      withSessionToken(
+        // 同上：访客填过 key 就自动带上，调用点不用管
+        { method: 'POST', headers: aiRequestHeaders() },
+        sessionToken,
+      ),
     ),
 
   /**

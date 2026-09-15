@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 
 import { ApiError, api } from '../api'
+import { AiKeyPanel } from '../components/AiKeyPanel'
 import { BarChart } from '../components/BarChart'
 import type {
   AppliedContext,
@@ -79,10 +80,23 @@ interface AiReasonState {
   mode: ReasonMode
   loading: boolean
   error: string | null
-  /** AI 没启用（后端返回 501）。这时把入口整个藏起来 */
+  /**
+   * 这台服务器没配 AI（后端 501）。
+   *
+   * <p>⚠️ 这个状态的前端行为**和以前正好相反**：
+   * 以前 501 = "这站没有 AI" → 把入口整个藏起来；
+   * 现在 501 = "这站没替你配 AI，但**你可以填自己的**" → 引导用户去填。
+   *
+   * <p>别人打开你的站点，不该看到"AI 不可用"而走掉，
+   * 该看到"填个 key 就能用"。这两句话的差别就是这个功能的全部意义。
+   */
   unavailable: boolean
+  /** 填的 key 被上游拒了（后端 400）。该让用户重填，而不是重试 */
+  keyRejected: boolean
   onModeChange: (mode: ReasonMode) => void
   onRequest: () => void
+  /** 用户填完 key 之后重试（内容其实和 onRequest 一样，但语义不同） */
+  onKeySaved: () => void
 }
 
 /**
@@ -153,8 +167,10 @@ export function TravelResultScreen({
   const [reasonMode, setReasonMode] = useState<ReasonMode>(loadReasonMode)
   const [reasonLoading, setReasonLoading] = useState(false)
   const [reasonError, setReasonError] = useState<string | null>(null)
-  /** 后端说"AI 没启用"（501）。置位后不再重试，入口也藏起来 */
+  /** 后端说"这台服务器没配 AI"（501）。这时引导访客填自己的 key */
   const [aiUnavailable, setAiUnavailable] = useState(false)
+  /** 访客填的 key 被厂商拒了（400）。该让他重填，不是重试 */
+  const [aiKeyRejected, setAiKeyRejected] = useState(false)
 
   /**
    * 当前展示的是哪一批推荐。
@@ -284,11 +300,17 @@ export function TravelResultScreen({
         }
         setReasonTexts(texts)
       } catch (e: unknown) {
-        // ⚠️ 501 不是错误，是"这个部署没启用 AI"。
-        // 别人 clone 仓库不配 key 就是这种情况——功能少一块，
-        // 但页面该完完整整、安安静静，而不是弹一个红色的报错。
         if (e instanceof ApiError && e.status === 501) {
+          // 这台服务器没替访客配 AI。以前这里是把入口藏起来，
+          // 现在改成引导他填自己的 key——见 AiReasonState.unavailable 的注释。
           setAiUnavailable(true)
+          return
+        }
+        if (e instanceof ApiError && e.status === 400) {
+          // 400 = 调用方给的东西有问题（厂商名认不出 / key 被上游拒了）。
+          // 后端刻意把它和 502（上游故障）分开，就是为了让这里能弹"重新填写"
+          // 而不是"重试"——重试一万次还是 401。
+          setAiKeyRejected(true)
           return
         }
         setReasonError(e instanceof Error ? e.message : String(e))
@@ -322,6 +344,32 @@ export function TravelResultScreen({
     setReasonMode(mode)
     saveReasonMode(mode)
   }, [])
+
+  /**
+   * 访客刚填完自己的 key —— 立刻替他重试一次。
+   *
+   * <p>让他填完还要再点一次「生成」，是很没耐心的设计：他填 key 的动机
+   * 就是"想让它现在能跑"，而这个动机在该动作完成的瞬间最强。
+   *
+   * <p>⚠️ 三件事都要复位，少一件就会静默失效：
+   * <ul>
+   *   <li>两个失败标记，否则界面还停在"没配 AI / key 被拒"那一屏</li>
+   *   <li>{@code reasonRequestedFor}，它是自动模式防重复请求的守卫——
+   *       不复位的话，即使自动模式想重试也会被自己挡住</li>
+   * </ul>
+   */
+  const handleKeySaved = useCallback(() => {
+    setAiUnavailable(false)
+    setAiKeyRejected(false)
+    setReasonError(null)
+
+    if (rec.kind !== 'done') {
+      return
+    }
+    // 先占住这个批次号，免得自动模式的 effect 紧接着又发一次
+    reasonRequestedFor.current = rec.data.batchNo
+    void loadReasons(rec.data.batchNo)
+  }, [rec, loadReasons])
 
   /**
    * 自动模式：拿定位 → 直接推荐。
@@ -522,10 +570,12 @@ export function TravelResultScreen({
             loading: reasonLoading,
             error: reasonError,
             unavailable: aiUnavailable,
+            keyRejected: aiKeyRejected,
             onModeChange: changeReasonMode,
             // 「重新生成」：regenerate=true 会真的再花一次 token，
             // 所以这个按钮只在手动模式下出现（见 AiReasonBar）
             onRequest: () => void loadReasons(rec.data.batchNo, true),
+            onKeySaved: handleKeySaved,
           }}
         />
       )}
@@ -788,9 +838,34 @@ function ContextBanner({
  * 而模式选择是用户自己的设置，不是系统的判断。）
  */
 function AiReasonBar({ state }: { state: AiReasonState }) {
-  if (state.unavailable) return null
-
   const hasTexts = Object.keys(state.texts).length > 0
+
+  // 服务器没配 AI：不藏起来，改成引导访客填自己的 key。
+  if (state.unavailable) {
+    return (
+      <div className="ai-reason-bar">
+        <span className="ai-reason-status">这台服务器没有配 AI。</span>
+        <AiKeyPanel
+          defaultOpen
+          onSaved={state.onKeySaved}
+          hint="填上你自己的 API Key 就能用了。"
+        />
+      </div>
+    )
+  }
+
+  // key 被上游拒了：让用户改输入，不是让他重试——重试一万次还是 401
+  if (state.keyRejected) {
+    return (
+      <div className="ai-reason-bar">
+        <span className="ai-reason-status error">
+          你填的 AI Key 被厂商拒绝了（可能填错、过期或额度用尽）。
+        </span>
+        <AiKeyPanel defaultOpen onSaved={state.onKeySaved} hint="换一个 key 再试试。" />
+      </div>
+    )
+  }
+
   const showRequest = !state.loading && !state.error && (state.mode === 'manual' || hasTexts)
 
   return (
@@ -831,6 +906,10 @@ function AiReasonBar({ state }: { state: AiReasonState }) {
           {hasTexts ? '重新生成' : '让 AI 说说为什么'}
         </button>
       )}
+
+      <span className="spacer" />
+      {/* 平时也能主动去填自己的 key —— 不是只有出错了才让你知道有这条路 */}
+      <AiKeyPanel onSaved={state.onKeySaved} />
     </div>
   )
 }

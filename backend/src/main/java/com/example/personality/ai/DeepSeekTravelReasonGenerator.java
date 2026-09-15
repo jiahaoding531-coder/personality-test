@@ -3,7 +3,6 @@ package com.example.personality.ai;
 import com.example.personality.exception.AiServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -12,21 +11,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 真实的推荐理由生成：让 DeepSeek 把打分依据写成人话。
+ * 把打分依据写成人话。
  *
- * <p><b>只在 {@code app.ai.enabled=true} 时装配。</b>
- * 未启用时容器里是 {@link StubTravelReasonGenerator}（返回 501）。
- * 两个实现用同一个配置项的正反条件互斥，保证容器里<b>恰好有一个</b>
- * {@code TravelReasonGenerator}。
+ * <p>和其他实现共用 {@link DeepSeekChatClient}（HTTP、超时、错误处理都在那里），
+ * 这个类只管两件事：拼提示词、把模型返回的 JSON 解析成结构化的理由。
  *
- * <h2>和其他实现共用同一个 HTTP 客户端</h2>
- *
- * <p>{@link DeepSeekChatClient} 里装的是超时、错误处理、响应解析这些
- * "踩过一次才知道要写"的东西。这个类只管两件事：拼提示词、
- * 把模型返回的 JSON 解析成结构化的理由。
+ * <p>⚠️ 凭据随每次调用传进来，不存字段——理由见 {@link TravelReasonGenerator} 的接口注释。
  */
 @Component
-@ConditionalOnProperty(name = "app.ai.enabled", havingValue = "true")
 public class DeepSeekTravelReasonGenerator implements TravelReasonGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(DeepSeekTravelReasonGenerator.class);
@@ -43,16 +35,18 @@ public class DeepSeekTravelReasonGenerator implements TravelReasonGenerator {
     }
 
     @Override
-    public List<RankedReason> generateReasons(TravelReasonInput input) {
+    public List<RankedReason> generateReasons(AiCredentials credentials, TravelReasonInput input) {
         // jsonMode=true：要求上游返回一个 JSON 对象。
         // 提示词里必须有 "json" 字样，否则多数厂商会直接拒掉这次请求。
         String content = chatClient.complete(
+                credentials,
                 promptBuilder.systemPrompt(),
                 promptBuilder.userPrompt(input),
                 true);
 
         List<RankedReason> reasons = parse(content, input.places().size());
-        log.info("推荐理由生成成功 条数={} 地点数={}", reasons.size(), input.places().size());
+        log.info("推荐理由生成成功 endpoint={} 条数={} 地点数={}",
+                credentials.providerName(), reasons.size(), input.places().size());
         return reasons;
     }
 
@@ -60,8 +54,7 @@ public class DeepSeekTravelReasonGenerator implements TravelReasonGenerator {
      * 把模型返回的 JSON 解析成理由列表。
      *
      * <p><b>刻意写成 static 包级可见的纯函数</b>，不碰网络也不碰 Spring——
-     * 这样解析逻辑可以毫秒级单测（见 {@code DeepSeekTravelReasonGeneratorTest}），
-     * 不需要 key、不花钱、不受网络影响。
+     * 这样解析逻辑可以毫秒级单测，不需要 key、不花钱、不受网络影响。
      *
      * <p>大模型的输出是不受我们控制的，所以这里对格式的各种意外都要有准备：
      * <ul>
@@ -84,7 +77,7 @@ public class DeepSeekTravelReasonGenerator implements TravelReasonGenerator {
         try {
             root = JSON.readTree(json);
         } catch (RuntimeException e) {
-            // 不把原始输出打进日志的正文里——它可能有几百字，而且模型偶尔会
+            // 不把原始输出整段打进日志——它可能有几百字，而且模型偶尔会
             // 把用户数据复述进去。截断一下够定位问题了。
             log.warn("大模型返回的不是合法 JSON，前 200 字：{}", abbreviate(json));
             throw new AiServiceException("AI 返回的内容不是合法的 JSON，无法解析成推荐理由", e);
@@ -166,10 +159,5 @@ public class DeepSeekTravelReasonGenerator implements TravelReasonGenerator {
             return "";
         }
         return text.length() <= 200 ? text : text.substring(0, 200) + "...";
-    }
-
-    @Override
-    public String providerName() {
-        return chatClient.providerName();
     }
 }

@@ -27,14 +27,46 @@ import java.time.Duration;
 public class AiProperties {
 
     /**
-     * 是否启用真实的 AI 调用。
+     * 是否允许用**服务端配置的这把 key**。
      *
-     * <p><b>默认 false</b>，这时容器里装配的是 {@code StubAiReportGenerator}
-     * （调用返回 501）。这样设计的原因很实际：别人 clone 你的仓库时，
-     * 手上多半没有 API Key，如果默认开启，他一启动就报错，
-     * 还得先读懂代码才知道要关掉什么。
+     * <h2>⚠️ 语义已经变了，别再按老意思读</h2>
+     *
+     * <p>接入"访客自带 key"（BYOK）之前，这个开关的意思是<b>"有没有 AI"</b>：
+     * false 就装配桩实现、接口返回 501。
+     *
+     * <p>现在它的意思收窄成了<b>"这站替不替访客付钱"</b>：
+     * <ul>
+     *   <li>{@code true} + 配了 key → 访客没带 key 时用服务端这把</li>
+     *   <li>{@code false} → 服务端一分钱不花；但访客<b>带上自己的 key 照样能用</b></li>
+     * </ul>
+     *
+     * <p>也就是说 <b>false 不再等于"没有 AI"</b>。真正"没有 AI"的情况是
+     * "服务端没配 + 访客也没带"，那时由 {@code AiCredentialsResolver} 返回空，
+     * 服务层转成 501——注意那已经是**运行时**的判断，不再是启动时的 Bean 装配条件了。
+     *
+     * <p>默认 false 的理由没变：别人 clone 仓库直接跑，不该因为缺一个环境变量就报错。
      */
     private boolean enabled = false;
+
+    /**
+     * 是否允许访客携带自己的 API Key。
+     *
+     * <p><b>默认 true</b>，因为这是"把 demo 发给别人看"时唯一不让自己掏钱的形态：
+     * 别人打开就能填上自己的 key 用起来，而你一分钱不花。
+     *
+     * <p>代价是：**部署出去就成了一台"按白名单转发大模型请求"的代理**。
+     * 评估过风险边界，是可以接受的：
+     * <ul>
+     *   <li>调用者必须自己有一把**在厂商侧有效**的 key——他没有 key 就什么也做不了</li>
+     *   <li>目标地址来自 {@code AiProvider} 白名单，**请求里的任何字符串都变不成地址**
+     *       （SSRF 的入口被这道白名单彻底堵死）</li>
+     *   <li>资源占用被 {@link #getTimeout()} 和 Tomcat 的线程池上限约束住</li>
+     * </ul>
+     *
+     * <p>如果你的部署确实不想要这个能力（比如内部系统），把它设成 false 即可——
+     * 那时访客带的 key 会被忽略，只认服务端配置。
+     */
+    private boolean allowUserKeys = true;
 
     /** DeepSeek 的 OpenAI 兼容端点。换成别的厂商（通义、智谱、Kimi）通常也兼容这个协议。 */
     private String baseUrl = "https://api.deepseek.com/v1";
@@ -72,6 +104,14 @@ public class AiProperties {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean isAllowUserKeys() {
+        return allowUserKeys;
+    }
+
+    public void setAllowUserKeys(boolean allowUserKeys) {
+        this.allowUserKeys = allowUserKeys;
     }
 
     public String getBaseUrl() {

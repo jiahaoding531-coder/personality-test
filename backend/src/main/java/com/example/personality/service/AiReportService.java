@@ -1,5 +1,6 @@
 package com.example.personality.service;
 
+import com.example.personality.ai.AiCredentials;
 import com.example.personality.ai.AiReportGenerator;
 import com.example.personality.dto.AiReportResponse;
 import com.example.personality.dto.SessionResultResponse;
@@ -61,12 +62,15 @@ public class AiReportService {
      * @param regenerate 为 false 时，如果已经有报告就直接返回旧的。
      *                   这个默认行为很重要——用户误点两次不该白白消耗两次 token，
      *                   而且两次生成的文本不一样反而让人困惑。
-     * @throws com.example.personality.exception.NotImplementedException
-     *         当 {@code app.ai.enabled=false} 时（当前装配的是桩实现）
-     * @throws com.example.personality.exception.AiServiceException
-     *         调用上游失败时
+     * @param credentials 这次用谁的 key。由 {@code AiCredentialsResolver} 在控制器里解析好——
+     *                    访客自带的优先，其次服务端配置的。两者都没有时控制器已经返回 501 了，
+     *                    所以走到这里的凭据一定是可用的
+     * @throws com.example.personality.exception.AiServiceException 上游故障（502）
+     * @throws com.example.personality.exception.InvalidAiCredentialsException
+     *         凭据是访客给的且被上游拒绝（400）——用户该做的是改 key，不是重试
      */
-    public AiReportResponse generate(Long sessionId, boolean regenerate) {
+    public AiReportResponse generate(Long sessionId, boolean regenerate,
+                                     AiCredentials credentials) {
 
         // ---------- ① 短事务：取画像（只为了拿主键 id）----------
         PersonalityProfile profile = profileQueryService.loadProfile(sessionId);
@@ -84,11 +88,14 @@ public class AiReportService {
         SessionResultResponse result = profileQueryService.buildResult(sessionId);
 
         // ---------- ② 事务外：调用大模型（耗时 3~30 秒）----------
-        String content = aiReportGenerator.generateReport(result);
+        // 凭据随调用传进去，不存在单例 Bean 的字段里
+        String content = aiReportGenerator.generateReport(credentials, result);
 
         // ---------- ③ 短事务：写库（由 Repository 自带的事务覆盖）----------
+        // ⚠️ 存的是 **providerName（哪个厂商 + 哪个模型）**，不是 key。
+        //    这一列会随接口返回、也会被日志打到，key 绝不该出现在这里。
         AiReport saved = aiReportRepository.save(
-                AiReport.of(profile.getId(), content, aiReportGenerator.providerName()));
+                AiReport.of(profile.getId(), content, credentials.providerName()));
 
         return toResponse(sessionId, saved, false);
     }

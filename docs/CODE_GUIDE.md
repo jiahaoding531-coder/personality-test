@@ -567,9 +567,12 @@ public AiReportResponse generate(Long sessionId, boolean regenerate) {
 > 从非事务方法调用它，Spring 会自动开一个新事务。这也顺便规避了
 > 第 5 节讲的"自调用陷阱"。
 
-### 9.3 条件装配：用一个配置项的正反两面
+### 9.3 条件装配：曾经用，现在不用了
 
-项目里有两个 `AiReportGenerator` 实现，但容器里任何时候都**只能有一个**：
+**这一节是一个"范式被需求推翻"的实例，值得完整读一遍。**
+
+早先项目里有两个 `AiReportGenerator` 实现，用同一个配置项的**正反两面**
+互斥装配，保证容器里任何时候只有一个：
 
 ```java
 @Component
@@ -578,16 +581,50 @@ public class DeepSeekAiReportGenerator implements AiReportGenerator { ... }
 
 @Component
 @ConditionalOnProperty(name = "app.ai.enabled", havingValue = "false", matchIfMissing = true)
-public class StubAiReportGenerator implements AiReportGenerator { ... }
+public class StubAiReportGenerator implements AiReportGenerator { ... }   // 已删除
 ```
 
-如果两个都被装配，Spring 注入时会报
-`NoUniqueBeanDefinitionException: expected single matching bean but found 2`。
+（顺带一提，**不用 `@ConditionalOnMissingBean`** 是因为它依赖 Bean 的注册顺序，
+在 `@Component` 上行为不稳定；用同一个属性的正反值判断则结果是确定的。
+这个知识点本身仍然成立。）
 
-**为什么不用 `@ConditionalOnMissingBean`？** 它依赖 Bean 的注册顺序，
-在 `@Component` 上行为不稳定（在 `@Configuration` 类里才可靠）。
-用同一个属性的正反值来判断，结果是确定的，不依赖扫描顺序。
-`matchIfMissing = true` 则保证**配置项完全不写时**也走桩实现。
+#### 为什么后来删掉了桩实现
+
+条件装配有一个**隐含前提**：
+
+> 「这个依赖可不可用」，在**启动时**就能确定。
+
+接入「访客各带各的 key」（BYOK）之后，这个前提没了——能不能调模型，
+取决于**这一次请求带没带 key**，是运行时的判断。
+
+硬套原来的写法会变成：启动时装配一个"注定返回 501 的桩实现"，
+但它和真实现在运行时其实走的是同一条路（都取决于凭据），
+于是凭空多出一套并行的代码路径。**这才是要删它的理由**，
+而不是"桩实现不好"。
+
+#### 现在的做法
+
+```java
+// 只有一个实现，无条件装配
+@Component
+public class DeepSeekTravelReasonGenerator implements TravelReasonGenerator { ... }
+
+// 「有没有凭据」在运行时判断，收在一个纯逻辑类里
+@Component
+public class AiCredentialsResolver {
+    public Optional<AiCredentials> resolve(String providerHeader, String userKeyHeader) { ... }
+    public AiCredentials require(String providerHeader, String userKeyHeader) { ... }  // 没有就抛 501
+}
+```
+
+#### 可以带走的判断准则
+
+- **依赖在启动时确定** → 条件装配（正反两面，别用 `@ConditionalOnMissingBean`）
+- **依赖在每次请求才确定** → 运行时解析，把它做成一个**纯逻辑的解析器**
+
+第二条还有一个额外好处：解析器不碰网络、不碰数据库，所以它**能被完整单测**。
+而"带着凭据去调模型"那部分必须联网，又慢又贵——把安全关键逻辑
+（白名单、优先级、地址从哪来）挤到可测的那一侧，是这个类单独存在的第二个理由。
 
 ### 9.4 永远不要相信外部输入——哪怕来自你自己调的 API
 

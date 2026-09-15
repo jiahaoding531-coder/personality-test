@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
-import { api } from '../api'
+import { ApiError, api } from '../api'
+import { AiKeyPanel } from './AiKeyPanel'
 import type { AiReportResponse } from '../types'
 
 type State =
@@ -8,6 +9,16 @@ type State =
   | { kind: 'loading' }
   | { kind: 'done'; report: AiReportResponse }
   | { kind: 'error'; message: string }
+  /**
+   * 这台服务器没替访客配 AI（后端 501）。
+   *
+   * <p>⚠️ 单独一个状态，而不是并进 {@code error}：它的处理方式完全不同——
+   * 不是"出错了，重试一下"，而是"**你可以填自己的 key 就能用**"。
+   * 混进 error 里显示一个红色的"生成失败"，就把一条可走的路说成了死路。
+   */
+  | { kind: 'noServerAi' }
+  /** 填的 key 被厂商拒了（后端 400）。该改输入，不是重试 */
+  | { kind: 'keyRejected' }
 
 /**
  * AI 个性化解读面板。
@@ -37,6 +48,16 @@ export function AiPanel({
       const report = await api.generateAiReport(sessionId, regenerate, sessionToken)
       setState({ kind: 'done', report })
     } catch (e) {
+      if (e instanceof ApiError && e.status === 501) {
+        setState({ kind: 'noServerAi' })
+        return
+      }
+      if (e instanceof ApiError && e.status === 400) {
+        // 后端刻意把"调用方给的东西有问题"（400）和"上游故障"（502）分开，
+        // 就是为了让这里能分辨该"重填 key"还是该"重试"
+        setState({ kind: 'keyRejected' })
+        return
+      }
       setState({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
     }
   }
@@ -62,6 +83,26 @@ export function AiPanel({
               生成 AI 解读
             </button>
           </div>
+          {/* 平时也能主动去填自己的 key —— 不是只有出错了才让你知道有这条路 */}
+          <AiKeyPanel onSaved={() => load(false)} />
+        </>
+      )}
+
+      {state.kind === 'noServerAi' && (
+        <>
+          <p className="ai-lead">这台服务器没有配 AI。</p>
+          <AiKeyPanel
+            defaultOpen
+            onSaved={() => load(false)}
+            hint="填上你自己的 API Key 就能用了。"
+          />
+        </>
+      )}
+
+      {state.kind === 'keyRejected' && (
+        <>
+          <p className="ai-lead">你填的 AI Key 被厂商拒绝了（可能填错、过期或额度用尽）。</p>
+          <AiKeyPanel defaultOpen onSaved={() => load(false)} hint="换一个 key 再试试。" />
         </>
       )}
 

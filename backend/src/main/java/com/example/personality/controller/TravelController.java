@@ -1,5 +1,7 @@
 package com.example.personality.controller;
 
+import com.example.personality.ai.AiCredentials;
+import com.example.personality.ai.AiCredentialsResolver;
 import com.example.personality.domain.AmbientContext;
 import com.example.personality.dto.AnswersSavedResponse;
 import com.example.personality.dto.FeedbackRequest;
@@ -62,6 +64,7 @@ public class TravelController {
     private final RecommendationService recommendationService;
     private final AmbientService ambientService;
     private final TravelReasonService travelReasonService;
+    private final AiCredentialsResolver aiCredentialsResolver;
     private final SessionAccessGuard accessGuard;
 
     public TravelController(TestSessionService testSessionService,
@@ -69,12 +72,14 @@ public class TravelController {
                             RecommendationService recommendationService,
                             AmbientService ambientService,
                             TravelReasonService travelReasonService,
+                            AiCredentialsResolver aiCredentialsResolver,
                             SessionAccessGuard accessGuard) {
         this.testSessionService = testSessionService;
         this.travelProfileService = travelProfileService;
         this.recommendationService = recommendationService;
         this.ambientService = ambientService;
         this.travelReasonService = travelReasonService;
+        this.aiCredentialsResolver = aiCredentialsResolver;
         this.accessGuard = accessGuard;
     }
 
@@ -239,9 +244,22 @@ public class TravelController {
             @PathVariable Long sessionId,
             @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
             @AuthenticationPrincipal AppUserPrincipal principal,
-            @RequestParam(defaultValue = "false") boolean regenerate) {
+            @RequestParam(defaultValue = "false") boolean regenerate,
+            // 访客自带的大模型凭据。两个都不传就是走服务端配置的那把。
+            @RequestHeader(value = AiCredentialsResolver.PROVIDER_HEADER, required = false)
+            String aiProvider,
+            @RequestHeader(value = AiCredentialsResolver.KEY_HEADER, required = false)
+            String aiKey) {
 
         checkAccess(sessionId, sessionToken, principal);
-        return travelReasonService.generate(sessionId, regenerate);
+
+        // ⚠️ 解析放在**进服务层之前**，有两个原因：
+        //   ① 都没有凭据时在这里就抛 501，后面一行都不会执行——不会白读一遍库
+        //   ② 厂商名认不出来是 400，属于"请求本身有问题"，也该在碰业务逻辑之前就挡掉
+        AiCredentials credentials = aiCredentialsResolver.require(aiProvider, aiKey);
+
+        // 服务层拿到的是**已经解析好的凭据**，不用关心它从哪来，
+        // 也因此不会把 HTTP 请求头这个概念漏进业务逻辑里。
+        return travelReasonService.generate(sessionId, regenerate, credentials);
     }
 }
