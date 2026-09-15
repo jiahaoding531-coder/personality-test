@@ -9,7 +9,9 @@ import org.springframework.mock.web.MockHttpSession;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.lessThan;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -140,6 +142,16 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.places[0].scorePercent").value(greaterThanOrEqualTo(0)))
                 // 距离必须算出来了（定位是必填的，所以不该是 null）
                 .andExpect(jsonPath("$.places[0].distanceKm").isNumber())
+                // ⚠️ 坐标是「导航过去」那个链接的全部依据。
+                // 缺了它前端只能显示一个地名，用户还得自己开地图去搜——
+                // 而"推荐出来的地方能直接去"正是这个功能的落点。
+                .andExpect(jsonPath("$.places[0].latitude").isNumber())
+                .andExpect(jsonPath("$.places[0].longitude").isNumber())
+                // 地点坐标必须在杭州范围内（种子数据全在杭州）。
+                // 这条同时在守经纬度有没有被写反——写反了纬度会是 120 左右，
+                // 而那种错误前端「导航过去」才会暴露，那时已经晚了。
+                .andExpect(jsonPath("$.places[0].latitude").value(lessThan(31.0)))
+                .andExpect(jsonPath("$.places[0].longitude").value(greaterThan(119.0)))
                 // 推荐依据：最多 3 条，每条都带维度名和双方的分值
                 .andExpect(jsonPath("$.places[0].reasons.length()").value(greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.places[0].reasons[0].dimensionLabel").isString())

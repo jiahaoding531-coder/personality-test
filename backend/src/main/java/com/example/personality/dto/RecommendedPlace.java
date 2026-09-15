@@ -7,7 +7,7 @@ import java.util.List;
  *
  * <p>字段分成三组，对应"用户做决定时要看什么"：
  * <ul>
- *   <li><b>这是什么</b>：name / category / description</li>
+ *   <li><b>这是什么</b>：name / category / latitude / longitude / description</li>
  *   <li><b>为什么推荐它</b>：scorePercent / reasons</li>
  *   <li><b>去得了吗</b>：distanceKm / ticketPrice / suggestedMinutes / openFrom / openTo</li>
  * </ul>
@@ -23,8 +23,11 @@ import java.util.List;
  * @param placeId          地点 ID
  * @param name             地点名
  * @param category         类别（NATURE / CULTURE / FOOD / PHOTO / DISTRICT / MUSEUM / MARKET）
+ * @param latitude         地点纬度。<b>用来拼"导航过去"的链接</b>——
+ *                         没有它前端只能显示一个地名，用户还得自己去地图里搜
+ * @param longitude        地点经度
  * @param description      一句话介绍
- * @param scorePercent     综合得分，0~100 的整数（兴趣匹配 × 距离衰减 × 质量修正 × 状态修正）
+ * @param scorePercent     综合得分，0~100 的整数（兴趣匹配 × 距离衰减 × 质量修正 × 状态修正 × 天气修正）
  * @param scoreBreakdown   这个分数的构成。只给一个百分数是回答不了"为什么是它"的——
  *                         同样是 62%，"兴趣很合但有点远"和"兴趣一般但就在楼下"
  *                         对用户的决策含义完全相反
@@ -41,6 +44,8 @@ public record RecommendedPlace(
         Long placeId,
         String name,
         String category,
+        double latitude,
+        double longitude,
         String description,
         int scorePercent,
         ScoreBreakdown scoreBreakdown,

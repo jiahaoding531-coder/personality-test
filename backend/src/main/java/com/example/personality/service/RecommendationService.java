@@ -549,6 +549,8 @@ public class RecommendationService {
                 place.id(),
                 place.name(),
                 place.category(),
+                place.latitude(),
+                place.longitude(),
                 place.description(),
                 scored.scorePercent(),
                 // 分数是怎么来的——只给一个百分数回答不了"为什么是它"

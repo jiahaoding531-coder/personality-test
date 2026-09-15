@@ -706,6 +706,39 @@ function WhyPanel({
   )
 }
 
+/**
+ * 拼一个「在高德地图里打开这个地点」的链接。
+ *
+ * <p><b>这件事完全不需要后端、不需要 key、不消耗任何配额。</b>
+ * 高德的 URI API 就是个普通网址，点开之后：装了高德 App 就直接唤起，
+ * 没装就落到网页版，页面上有「到这去」。
+ *
+ * <h2>⚠️ 坐标顺序是「经度,纬度」</h2>
+ *
+ * <p>高德的 {@code position} 参数是 <b>先经度后纬度</b>——和绝大多数地图
+ * API 以及日常说的"经纬度"相反，也和我们后端请求体里的
+ * {@code {latitude, longitude}} 相反。传反了<b>不会报错</b>，
+ * 它会把那个纬度当成一个合法经度算下去，于是定位到地球另一边，
+ * 或者干脆落进海里什么都不显示。所以这里刻意不写简写。
+ *
+ * <p>{@code coordinate=gaode} 是告诉高德"这些坐标已经是高德坐标系了，
+ * 别再转一次"。我们的 POI 坐标（V7 的种子数据）就是高德坐标系下的，
+ * 再转一次会整体偏移几百米。
+ *
+ * <p>名字要 encode：地点名里有中文和括号（"楼外楼（孤山店）"），
+ * 直接拼进 URL 会被截断——"（"在 URL 里有特殊含义。
+ */
+function amapMarkerUrl(place: RecommendedPlace): string {
+  const params = new URLSearchParams({
+    position: `${place.longitude},${place.latitude}`,
+    name: place.name,
+    coordinate: 'gaode',
+    callnative: '1',   // 有高德 App 就直接唤起，没有则用网页版
+    src: 'travelmind',
+  })
+  return `https://uri.amap.com/marker?${params.toString()}`
+}
+
 function PlaceCard({
   place,
   reaction,
@@ -750,6 +783,20 @@ function PlaceCard({
       />
 
       <div className="feedback-row">
+        {/*
+          「导航过去」是个**普通链接**，不是按钮：
+          它打开的是站外地址，用 <a> 才对——浏览器会显示真实目标、
+          支持中键新标签打开、右键复制链接、也能被读屏软件正确识别。
+          用 button + window.open 把这些全丢掉，只为换个样式，不划算。
+        */}
+        <a
+          className="fb-btn nav-btn"
+          href={amapMarkerUrl(place)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          🧭 导航过去
+        </a>
         <button
           className={reaction === 'LIKE' ? 'fb-btn chosen' : 'fb-btn'}
           type="button"

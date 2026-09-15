@@ -1138,6 +1138,16 @@ table.data td.num {
   font-weight: 600;
 }
 
+/* 「导航过去」是个 <a>，但要长得和旁边的 <button> 一样。
+   两件要处理的事：a 默认有下划线、默认是行内元素（padding 会撑不开高度）。 */
+.nav-btn {
+  display: inline-block;
+  text-decoration: none;
+  /* 和"想去/不感兴趣"拉开一点距离：前两个是"评价这条推荐"，
+     这个是把推荐变成行动——性质不同，不该挤在一起 */
+  margin-right: auto;
+}
+
 /* 画像调整提示里的小标签："自然风光 50 → 40" */
 .adjust-chip {
   display: inline-block;

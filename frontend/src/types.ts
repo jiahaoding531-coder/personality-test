@@ -269,6 +269,14 @@ export interface RecommendedPlace {
   recommendationId: number
   placeId: number
   name: string
+  /**
+   * 地点坐标。用来拼「导航过去」的链接——没有它前端只能显示一个地名，
+   * 用户还得自己开地图去搜。
+   *
+   * ⚠️ 拼链接时注意高德要求**经度在前**，和这里的字段名顺序相反。
+   */
+  latitude: number
+  longitude: number
   category: string
   description: string
   /** 综合得分，0~100 的整数 */
