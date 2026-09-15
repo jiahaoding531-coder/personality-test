@@ -11,6 +11,7 @@ import com.example.personality.dto.MatchReason;
 import com.example.personality.dto.RecommendationRequest;
 import com.example.personality.dto.RecommendationResponse;
 import com.example.personality.dto.RecommendedPlace;
+import com.example.personality.dto.ScoreBreakdown;
 import com.example.personality.entity.Place;
 import com.example.personality.entity.QuestionScale;
 import com.example.personality.entity.Recommendation;
@@ -498,6 +499,13 @@ public class RecommendationService {
                 place.category(),
                 place.description(),
                 scored.scorePercent(),
+                // 分数是怎么来的——只给一个百分数回答不了"为什么是它"
+                new ScoreBreakdown(
+                        scored.interestScore(),
+                        scored.distanceFactor(),
+                        scored.qualityFactor(),
+                        scored.stateFactor(),
+                        scored.score()),
                 scored.distanceKm(),
                 place.ticketPrice(),
                 place.suggestedMinutes(),

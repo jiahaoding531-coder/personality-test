@@ -29,11 +29,15 @@ import java.util.Map;
  * <h2>算法</h2>
  *
  * <pre>
- *   ① 硬过滤：不营业的、时间不够的，直接排除
+ *   ① 硬过滤：不营业的、时间不够的、超预算的，直接排除
  *   ② 兴趣匹配（主信号，占大头）
  *   ③ 乘以距离衰减
  *   ④ 乘以质量修正（微调）
+ *   ⑤ 乘以当前状态的修正
  * </pre>
+ *
+ * <p>四个因子都会随结果一起返回（见 {@link ScoredPlace}），
+ * 前端据此能说清「为什么是它，而不是别人」。
  *
  * <p><b>为什么用「相乘」而不是「加权求和」？</b>
  * 相乘意味着每个因子都必须是"不差"的，任何一项掉到 0 分整个结果就是 0。
@@ -145,8 +149,9 @@ public class RecommendationEngine {
 
             double score = match.interest() * distanceFactor * qualityFactor * stateFactor;
 
+            // 四个因子全都留给上层——只有最终分是回答不了"为什么是它"的
             scored.add(new ScoredPlace(place, score, match.interest(),
-                    distanceKm, qualityFactor, match.topMatches()));
+                    distanceKm, distanceFactor, qualityFactor, stateFactor, match.topMatches()));
         }
 
         scored.sort(Comparator.comparingDouble(ScoredPlace::score).reversed());

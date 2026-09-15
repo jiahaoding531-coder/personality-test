@@ -3,7 +3,7 @@
 > 两条完整可跑的链路：
 > **人格测试 → 5 维画像 → AI 个性化反馈**，
 > 以及 **旅行偏好测试 → 8 维画像 → 结合定位的 Top 3 推荐**。
-> 两套前端（零构建静态页 + React），154 个自动化测试，CI 全绿。
+> 两套前端（零构建静态页 + React），157 个自动化测试，CI 全绿。
 
 [![CI](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml/badge.svg)](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
@@ -66,7 +66,7 @@ Session Cookie 认证、测试历史、速率限制、Top 3 旅行推荐。详�
 | 构建 | Maven Wrapper | **无需单独安装 Maven** |
 | AI | DeepSeek（OpenAI 兼容协议） | 可选启用，默认关闭时用桩实现 |
 | 前端 | React 19 + TypeScript + Vite | 独立目录 `frontend/`，另有一个零构建的静态页 |
-| 测试 | JUnit 5 + MockMvc | 154 个：65 个纯逻辑单测 + 89 个集成测试 |
+| 测试 | JUnit 5 + MockMvc | 157 个：68 个纯逻辑单测 + 89 个集成测试 |
 | CI | GitHub Actions | push/PR 自动跑测试 + 类型检查 |
 
 ---
@@ -450,19 +450,19 @@ personality-test/
 ## 测试
 
 ```bash
-cd backend && ./mvnw test        # 154 个测试
+cd backend && ./mvnw test        # 157 个测试
 cd frontend && npm run typecheck # 类型检查（前端还没有单测，见路线图）
 ```
 
 ```
-Tests run: 154, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 157, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 分成两层，**各自解决不同的问题**：
 
 | 层 | 数量 | 需要数据库 | 耗时 | 测什么 |
 |---|---|---|---|---|
-| **纯逻辑单元测试** | 65 | ❌ | 0.15 秒 | 计分算法（两套量表）、推荐引擎、提示词约束 |
+| **纯逻辑单元测试** | 68 | ❌ | 0.15 秒 | 计分算法（两套量表）、推荐引擎、提示词约束 |
 | **集成测试** | 81 | ✅ | ~30 秒 | HTTP 契约、安全规则、事务、用户隔离 |
 
 **纯逻辑单元测试不需要数据库** —— 它们直接 `new ScoringService()` /
@@ -662,7 +662,7 @@ psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 - [ ] **画像跨会话复用**：现在每次打开都要重答 8 道题
 - [ ] **反馈归因改进**：让用户说"为什么不喜欢"（太远/太累/太贵/不合口味），
       而不是系统按"贡献最大的维度"猜
-- [ ] **「为什么没选其他」**：Top 3 的分数和维度对比数据都有了，不用 AI 也能做结构化版
+- [x] **「为什么是它」**：把打分的四个因子摊开给用户看（V1.3 完成）
 - [ ] **导航前确认**：去这里 / 换一个 / 我先看看别的（半小时的活）
 - [ ] **AI 生成推荐理由**：`recommendations.reason` 字段已预留，把结构化的
       `reasons` 喂给 DeepSeek 生成自然语言解释——计划书第七节明确划给 AI 的职责

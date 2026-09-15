@@ -24,7 +24,10 @@ import java.util.List;
  * @param name             地点名
  * @param category         类别（NATURE / CULTURE / FOOD / PHOTO / DISTRICT / MUSEUM / MARKET）
  * @param description      一句话介绍
- * @param scorePercent     综合得分，0~100 的整数（兴趣匹配 × 距离衰减 × 质量修正）
+ * @param scorePercent     综合得分，0~100 的整数（兴趣匹配 × 距离衰减 × 质量修正 × 状态修正）
+ * @param scoreBreakdown   这个分数的构成。只给一个百分数是回答不了"为什么是它"的——
+ *                         同样是 62%，"兴趣很合但有点远"和"兴趣一般但就在楼下"
+ *                         对用户的决策含义完全相反
  * @param distanceKm       距离用户的公里数。用户没给定位时为 null（但接口上定位是必填的，正常不会为 null）
  * @param ticketPrice      门票价格（元），0 表示免费
  * @param suggestedMinutes 建议停留时长（分钟）
@@ -40,6 +43,7 @@ public record RecommendedPlace(
         String category,
         String description,
         int scorePercent,
+        ScoreBreakdown scoreBreakdown,
         Double distanceKm,
         int ticketPrice,
         int suggestedMinutes,

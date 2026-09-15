@@ -115,6 +115,62 @@ class RecommendationEngineTest {
                 "一正一负抵消后，应该和无状态时一样");
     }
 
+    // ==========================================================
+    // 打分的拆解：四个因子必须能还原出最终分
+    // ==========================================================
+
+    /**
+     * <b>这条是不变量测试，防的是"暴露出去的拆解和实际打分对不上"。</b>
+     *
+     * <p>前端要靠这四个因子解释"为什么是它"，还要把它们画成
+     * {@code 兴趣 × 距离 × 质量 × 状态 = 最终分}。任何一个因子在传递过程中
+     * 丢了或者算错了，用户看到的就是一本假账——比不给拆解更糟。
+     */
+    @Test
+    @DisplayName("四个因子相乘必须精确等于 score——拆解不能是假账")
+    void scoreEqualsProductOfItsFactors() {
+        RecommendationContext ctx = RecommendationContext.withLocation(
+                LocalTime.of(18, 0), 600, 30.2420, 120.1400, 10.0,
+                100, java.util.Set.of(TravelState.HUNGRY));
+
+        List<PlaceCandidate> places = List.of(
+                placeAt("近的", 30.2450, 120.1420, traits(90, 60, 95, 70, 50, 50, 40)),
+                placeAt("远的", 30.2900, 120.1800, traits(80, 70, 85, 60, 40, 60, 30)));
+
+        for (ScoredPlace scored : engine.recommend(neutralPreference(), places, ctx, 3)) {
+            double product = scored.interestScore() * scored.distanceFactor()
+                    * scored.qualityFactor() * scored.stateFactor();
+            assertEquals(scored.score(), product, 1e-9,
+                    scored.place().name() + " 的拆解对不上：四个因子相乘 = " + product
+                            + "，但 score = " + scored.score());
+        }
+    }
+
+    @Test
+    @DisplayName("没有定位、没有状态时，对应的两个因子恒为 1.0（乘法单位元）")
+    void neutralFactorsAreExactlyOne() {
+        List<ScoredPlace> top = engine.recommend(neutralPreference(),
+                List.of(place("甲", traits(50, 50, 50, 50, 50, 50, 50))), RELAXED, 3);
+
+        assertEquals(1.0, top.get(0).distanceFactor(),
+                "没定位时距离因素应该完全失效，而不是给个 0.9");
+        assertEquals(1.0, top.get(0).stateFactor(), "没状态时状态因素不该有任何影响");
+    }
+
+    @Test
+    @DisplayName("状态修正会体现在拆解里——累了的时候 stateFactor 明显小于 1")
+    void stateFactorShowsUpInTheBreakdown() {
+        PlaceCandidate hilly = place("爬山路线", traits(50, 50, 50, 50, 50, 50, 95));
+
+        ScoredPlace normal = engine.recommend(neutralPreference(), List.of(hilly), RELAXED, 3).get(0);
+        ScoredPlace tired = engine.recommend(neutralPreference(), List.of(hilly),
+                withStates(TravelState.TIRED), 3).get(0);
+
+        assertEquals(1.0, normal.stateFactor());
+        assertTrue(tired.stateFactor() < 0.5,
+                "费腿的地方在'累了'的时候应该被压得很低，实际：" + tired.stateFactor());
+    }
+
     @Test
     @DisplayName("状态系数永远 ≤ 1——score ≤ 1 这条不变量不能被打破")
     void stateFactorNeverExceedsOne() {
