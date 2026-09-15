@@ -188,6 +188,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/travel/sessions/*/submit").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/travel/sessions/*/profile").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/travel/sessions/*/recommendations").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/travel/sessions/*/recommendations/*/feedback").permitAll()
 
                         // 「我的」数据必须登录
                         .requestMatchers("/api/me/**").authenticated()

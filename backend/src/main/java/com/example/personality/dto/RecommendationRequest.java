@@ -28,6 +28,10 @@ import jakarta.validation.constraints.NotNull;
  * @param remainingMinutes 今天还剩多少可以玩的时间（分钟）。不传默认 240 分钟（4 小时）。
  *                         一个建议停留 3 小时的地方，在"只剩 2 小时"时会被直接排除。
  * @param maxDistanceKm    候选地点的最大半径（公里）。不传默认 10 公里。
+ * @param excludeSeen      是否排除这个会话里已经推荐过、且用户没点过 👍 的地点。
+ *                         "换一批"按钮要传 {@code true}，否则重新请求会拿到一模一样的结果
+ *                         （引擎没有记忆，同样的输入必然算出同样的输出）。
+ *                         <b>不传默认 false</b>——保持既有行为不变，也让"刷新页面"可预测。
  */
 public record RecommendationRequest(
 
@@ -47,7 +51,9 @@ public record RecommendationRequest(
 
         @DecimalMin(value = "0.5", message = "maxDistanceKm 至少为 0.5 公里")
         @DecimalMax(value = "50.0", message = "maxDistanceKm 最多为 50 公里")
-        Double maxDistanceKm
+        Double maxDistanceKm,
+
+        Boolean excludeSeen
 ) {
 
     /** 不传剩余时长时的默认值：4 小时。够逛两个景点，是比较典型的半日行程。 */
@@ -66,5 +72,9 @@ public record RecommendationRequest(
 
     public double maxDistanceKmOrDefault() {
         return maxDistanceKm == null ? RecommendationContext.DEFAULT_MAX_DISTANCE_KM : maxDistanceKm;
+    }
+
+    public boolean excludeSeenOrDefault() {
+        return Boolean.TRUE.equals(excludeSeen);
     }
 }

@@ -3,7 +3,7 @@
 > 两条完整可跑的链路：
 > **人格测试 → 5 维画像 → AI 个性化反馈**，
 > 以及 **旅行偏好测试 → 8 维画像 → 结合定位的 Top 3 推荐**。
-> 两套前端（零构建静态页 + React），113 个自动化测试，CI 全绿。
+> 两套前端（零构建静态页 + React），135 个自动化测试，CI 全绿。
 
 [![CI](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml/badge.svg)](https://github.com/jiahaoding531-coder/personality-test/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
@@ -30,7 +30,8 @@
 | 题目 | 20 道，每维度 4 题，含 8 道反向题 | 8 道场景题，每维度 1 题，全正向 |
 | 画像 | 5 维，分数连续 | 8 维，分数只能取 0/25/50/75/100 |
 | 结果 | 5 维条形图 + 档位解读文案 + AI 深度解读 | 8 维条形图 + **结合定位的 Top 3 地点推荐** |
-| 规模 | 完整 | **V0**：59 个杭州模拟景点，不接真实地图和天气 |
+| 反馈 | AI 解读可重新生成 | 👍/👎 **回写画像** + "换一批" |
+| 规模 | 完整 | 59 个杭州模拟景点，不接真实地图和天气 |
 
 旅行侧是 `TravelMind.docx` 计划书的第一阶段——**先把推荐算法本身跑通**，
 证明了它准不准之后，再接高德这类真实数据源。推荐分数由确定性算法算出
@@ -65,7 +66,7 @@ Session Cookie 认证、测试历史、速率限制、Top 3 旅行推荐。详�
 | 构建 | Maven Wrapper | **无需单独安装 Maven** |
 | AI | DeepSeek（OpenAI 兼容协议） | 可选启用，默认关闭时用桩实现 |
 | 前端 | React 19 + TypeScript + Vite | 独立目录 `frontend/`，另有一个零构建的静态页 |
-| 测试 | JUnit 5 + MockMvc | 113 个：42 个纯逻辑单测 + 71 个集成测试 |
+| 测试 | JUnit 5 + MockMvc | 135 个：53 个纯逻辑单测 + 82 个集成测试 |
 | CI | GitHub Actions | push/PR 自动跑测试 + 类型检查 |
 
 ---
@@ -301,6 +302,18 @@ cd backend && ./mvnw spring-boot:run
 | `GET` | `/api/test-sessions/{id}/result` | 🔑 查询已生成的画像 |
 | `POST` | `/api/test-sessions/{id}/ai-report` | 🔑 AI 个性化反馈（需配置 API Key，否则返回 501） |
 
+旅行偏好测试（TravelMind）：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/api/questions?scale=TRAVEL` | 获取 8 道旅行偏好题（不传 `scale` 仍是人格题） |
+| `POST` | `/api/travel/sessions` | 创建旅行测试会话 |
+| `POST` | `/api/travel/sessions/{id}/answers` | 🔑 保存作答 |
+| `POST` | `/api/travel/sessions/{id}/submit` | 🔑 提交并计分，返回 8 维旅行画像 |
+| `GET` | `/api/travel/sessions/{id}/profile` | 🔑 查询旅行画像 |
+| `POST` | `/api/travel/sessions/{id}/recommendations` | 🔑 结合定位推荐 Top 3（`excludeSeen` 用于"换一批"） |
+| `POST` | `/api/travel/sessions/{id}/recommendations/{rid}/feedback` | 🔑 👍/👎，返回画像被调整的结果 |
+
 > 🔑 = 需要在 `X-Session-Token` 请求头里带上创建会话时拿到的令牌，
 > 或者是该会话的登录所有者。详见 [`docs/api.md`](docs/api.md)。
 
@@ -437,20 +450,20 @@ personality-test/
 ## 测试
 
 ```bash
-cd backend && ./mvnw test        # 113 个测试
+cd backend && ./mvnw test        # 135 个测试
 cd frontend && npm run typecheck # 类型检查（前端还没有单测，见路线图）
 ```
 
 ```
-Tests run: 113, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 135, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 分成两层，**各自解决不同的问题**：
 
 | 层 | 数量 | 需要数据库 | 耗时 | 测什么 |
 |---|---|---|---|---|
-| **纯逻辑单元测试** | 42 | ❌ | 0.15 秒 | 计分算法（两套量表）、推荐引擎、提示词约束 |
-| **集成测试** | 71 | ✅ | ~20 秒 | HTTP 契约、安全规则、事务、用户隔离 |
+| **纯逻辑单元测试** | 53 | ❌ | 0.15 秒 | 计分算法（两套量表）、推荐引擎、提示词约束 |
+| **集成测试** | 81 | ✅ | ~30 秒 | HTTP 契约、安全规则、事务、用户隔离 |
 
 **纯逻辑单元测试不需要数据库** —— 它们直接 `new ScoringService()` /
 `new AiPromptBuilder()`，不启动 Spring 容器。这是把核心逻辑与框架解耦换来的：
@@ -590,12 +603,24 @@ psql -U postgres -c "CREATE DATABASE personality_mvp_test;"
 但没有接口。反馈是整个闭环里最有价值的数据（计划书第十九节的核心指标
 "推荐接受率是否随使用次数提升"要靠它），所以排在下一步而不是顺手做。
 
-### V0.9 计划中
+### V0.9 ✅ 用户反馈闭环
 
-- [ ] **用户反馈接口**：👍/👎 + "换一批"，并把反馈接回画像（计划书 Phase 6「个性化」）
+- [x] 👍/👎 接口，反馈记在"某一次推荐的某一条"上
+- [x] **反馈回写画像**：问卷画像一个字节都不动，每次推荐时叠加反馈实时算出「有效画像」
+- [x] "换一批"是真的换——排除本会话看过、且没被点过 👍 的地点
+- [x] 前端反馈按钮 + 画像调整提示（「自然风光 50 → 40」）
+- [x] 11 个修正逻辑单测 + 10 个反馈集成测试
+
+> ⚠️ **归因是启发式的**：一条反馈针对一个地点，但地点有 7 个属性维度。
+> 系统只能按"这次推荐里贡献最大的维度"来归因，可能出现"因为太吵被否掉、
+> 却被算到自然风光头上"的误判。要真正准确得让用户说出原因，那是更重的交互。
+
+### V1.0 计划中
+
 - [ ] **AI 生成推荐理由**：`recommendations.reason` 字段已预留，把结构化的
       `reasons` 喂给 DeepSeek 生成自然语言解释——计划书第七节明确划给 AI 的职责
 - [ ] 导航（拼一个高德/苹果地图 URL 跳转，半小时的活）
+- [ ] 定位与天气：接高德开放平台，把 `RecommendationContext` 里预留的字段填上
 - [ ] 多次结果对比（历史页并排两张画像，看变化）
 - [ ] 让 `rawScore` / `itemCount` 返回真实值（目前是 `-1` 占位）
 - [ ] 前端单元测试（Vitest + Testing Library）

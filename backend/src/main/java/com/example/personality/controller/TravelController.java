@@ -1,6 +1,8 @@
 package com.example.personality.controller;
 
 import com.example.personality.dto.AnswersSavedResponse;
+import com.example.personality.dto.FeedbackRequest;
+import com.example.personality.dto.FeedbackResponse;
 import com.example.personality.dto.RecommendationRequest;
 import com.example.personality.dto.RecommendationResponse;
 import com.example.personality.dto.SessionResponse;
@@ -152,5 +154,32 @@ public class TravelController {
 
         checkAccess(sessionId, sessionToken, principal);
         return recommendationService.recommend(sessionId, request);
+    }
+
+    /**
+     * {@code POST /api/travel/sessions/{id}/recommendations/{recommendationId}/feedback}
+     * —— 对某一条推荐点 👍 / 👎。
+     *
+     * <p>响应里带回<b>画像被调整的结果</b>（哪个维度从多少变到多少），
+     * 让用户当场看得见反馈的影响——否则画像是"下次推荐才用到"的东西，
+     * 用户点完没有任何感觉，很容易以为按钮坏了。
+     *
+     * <p>重复提交同一条是合法的：改主意走 UPDATE（👎 → 👍 不会留下两条记录）。
+     *
+     * <p><b>为什么 recommendationId 放在路径里而不是请求体里</b>：
+     * 它标识的是"哪一个资源"，属于 URL 的职责。而且放在路径里能让
+     * "这条推荐属不属于这个会话"的校验显得更自然——Service 会挡住
+     * 拿自己的 sessionId 配别人的 recommendationId 这种写法。
+     */
+    @PostMapping("/sessions/{sessionId}/recommendations/{recommendationId}/feedback")
+    public FeedbackResponse giveFeedback(
+            @PathVariable Long sessionId,
+            @PathVariable Long recommendationId,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @AuthenticationPrincipal AppUserPrincipal principal,
+            @Valid @RequestBody FeedbackRequest request) {
+
+        checkAccess(sessionId, sessionToken, principal);
+        return recommendationService.submitFeedback(sessionId, recommendationId, request.reaction());
     }
 }

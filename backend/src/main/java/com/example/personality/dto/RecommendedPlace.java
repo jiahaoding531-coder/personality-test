@@ -17,6 +17,9 @@ import java.util.List;
  * 真正的排序在后端已经做完了，这里返回的列表本来就是有序的。
  *
  * @param rank             名次，从 1 开始
+ * @param recommendationId 这条推荐记录的 ID。
+ *                         <b>点 👍/👎 时要带上它</b>——反馈是挂在"某一次推荐的某一条"上的，
+ *                         不是挂在地点上（同一个地点在不同批次里是不同的推荐）
  * @param placeId          地点 ID
  * @param name             地点名
  * @param category         类别（NATURE / CULTURE / FOOD / PHOTO / DISTRICT / MUSEUM / MARKET）
@@ -31,6 +34,7 @@ import java.util.List;
  */
 public record RecommendedPlace(
         int rank,
+        Long recommendationId,
         Long placeId,
         String name,
         String category,
