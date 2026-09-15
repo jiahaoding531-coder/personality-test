@@ -198,23 +198,48 @@ export default function App() {
   }, [])
 
   // ---------------------------------------------------------------
-  // 旅行偏好测试：建会话 + 取 8 道旅行题
+  // 旅行偏好测试
   // ---------------------------------------------------------------
+
+  /**
+   * 开始旅行测试。
+   *
+   * <p><b>先看用户上次测过没有。</b>测过就直接用那份画像进结果页——
+   * 让他为了一份一个字都不会变的问卷再答 8 道题，那是问卷不是助手。
+   * 没测过（或匿名）才去答题。
+   *
+   * <p>探测"有没有历史画像"靠的是 `GET profile` 的 200/404：
+   * 后端在读取时有 fallback（本会话没有 → 找该用户最近一份），
+   * 所以这个接口的语义其实就是"这个用户当前的旅行画像"。
+   */
   const startTravelTest = useCallback(async () => {
     setLoadingText('正在准备旅行测试…')
     setScreen('loading')
     try {
-      // 和人格测试一样，两个请求互不依赖，并发发出
-      const [session, bank] = await Promise.all([
-        api.createTravelSession(),
-        api.getTravelQuestions(),
-      ])
-      setTravelFlow({
+      const session = await api.createTravelSession()
+      const base = {
         sessionId: session.sessionId,
         accessToken: session.accessToken,
+        questions: [] as Question[],
+        options: [] as ScaleOption[],
+        answers: {},
+      }
+
+      // 先试历史画像。拿到就直接开始，拿不到（404）才去答题
+      try {
+        const reused = await api.getTravelProfile(session.sessionId, session.accessToken)
+        setTravelFlow({ ...base, profile: reused })
+        setScreen('travel-result')
+        return
+      } catch {
+        // 404 = 这个人没测过。这是正常路径，不是错误
+      }
+
+      const bank = await api.getTravelQuestions()
+      setTravelFlow({
+        ...base,
         questions: bank.questions,
         options: bank.options,
-        answers: {},
         profile: null,
       })
       setScreen('travel-test')

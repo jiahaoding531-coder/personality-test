@@ -262,6 +262,20 @@ export function TravelResultScreen({
     <>
       <div className="card">
         <h1>你的旅行偏好</h1>
+
+        {/*
+          复用上次画像时必须说清楚。系统直接跳到结果页而用户没答题，
+          不说的话他会以为"我还没测怎么就出结果了"。
+        */}
+        {profile.reused && (
+          <p className="hint">
+            这是你<b>上次</b>测出来的画像——不用再答一遍了。{' '}
+            <button className="link-btn" type="button" onClick={onRestart}>
+              重新测一次
+            </button>
+          </p>
+        )}
+
         <p className="lede">
           8 个维度各 1 道题，所以分数只有 0 / 25 / 50 / 75 / 100 五档。
           这份画像只是一开始的猜测——真正让它变准的，是你对推荐的反馈。

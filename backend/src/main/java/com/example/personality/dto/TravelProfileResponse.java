@@ -32,6 +32,8 @@ public record TravelProfileResponse(
         Instant submittedAt,
         // 固定是 "TRAVEL"。留着是为了将来前端能把两种画像混在一个列表里渲染。
         String scale,
+        // 这份画像是不是从用户上一次测试借来的（当前会话还没测）
+        boolean reused,
         List<TravelDimensionResult> dimensions
 ) {
 

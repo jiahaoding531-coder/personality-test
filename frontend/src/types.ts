@@ -175,6 +175,13 @@ export interface TravelProfileResponse {
   submittedAt: string | null
   /** 固定是 'TRAVEL' */
   scale: string
+  /**
+   * 这份画像是不是从**上一次测试**借来的（当前会话还没答题）。
+   *
+   * 前端必须把这件事说清楚——否则用户会以为系统把他没做的测试算完了。
+   * ⚠️ 只有登录用户才可能为 true：匿名没有稳定的身份，"上次"无从谈起。
+   */
+  reused: boolean
   dimensions: TravelDimensionResult[]
 }
 

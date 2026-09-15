@@ -254,6 +254,13 @@ export const api = {
       withSessionToken({ method: 'POST' }, sessionToken),
     ),
 
+  /**
+   * 读旅行画像。
+   *
+   * ⚠️ 这个接口有一个副作用是**好事**：当前会话还没答题时，
+   * 它会退回用户**上一次**测出来的画像（`reused: true`）。
+   * 所以"用户有没有历史画像"就是靠它 200/404 来判断的——不需要额外的探测接口。
+   */
   getTravelProfile: (sessionId: number, sessionToken?: string) =>
     request<TravelProfileResponse>(
       `/api/travel/sessions/${sessionId}/profile`,

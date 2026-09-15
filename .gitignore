@@ -62,6 +62,9 @@ out/
 # VS Code
 .vscode/
 
+# Visual Studio
+.vs/
+
 # NetBeans
 /nbproject/private/
 /nbbuild/
