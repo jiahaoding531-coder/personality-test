@@ -13,6 +13,8 @@
  * TypeScript 只能保证前端内部的一致性，管不到跨语言的契约。
  */
 
+import type { TravelQueryOperation } from './travel/travelQueryState'
+
 /** 李克特量表的一个选项，例如 `{ value: 1, label: '非常不同意' }` */
 export interface ScaleOption {
   value: number
@@ -375,6 +377,8 @@ export interface PlaceReason {
  * 而完全想不到是它把"想安静"听成了别的。
  */
 export interface InterpretResponse {
+  /** 自然语言不直接改状态，只能输出交给 reducer 的操作 */
+  operations: TravelQueryOperation[]
   /** 理解出的状态，带中文名 */
   states: { key: TravelState; label: string }[]
   /**

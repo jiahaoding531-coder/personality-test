@@ -100,7 +100,7 @@ export function AiKeyPanel({
           type="password"
           autoComplete="off"
           spellCheck={false}
-          placeholder="sk-..."
+          placeholder="粘贴所选厂商的 API Key"
           value={key}
           onChange={(e) => {
             setKey(e.target.value)

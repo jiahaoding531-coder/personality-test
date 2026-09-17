@@ -1,10 +1,9 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 
 import { ApiError, api } from '../api'
 import { AiKeyPanel } from '../components/AiKeyPanel'
 import { BarChart } from '../components/BarChart'
 import type {
-  AppliedContext,
   DimensionAdjustment,
   InterpretResponse,
   Reaction,
@@ -12,8 +11,22 @@ import type {
   RecommendationResponse,
   RecommendedPlace,
   TravelProfileResponse,
-  TravelState,
 } from '../types'
+import {
+  createEmptyTravelQueryState,
+  createTravelQueryChips,
+  describeTravelQueryOperations,
+  reduceTravelQueryOperations,
+  toRecommendationFilters,
+  type TravelQueryOperation,
+  type TravelQueryChip,
+  type TravelQueryState,
+} from '../travel/travelQueryState'
+import {
+  chooseAiRetryTarget,
+  createLatestRequestGate,
+  createSingleFlightGate,
+} from '../travel/travelRequestState'
 
 /**
  * 旅行测试的结果页。
@@ -74,69 +87,32 @@ function saveReasonMode(mode: ReasonMode) {
   }
 }
 
-/** 交给 `RecommendationList` 的 AI 理由状态。打包传免得加七个 props。 */
-interface AiReasonState {
-  /** recommendationId → 那句话 */
-  texts: Record<number, string>
-  mode: ReasonMode
-  loading: boolean
-  error: string | null
-  /**
-   * 这台服务器没配 AI（后端 501）。
-   *
-   * <p>⚠️ 这个状态的前端行为**和以前正好相反**：
-   * 以前 501 = "这站没有 AI" → 把入口整个藏起来；
-   * 现在 501 = "这站没替你配 AI，但**你可以填自己的**" → 引导用户去填。
-   *
-   * <p>别人打开你的站点，不该看到"AI 不可用"而走掉，
-   * 该看到"填个 key 就能用"。这两句话的差别就是这个功能的全部意义。
-   */
-  unavailable: boolean
-  /** 填的 key 被上游拒了（后端 400）。该让用户重填，而不是重试 */
-  keyRejected: boolean
-  onModeChange: (mode: ReasonMode) => void
-  onRequest: () => void
-  /** 用户填完 key 之后重试（内容其实和 onRequest 一样，但语义不同） */
-  onKeySaved: () => void
-}
-
-/**
- * 系统"没把握"的判据（前端算）。
- *
- * <p>这就是文档里说的"必要时追问"——**一上来就问等于又变成表单**，
- * 所以只在系统自己都不确定的时候才开口。
- */
-const LOW_CONFIDENCE_SCORE = 35
-
-interface ContextForm {
+interface LocationState {
   latitude: string
   longitude: string
-  remainingMinutes: string
-  maxDistanceKm: string
-  maxTicketPrice: string
-  states: TravelState[]
-  /**
-   * 词表覆盖不了时，AI 从自然语言里解析出来的**原始维度倾向**。
-   *
-   * 键是维度名（`CROWD_TOLERANCE`），不是中文——因为要原样回传给后端。
-   * 展示时现查 `DIMENSION_LABELS`。
-   */
-  biases: Record<string, number>
 }
 
-const EMPTY_FORM: ContextForm = {
+interface RecommendationRunOptions {
+  excludeSeen?: boolean
+  auto?: boolean
+  message?: string | null
+  operationFeedback?: string
+}
+
+interface RecommendationRunTask {
+  location: LocationState
+  query: TravelQueryState
+  options: RecommendationRunOptions
+}
+
+const EMPTY_LOCATION: LocationState = {
   latitude: '',
   longitude: '',
-  remainingMinutes: '240',
-  maxDistanceKm: '',
-  maxTicketPrice: '',
-  states: [],
-  biases: {},
 }
 
 interface Scenario {
   label: string
-  patch: Partial<ContextForm>
+  operations: TravelQueryOperation[]
 }
 
 /**
@@ -145,19 +121,16 @@ interface Scenario {
  * <p>它们是"一句话输入"的快捷方式——点了立刻重新推荐，不用等 AI。
  * 两套并存：按钮快、零成本；输入框能表达按钮覆盖不了的东西。
  *
- * <p>⚠️ 每个 patch 都带 `biases: {}` ——点快捷按钮意味着**换一种处境**，
- * 上一次用自然语言说出来的倾向必须清掉。不清的话，
- * 用户先说了"想找带猫的咖啡馆"、再点"我有点累了"，
- * 那个"小众↑"还在偷偷生效，而他完全不知道。
+ * <p>快捷标签都是确定性操作：意图 / 偏好只追加，同类约束只替换自己。
  */
 const SCENARIOS: Scenario[] = [
-  { label: '我想散步一下', patch: { states: ['WANT_WALK'], maxDistanceKm: '5', biases: {} } },
-  { label: '我有点累了', patch: { states: ['TIRED'], biases: {} } },
-  { label: '我想吃饭', patch: { states: ['HUNGRY'], biases: {} } },
-  { label: '想安静点', patch: { states: ['QUIET'], biases: {} } },
-  { label: '只剩 1 小时', patch: { remainingMinutes: '60', biases: {} } },
-  { label: '不想走远', patch: { maxDistanceKm: '2', biases: {} } },
-  { label: '预算不多', patch: { maxTicketPrice: '50', biases: {} } },
+  { label: '我想散步一下', operations: [{ op: 'ADD_INTENT', value: 'WANT_WALK' }] },
+  { label: '我有点累了', operations: [{ op: 'ADD_PREFERENCE', value: 'TIRED' }] },
+  { label: '我想吃饭', operations: [{ op: 'ADD_INTENT', value: 'HUNGRY' }] },
+  { label: '想安静点', operations: [{ op: 'ADD_PREFERENCE', value: 'QUIET' }] },
+  { label: '只剩 1 小时', operations: [{ op: 'SET_CONSTRAINT', key: 'durationMinutes', value: 60 }] },
+  { label: '不想走远', operations: [{ op: 'SET_CONSTRAINT', key: 'maxDistanceMeters', value: 2000 }] },
+  { label: '预算不多', operations: [{ op: 'SET_CONSTRAINT', key: 'budgetMax', value: 50 }] },
 ]
 
 /**
@@ -173,7 +146,6 @@ const SCENARIOS: Scenario[] = [
 type NlState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'done'; result: InterpretResponse }
   /** 解析出来是空的——"这句我没听懂"。是正常结果，不是故障 */
   | { kind: 'nothing'; summary: string }
   | { kind: 'noServerAi' }
@@ -185,6 +157,13 @@ type RecState =
   | { kind: 'done'; data: RecommendationResponse }
   | { kind: 'error'; message: string }
 
+interface ChatTurn {
+  id: string
+  userMessage: string | null
+  assistantMessage: string
+  data: RecommendationResponse
+}
+
 export function TravelResultScreen({
   profile,
   sessionToken,
@@ -194,10 +173,16 @@ export function TravelResultScreen({
   sessionToken?: string
   onRestart: () => void
 }) {
-  const [form, setForm] = useState<ContextForm>(EMPTY_FORM)
+  const [location, setLocation] = useState<LocationState>(EMPTY_LOCATION)
+  const [query, setQuery] = useState<TravelQueryState>(createEmptyTravelQueryState)
+  /** 定位回调可能几秒后才执行，届时必须读取用户最新的条件，而不是旧闭包。 */
+  const queryRef = useRef(query)
+  queryRef.current = query
   const [rec, setRec] = useState<RecState>({ kind: 'idle' })
+  const [turns, setTurns] = useState<ChatTurn[]>([])
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [showManual, setShowManual] = useState(false)
+  const [showPreferences, setShowPreferences] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
   const [myFeedback, setMyFeedback] = useState<Record<number, Reaction>>({})
@@ -215,11 +200,16 @@ export function TravelResultScreen({
    * 两段话都是通顺的，只是对不上用户最后一次说的话。
    */
   const nlSeq = useRef(0)
+  /** 推荐请求也只允许最后一次更新界面，避免旧响应覆盖用户刚改的新条件。 */
+  const recommendationGate = useRef(createLatestRequestGate())
+  /** 请求发出到落库前都不允许第二条推荐进入，保持 UI 当前批次就是数据库最新批次。 */
+  const recommendationFlight = useRef(createSingleFlightGate<RecommendationRunTask>())
+  /** 用户手动改定位后，让更早发起的浏览器定位回调失效。 */
+  const locationSequence = useRef(0)
 
   // ---- AI 理由 ----
   const [reasonTexts, setReasonTexts] = useState<Record<number, string>>({})
   const [reasonMode, setReasonMode] = useState<ReasonMode>(loadReasonMode)
-  const [reasonLoading, setReasonLoading] = useState(false)
   const [reasonError, setReasonError] = useState<string | null>(null)
   /** 后端说"这台服务器没配 AI"（501）。这时引导访客填自己的 key */
   const [aiUnavailable, setAiUnavailable] = useState(false)
@@ -237,23 +227,9 @@ export function TravelResultScreen({
   const currentBatch = useRef<number | null>(null)
   /** 已经为哪一批发起过自动请求，避免 effect 重复触发 */
   const reasonRequestedFor = useRef<number | null>(null)
+  const streamEndRef = useRef<HTMLDivElement | null>(null)
 
   const sessionId = profile.sessionId
-
-  /**
-   * 维度名 → 中文。
-   *
-   * <p>从后端给的画像里现取，**前端不另维护一份翻译表**——
-   * 文字全由后端定，加一个维度或改一个中文名，前端不用跟着改。
-   * （自然语言解析出来的原始倾向要用它才能显示成"人群耐受 ↓"。）
-   */
-  const dimensionLabels = useMemo(() => {
-    const labels: Record<string, string> = {}
-    for (const d of profile.dimensions) {
-      labels[d.key] = d.name
-    }
-    return labels
-  }, [profile.dimensions])
 
   /**
    * 进页面时自动跑一次的守卫。
@@ -263,8 +239,9 @@ export function TravelResultScreen({
    */
   const autoStarted = useRef(false)
 
-  const patchForm = useCallback((patch: Partial<ContextForm>) => {
-    setForm((f) => ({ ...f, ...patch }))
+  const patchLocation = useCallback((patch: Partial<LocationState>) => {
+    locationSequence.current++
+    setLocation((current) => ({ ...current, ...patch }))
   }, [])
 
   /**
@@ -276,25 +253,34 @@ export function TravelResultScreen({
    */
   const run = useCallback(
     async (
-      override: Partial<ContextForm> = {},
-      options: { excludeSeen?: boolean; auto?: boolean } = {},
+      nextLocation: LocationState = location,
+      nextQuery: TravelQueryState = query,
+      options: RecommendationRunOptions = {},
     ) => {
-      const values = { ...form, ...override }
-      const latitude = Number(values.latitude)
-      const longitude = Number(values.longitude)
+      const task = { location: nextLocation, query: nextQuery, options }
+      if (!recommendationFlight.current.tryStart(task)) {
+        setPendingMessage(options.message ?? null)
+        return
+      }
+      const requestSequence = recommendationGate.current.next()
+      const latitude = Number(nextLocation.latitude)
+      const longitude = Number(nextLocation.longitude)
 
       if (
-        !values.latitude ||
-        !values.longitude ||
+        !nextLocation.latitude ||
+        !nextLocation.longitude ||
         !Number.isFinite(latitude) ||
         !Number.isFinite(longitude)
       ) {
         setNotice('没拿到定位。手动填一下经纬度，或者用杭州西湖的坐标。')
-        setShowManual(true)
         setRec({ kind: 'error', message: '缺少定位，无法推荐。' })
+        setBusy(false)
+        setPendingMessage(null)
+        recommendationFlight.current.finish()
         return
       }
 
+      setPendingMessage(options.message ?? null)
       setBusy(true)
       setNotice(null)
       try {
@@ -302,47 +288,54 @@ export function TravelResultScreen({
         if (options.auto) {
           body.autoInfer = true
         }
-        const minutes = Number(values.remainingMinutes)
-        if (Number.isFinite(minutes) && minutes > 0) {
-          body.remainingMinutes = minutes
-        }
-        const distance = Number(values.maxDistanceKm)
-        if (values.maxDistanceKm && Number.isFinite(distance) && distance > 0) {
-          body.maxDistanceKm = distance
-        }
-        const budget = Number(values.maxTicketPrice)
-        if (values.maxTicketPrice && Number.isFinite(budget) && budget >= 0) {
-          body.maxTicketPrice = budget
-        }
-        if (values.states.length > 0) {
-          body.states = values.states
-        }
-        // 自然语言解析出来的原始倾向。没说过就没有，不必传空对象。
-        if (Object.keys(values.biases).length > 0) {
-          body.biases = values.biases
-        }
+        const filters = toRecommendationFilters(nextQuery)
+        body.remainingMinutes = filters.remainingMinutes
+        if (filters.maxDistanceKm !== null) body.maxDistanceKm = filters.maxDistanceKm
+        if (filters.maxTicketPrice !== null) body.maxTicketPrice = filters.maxTicketPrice
+        if (filters.states.length > 0) body.states = filters.states
+        if (Object.keys(filters.biases).length > 0) body.biases = filters.biases
         if (options.excludeSeen) {
           body.excludeSeen = true
         }
 
         const data = await api.getRecommendations(sessionId, body, sessionToken)
+        if (!recommendationGate.current.isCurrent(requestSequence)) return
         setRec({ kind: 'done', data })
-        setMyFeedback({})
         setLastAdjustments(null)
+        setTurns((items) => [
+          ...items,
+          {
+            id: `${data.batchNo}-${Date.now()}`,
+            userMessage: options.message ?? null,
+            assistantMessage: [
+              options.operationFeedback,
+              recommendationLead(data, nextQuery),
+            ].filter(Boolean).join('。'),
+            data,
+          },
+        ])
 
         // 新的一批：旧批次的理由必须清掉，否则会挂在新卡片上。
         // ⚠️ 先更新 currentBatch —— 在途的理由请求回来时会拿它做校验。
         currentBatch.current = data.batchNo
         reasonRequestedFor.current = null
-        setReasonTexts({})
         setReasonError(null)
       } catch (e: unknown) {
+        if (!recommendationGate.current.isCurrent(requestSequence)) return
         setRec({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
       } finally {
-        setBusy(false)
+        const latest = recommendationFlight.current.takeLatest()
+        recommendationFlight.current.finish()
+        if (recommendationGate.current.isCurrent(requestSequence)) {
+          setBusy(false)
+          setPendingMessage(null)
+        }
+        if (latest) {
+          void run(latest.location, latest.query, latest.options)
+        }
       }
     },
-    [form, sessionId, sessionToken],
+    [location, query, sessionId, sessionToken],
   )
 
   /**
@@ -352,7 +345,6 @@ export function TravelResultScreen({
    */
   const loadReasons = useCallback(
     async (batchNo: number, regenerate = false) => {
-      setReasonLoading(true)
       setReasonError(null)
       try {
         const res = await api.getTravelReasons(sessionId, regenerate, sessionToken)
@@ -371,7 +363,7 @@ export function TravelResultScreen({
         for (const item of res.reasons) {
           texts[item.recommendationId] = item.reason
         }
-        setReasonTexts(texts)
+        setReasonTexts((current) => ({ ...current, ...texts }))
       } catch (e: unknown) {
         if (e instanceof ApiError && e.status === 501) {
           // 这台服务器没替访客配 AI。以前这里是把入口藏起来，
@@ -387,8 +379,6 @@ export function TravelResultScreen({
           return
         }
         setReasonError(e instanceof Error ? e.message : String(e))
-      } finally {
-        setReasonLoading(false)
       }
     },
     [sessionId, sessionToken],
@@ -403,6 +393,7 @@ export function TravelResultScreen({
    */
   useEffect(() => {
     if (rec.kind !== 'done') return
+    if (rec.data.places.length === 0) return
     if (reasonMode !== 'auto') return
     if (aiUnavailable) return
 
@@ -431,6 +422,7 @@ export function TravelResultScreen({
       return
     }
 
+    setPendingMessage(text)
     const seq = ++nlSeq.current
     setNlState({ kind: 'loading' })
 
@@ -447,44 +439,36 @@ export function TravelResultScreen({
         // 用户会以为"说了等于没说"，而其实是我们没听懂。
         // 如实说，让他换个说法。
         setNlState({ kind: 'nothing', summary: result.summary })
+        setPendingMessage(null)
         return
       }
 
-      setNlState({ kind: 'done', result })
-
-      // 把解析结果填进表单，再按它重新推荐。
-      // ⚠️ biases 每次都要一起给：这次说了什么就是什么，不能留着上一次的。
-      const patch: Partial<ContextForm> = {
-        states: result.states.map((s) => s.key),
-        biases: result.biases,
-      }
-      if (result.remainingMinutes !== null) {
-        patch.remainingMinutes = String(result.remainingMinutes)
-      }
-      if (result.maxDistanceKm !== null) {
-        patch.maxDistanceKm = String(result.maxDistanceKm)
-      }
-      if (result.maxTicketPrice !== null) {
-        patch.maxTicketPrice = String(result.maxTicketPrice)
-      }
-
-      patchForm(patch)
-      void run(patch)
+      // AI 只能生成 operations，真正的状态变更统一经过纯 reducer。
+      const operations = interpretOperations(result)
+      const nextQuery = reduceTravelQueryOperations(query, operations)
+      const operationFeedback = describeTravelQueryOperations(operations, result.unrecognized)
+      setQuery(nextQuery)
+      setNlText('')
+      setNlState({ kind: 'idle' })
+      void run(location, nextQuery, { message: text, operationFeedback })
     } catch (e: unknown) {
       if (seq !== nlSeq.current) {
         return
       }
       if (e instanceof ApiError && e.status === 501) {
         setNlState({ kind: 'noServerAi' })
+        setPendingMessage(null)
         return
       }
       if (e instanceof ApiError && e.status === 400) {
         setNlState({ kind: 'keyRejected' })
+        setPendingMessage(null)
         return
       }
       setNlState({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+      setPendingMessage(null)
     }
-  }, [nlText, sessionId, sessionToken, patchForm, run])
+  }, [nlText, sessionId, sessionToken, query, location, run])
 
   /**
    * 访客刚填完自己的 key —— 立刻替他重试一次。
@@ -504,13 +488,21 @@ export function TravelResultScreen({
     setAiKeyRejected(false)
     setReasonError(null)
 
-    if (rec.kind !== 'done') {
+    const retryTarget = chooseAiRetryTarget(
+      nlState.kind,
+      rec.kind === 'done' && rec.data.places.length > 0,
+    )
+    if (retryTarget === 'naturalLanguage') {
+      void submitNaturalLanguage()
+      return
+    }
+    if (retryTarget !== 'reasons' || rec.kind !== 'done') {
       return
     }
     // 先占住这个批次号，免得自动模式的 effect 紧接着又发一次
     reasonRequestedFor.current = rec.data.batchNo
     void loadReasons(rec.data.batchNo)
-  }, [rec, loadReasons])
+  }, [nlState.kind, rec, loadReasons, submitNaturalLanguage])
 
   /**
    * 自动模式：拿定位 → 直接推荐。
@@ -519,23 +511,24 @@ export function TravelResultScreen({
    * 用户拒接、超时都会走到这里，三种情况都该让人能手动填。
    */
   const startAuto = useCallback(async () => {
+    const attempt = ++locationSequence.current
     if (!('geolocation' in navigator)) {
       setNotice('这个浏览器不支持定位。可以手动填坐标，或直接用杭州西湖的坐标。')
-      setShowManual(true)
       return
     }
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const patch = {
+        if (attempt !== locationSequence.current) return
+        const nextLocation = {
           latitude: pos.coords.latitude.toFixed(4),
           longitude: pos.coords.longitude.toFixed(4),
         }
-        patchForm(patch)
-        void run(patch, { auto: true })
+        setLocation(nextLocation)
+        void run(nextLocation, queryRef.current, { auto: true })
       },
       (err) => {
-        setShowManual(true)
+        if (attempt !== locationSequence.current) return
         setNotice(
           err.code === err.PERMISSION_DENIED
             ? '你拒绝了定位。手动填一下，或者直接用杭州西湖的坐标——演示景点都在杭州。'
@@ -544,7 +537,7 @@ export function TravelResultScreen({
       },
       { timeout: 8000 },
     )
-  }, [patchForm, run])
+  }, [run])
 
   // 进页面就跑一次自动模式
   useEffect(() => {
@@ -555,19 +548,20 @@ export function TravelResultScreen({
 
   const applyScenario = useCallback(
     (scenario: Scenario) => {
-      patchForm(scenario.patch)
-      // patch 直接传给 run，不依赖 setForm 是否已经生效
-      void run(scenario.patch)
+      const nextQuery = reduceTravelQueryOperations(query, scenario.operations)
+      setQuery(nextQuery)
+      void run(location, nextQuery, { message: scenario.label })
     },
-    [patchForm, run],
+    [location, query, run],
   )
 
   const useDemoLocation = useCallback(() => {
-    const patch = { latitude: DEMO_LAT, longitude: DEMO_LNG }
-    patchForm(patch)
+    locationSequence.current++
+    const nextLocation = { latitude: DEMO_LAT, longitude: DEMO_LNG }
+    setLocation(nextLocation)
     setNotice(null)
-    void run(patch)
-  }, [patchForm, run])
+    void run(nextLocation, query, { message: '先按杭州西湖附近帮我找' })
+  }, [query, run])
 
   const giveFeedback = useCallback(
     async (recommendationId: number, reaction: Reaction) => {
@@ -586,183 +580,338 @@ export function TravelResultScreen({
     [sessionId, sessionToken],
   )
 
-  const manualMode = showManual || Boolean(form.maxDistanceKm || form.maxTicketPrice)
+  const setConstraint = useCallback((
+    key: 'durationMinutes' | 'budgetMax',
+    rawValue: string,
+  ) => {
+    const parsed = rawValue.trim() === '' ? null : Number(rawValue)
+    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) return
+    setQuery((current) => reduceTravelQueryOperations(current, [
+      { op: 'SET_CONSTRAINT', key, value: parsed },
+    ]))
+  }, [])
+
+  const setDistanceConstraint = useCallback((rawValue: string) => {
+    const kilometers = rawValue.trim() === '' ? null : Number(rawValue)
+    if (kilometers !== null && (!Number.isFinite(kilometers) || kilometers < 0)) return
+    setQuery((current) => reduceTravelQueryOperations(current, [
+      {
+        op: 'SET_CONSTRAINT',
+        key: 'maxDistanceMeters',
+        value: kilometers === null ? null : kilometers * 1000,
+      },
+    ]))
+  }, [])
+
+  const manualMode = query.constraints.maxDistanceMeters !== null || query.constraints.budgetMax !== null
+  const activeChips = createTravelQueryChips(query)
+
+  const removeChip = useCallback((chip: TravelQueryChip) => {
+    const nextQuery = reduceTravelQueryOperations(query, [chip.removeOperation])
+    setQuery(nextQuery)
+    void run(location, nextQuery, { message: `去掉“${chip.label}”这个条件` })
+  }, [location, query, run])
+
+  const clearTravelIntent = useCallback(() => {
+    const nextQuery = reduceTravelQueryOperations(query, [{ op: 'CLEAR_TRAVEL_INTENT' }])
+    setQuery(nextQuery)
+    void run(location, nextQuery, { message: '重新来，清空我这次的想法' })
+  }, [location, query, run])
+
+  useEffect(() => {
+    if (turns.length === 0 && !busy) return
+    const frame = requestAnimationFrame(() => {
+      streamEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [turns.length, busy, nlState.kind])
 
   return (
-    <>
-      <div className="card">
-        <h1>你的旅行偏好</h1>
-
-        {/*
-          复用上次画像时必须说清楚。系统直接跳到结果页而用户没答题，
-          不说的话他会以为"我还没测怎么就出结果了"。
-        */}
-        {profile.reused && (
-          <p className="hint">
-            这是你<b>上次</b>测出来的画像——不用再答一遍了。{' '}
-            <button className="link-btn" type="button" onClick={onRestart}>
-              重新测一次
-            </button>
-          </p>
-        )}
-
-        <p className="lede">
-          8 个维度各 1 道题，所以分数只有 0 / 25 / 50 / 75 / 100 五档。
-          这份画像只是一开始的猜测——真正让它变准的，是你对推荐的反馈。
-        </p>
-
-        <BarChart dimensions={profile.dimensions} />
-
-        <p className="note">
-          这是初始画像，不是固定结论。你的 👍/👎 不会改掉这份问卷结果，
-          而是作为一份独立的修正叠加在上面——所以这份结果永远可追溯。
-        </p>
-      </div>
-
-      <div className="card">
-        <h2 className="section-title">现在，你附近最值得去哪</h2>
-
-        {busy && rec.kind === 'idle' && <p className="lede">正在定位、判断你现在的情况…</p>}
-
-        {notice && <p className="hint hint-error">{notice}</p>}
-
-        {rec.kind === 'idle' && !busy && (
-          <div className="locate-actions">
-            <button className="btn btn-primary" type="button" onClick={() => void startAuto()}>
-              开始智能推荐
-            </button>
-            <button className="theme-btn" type="button" onClick={useDemoLocation}>
-              用杭州西湖的坐标
-            </button>
-          </div>
-        )}
-
-        {rec.kind === 'error' && (
-          <div className="locate-actions">
-            <button className="theme-btn" type="button" onClick={useDemoLocation}>
-              用杭州西湖的坐标
-            </button>
-          </div>
-        )}
-
-        {/* 「改一下」：手动兜底。默认折叠着，因为绝大多数情况用不上 */}
-        <button
-          className="link-btn manual-toggle"
-          type="button"
-          onClick={() => setShowManual((v) => !v)}
-        >
-          {showManual ? '收起手动设置' : '改一下（手动设置处境）'}
+    <div className="travel-shell">
+      <header className="travel-product-header">
+        <div className="travel-product-brand">
+          <span className="travel-logo" aria-hidden="true">T</span>
+          <span><b>TravelMind</b><small>你的即时旅行助手</small></span>
+        </div>
+        <button className="preference-trigger" type="button" onClick={() => setShowPreferences(true)}>
+          ⚙ 偏好设置
         </button>
+      </header>
 
-        {showManual && (
-          <>
-            <div className="field-row">
-              {numberField('travel-lat', '纬度', 'latitude', form, patchForm, '30.2420', 'decimal')}
-              {numberField('travel-lng', '经度', 'longitude', form, patchForm, '120.1400', 'decimal')}
+      <main className="travel-stream" aria-label="与 TravelMind 的对话">
+        <div className="chat-turn assistant">
+          <span className="chat-avatar" aria-hidden="true">T</span>
+          <div className="chat-bubble welcome-bubble">
+            <b>今天想去哪儿？</b>
+            <span>告诉我你此刻的状态，我会结合位置和旅行偏好替你筛选。</span>
+            {profile.reused && <small>我还记得你上次的旅行偏好，不用重新答题。</small>}
+          </div>
+        </div>
+
+        {notice && (
+          <div className="chat-turn assistant">
+            <span className="chat-avatar" aria-hidden="true">T</span>
+            <div className="chat-bubble chat-warning">
+              <span>{notice}</span>
+              <div className="chat-actions">
+                <button className="link-btn" type="button" onClick={() => void startAuto()}>重新定位</button>
+                <button className="link-btn" type="button" onClick={useDemoLocation}>先看西湖附近</button>
+              </div>
             </div>
-
-            {/*
-              自然语言输入。放在快捷按钮**上面**——它是更一般的表达方式，
-              按钮是它的快捷方式，而不是反过来。
-            */}
-            <p className="field-label">或者，直接用一句话说</p>
-            <div className="nl-row">
-              <textarea
-                className="nl-input"
-                rows={2}
-                maxLength={200}
-                placeholder="比如：我有点累了，想找个安静的地方坐坐，还有一个小时"
-                value={nlText}
-                onChange={(e) => setNlText(e.target.value)}
-                disabled={nlState.kind === 'loading'}
-              />
-              <button
-                className="btn btn-primary"
-                type="button"
-                disabled={nlState.kind === 'loading' || !nlText.trim()}
-                onClick={() => void submitNaturalLanguage()}
-              >
-                {nlState.kind === 'loading' ? '理解中…' : '按这句重新推荐'}
-              </button>
-            </div>
-
-            <NlFeedback
-              state={nlState}
-              dimensionLabels={dimensionLabels}
-              onRetry={() => void submitNaturalLanguage()}
-              onKeySaved={() => void submitNaturalLanguage()}
-              onDismiss={() => {
-                setNlState({ kind: 'idle' })
-                setNlText('')
-              }}
-            />
-
-            <p className="field-label">现在是什么情况？（点一下立刻重新推荐）</p>
-            <div className="scenario-row">
-              {SCENARIOS.map((s) => (
-                <button
-                  key={s.label}
-                  className={isScenarioActive(s, form) ? 'scenario-btn chosen' : 'scenario-btn'}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => applyScenario(s)}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="field-row">
-              {numberField('travel-minutes', '还剩多少分钟', 'remainingMinutes', form, patchForm, '240', 'numeric')}
-              {numberField('travel-distance', '最远走多少公里', 'maxDistanceKm', form, patchForm, '不限', 'decimal')}
-              {numberField('travel-budget', '门票最多多少钱', 'maxTicketPrice', form, patchForm, '不限', 'numeric')}
-            </div>
-
-            <button className="btn btn-primary" type="button" onClick={() => void run()} disabled={busy}>
-              {busy ? '正在计算…' : '按这个重新推荐'}
-            </button>
-          </>
+          </div>
         )}
 
-        {rec.kind === 'error' && <p className="hint hint-error">{rec.message}</p>}
-      </div>
+        {turns.map((turn) => (
+          <Fragment key={turn.id}>
+            {turn.userMessage && (
+              <div className="chat-turn user">
+                <div className="chat-bubble">{turn.userMessage}</div>
+              </div>
+            )}
+            <div className="chat-turn assistant recommendation-message">
+              <span className="chat-avatar" aria-hidden="true">T</span>
+              <div className="assistant-result">
+                <p className="assistant-lead">{turn.assistantMessage}</p>
+                <RecommendationList
+                  data={turn.data}
+                  myFeedback={myFeedback}
+                  lastAdjustments={lastAdjustments}
+                  loading={busy}
+                  manualMode={manualMode}
+                  reasonTexts={reasonTexts}
+                  onFeedback={giveFeedback}
+                  onRefresh={() => void run(location, query, { excludeSeen: true, message: '再换一批看看' })}
+                />
+              </div>
+            </div>
+          </Fragment>
+        ))}
 
-      {rec.kind === 'done' && (
-        <RecommendationList
-          data={rec.data}
-          myFeedback={myFeedback}
-          lastAdjustments={lastAdjustments}
-          loading={busy}
-          manualMode={manualMode}
-          onFeedback={giveFeedback}
-          onRefresh={() => void run({}, { excludeSeen: true })}
-          onCorrect={(patch) => {
-            patchForm(patch)
-            void run(patch)
-          }}
-          onPickScenario={applyScenario}
-          aiReason={{
-            texts: reasonTexts,
-            mode: reasonMode,
-            loading: reasonLoading,
-            error: reasonError,
-            unavailable: aiUnavailable,
-            keyRejected: aiKeyRejected,
-            onModeChange: changeReasonMode,
-            // 「重新生成」：regenerate=true 会真的再花一次 token，
-            // 所以这个按钮只在手动模式下出现（见 AiReasonBar）
-            onRequest: () => void loadReasons(rec.data.batchNo, true),
-            onKeySaved: handleKeySaved,
-          }}
-        />
+        {pendingMessage && (
+          <div className="chat-turn user">
+            <div className="chat-bubble">{pendingMessage}</div>
+          </div>
+        )}
+
+        {busy && (
+          <div className="chat-turn assistant">
+            <span className="chat-avatar" aria-hidden="true">T</span>
+            <div className="chat-bubble"><span className="typing-dot">正在重新理解你的需求并筛选地点…</span></div>
+          </div>
+        )}
+
+        {rec.kind === 'error' && !busy && (
+          <div className="chat-turn assistant">
+            <span className="chat-avatar" aria-hidden="true">T</span>
+            <div className="chat-bubble chat-warning">{rec.message}</div>
+          </div>
+        )}
+
+        {(nlState.kind === 'nothing' || nlState.kind === 'error' || nlState.kind === 'noServerAi' || nlState.kind === 'keyRejected') && (
+          <div className="chat-turn assistant">
+            <span className="chat-avatar" aria-hidden="true">T</span>
+            <div className="chat-bubble chat-warning">
+              {nlState.kind === 'nothing' && (nlState.summary || '这句话里没有可用的旅行条件，换个说法试试。')}
+              {nlState.kind === 'error' && (
+                <>
+                  <span>理解服务暂时不可用，已有条件没有改变：{nlState.message}</span>
+                  <button className="link-btn" type="button" onClick={() => void submitNaturalLanguage()}>
+                    重试这句话
+                  </button>
+                </>
+              )}
+              {nlState.kind === 'noServerAi' && '自然语言理解需要先配置 AI Key。'}
+              {nlState.kind === 'keyRejected' && '当前 AI Key 无法使用，请在偏好设置里检查。'}
+              {(nlState.kind === 'noServerAi' || nlState.kind === 'keyRejected') && (
+                <button className="link-btn" type="button" onClick={() => setShowPreferences(true)}>打开偏好设置</button>
+              )}
+            </div>
+          </div>
+        )}
+        <div ref={streamEndRef} className="travel-stream-end" aria-hidden="true" />
+      </main>
+
+      <BottomActionBar
+        activeChips={activeChips}
+        query={query}
+        busy={busy || nlState.kind === 'loading'}
+        text={nlText}
+        onTextChange={setNlText}
+        onSend={() => void submitNaturalLanguage()}
+        onRemoveChip={removeChip}
+        onScenario={applyScenario}
+        onClear={clearTravelIntent}
+        onOpenPreferences={() => setShowPreferences(true)}
+      />
+
+      {showPreferences && (
+        <div className="preference-backdrop" role="presentation" onMouseDown={() => setShowPreferences(false)}>
+          <aside className="preference-drawer" role="dialog" aria-modal="true" aria-label="TravelMind 偏好设置" onMouseDown={(e) => e.stopPropagation()}>
+            <header>
+              <div><small>TRAVELMIND</small><h2>偏好设置</h2></div>
+              <button className="drawer-close" type="button" aria-label="关闭偏好设置" onClick={() => setShowPreferences(false)}>×</button>
+            </header>
+
+            <section>
+              <h3>位置与限制</h3>
+              <div className="field-row">
+                {numberField('travel-lat', '纬度', location.latitude, (value) => patchLocation({ latitude: value }), '30.2420', 'decimal')}
+                {numberField('travel-lng', '经度', location.longitude, (value) => patchLocation({ longitude: value }), '120.1400', 'decimal')}
+              </div>
+              <div className="field-row">
+                {numberField('travel-minutes', '剩余分钟', nullableNumber(query.constraints.durationMinutes), (value) => setConstraint('durationMinutes', value), '240', 'numeric')}
+                {numberField('travel-distance', '最远公里', query.constraints.maxDistanceMeters === null ? '' : formatKm(query.constraints.maxDistanceMeters), (value) => setDistanceConstraint(value), '不限', 'decimal')}
+                {numberField('travel-budget', '预算上限', nullableNumber(query.constraints.budgetMax), (value) => setConstraint('budgetMax', value), '不限', 'numeric')}
+              </div>
+              <button className="btn btn-primary" type="button" disabled={busy} onClick={() => {
+                setShowPreferences(false)
+                void run(location, query, { message: '更新了位置与筛选条件' })
+              }}>应用设置</button>
+            </section>
+
+            <section>
+              <h3>AI 服务</h3>
+              <div className="preference-segments">
+                <span>推荐理由</span>
+                <button className={reasonMode === 'auto' ? 'seg chosen' : 'seg'} type="button" onClick={() => changeReasonMode('auto')}>自动生成</button>
+                <button className={reasonMode === 'manual' ? 'seg chosen' : 'seg'} type="button" onClick={() => changeReasonMode('manual')}>需要时生成</button>
+              </div>
+              {(aiUnavailable || aiKeyRejected || reasonError) && <p className="drawer-note">{aiKeyRejected ? '当前 Key 被厂商拒绝，请重新填写。' : reasonError ?? '当前服务器没有配置 AI，可使用自己的 Key。'}</p>}
+              <AiKeyPanel onSaved={handleKeySaved} defaultOpen={aiUnavailable || aiKeyRejected} />
+            </section>
+
+            <details className="profile-details">
+              <summary>查看我的旅行偏好画像</summary>
+              <BarChart dimensions={profile.dimensions} />
+              <button className="link-btn" type="button" onClick={onRestart}>重新测一次</button>
+            </details>
+          </aside>
+        </div>
       )}
+    </div>
+  )
+}
 
-      <div className="nav-row">
-        <button className="theme-btn" type="button" onClick={onRestart}>
-          重新测一次
-        </button>
+/** 新后端直接返回 operations；过渡期内也兼容正在运行的旧后端。 */
+function interpretOperations(result: InterpretResponse): TravelQueryOperation[] {
+  if (result.operations?.length) {
+    return result.operations
+  }
+
+  const operations: TravelQueryOperation[] = result.states.map(({ key }) => (
+    key === 'HUNGRY' || key === 'WANT_WALK'
+      ? { op: 'ADD_INTENT' as const, value: key }
+      : { op: 'ADD_PREFERENCE' as const, value: key }
+  ))
+  if (Object.keys(result.biases).length > 0) {
+    operations.push({ op: 'MERGE_BIASES', values: result.biases })
+  }
+  if (result.remainingMinutes !== null) {
+    operations.push({ op: 'SET_CONSTRAINT', key: 'durationMinutes', value: result.remainingMinutes })
+  }
+  if (result.maxDistanceKm !== null) {
+    operations.push({ op: 'SET_CONSTRAINT', key: 'maxDistanceMeters', value: result.maxDistanceKm * 1000 })
+  }
+  if (result.maxTicketPrice !== null) {
+    operations.push({ op: 'SET_CONSTRAINT', key: 'budgetMax', value: result.maxTicketPrice })
+  }
+  return operations
+}
+
+function formatKm(meters: number): string {
+  return String(Number((meters / 1000).toFixed(1)))
+}
+
+function nullableNumber(value: number | null): string {
+  return value === null ? '' : String(value)
+}
+
+function recommendationLead(data: RecommendationResponse, query: TravelQueryState): string {
+  const context = data.appliedContext
+  if (data.places.length === 0) {
+    return '这组条件下暂时没有合适的地点。可以放宽距离、预算或剩余时间，我再帮你找。'
+  }
+
+  const details: string[] = []
+  if (query.constraints.durationMinutes !== null) {
+    details.push(`仅剩的 ${query.constraints.durationMinutes} 分钟`)
+  }
+  if (context.states.length > 0) details.push(context.states.map((state) => state.label).join('、'))
+  if (context.maxTicketPrice !== null) details.push(`门票 ${context.maxTicketPrice} 元以内`)
+  const prefix = details.length > 0 ? `了解，结合${details.join('、')}` : '了解'
+  return `${prefix}，为你推荐以下 ${data.places.length} 个地点：`
+}
+
+function BottomActionBar({
+  activeChips,
+  query,
+  busy,
+  text,
+  onTextChange,
+  onSend,
+  onRemoveChip,
+  onScenario,
+  onClear,
+  onOpenPreferences,
+}: {
+  activeChips: TravelQueryChip[]
+  query: TravelQueryState
+  busy: boolean
+  text: string
+  onTextChange: (value: string) => void
+  onSend: () => void
+  onRemoveChip: (chip: TravelQueryChip) => void
+  onScenario: (scenario: Scenario) => void
+  onClear: () => void
+  onOpenPreferences: () => void
+}) {
+  const suggestions = SCENARIOS.filter((scenario) => !isScenarioActive(scenario, query))
+
+  return (
+    <div className="bottom-action-wrap">
+      <div className="bottom-action-bar">
+        <div className="action-chip-scroll" aria-label="当前条件与快捷条件">
+          {activeChips.map((chip) => (
+            <button className="active-action-chip" type="button" key={chip.id} onClick={() => onRemoveChip(chip)} disabled={busy}>
+              {chip.label}<span aria-hidden="true">×</span>
+            </button>
+          ))}
+          {suggestions.map((scenario) => (
+            <button className="suggestion-chip" type="button" key={scenario.label} onClick={() => onScenario(scenario)} disabled={busy}>
+              + {scenario.label}
+            </button>
+          ))}
+          {activeChips.length > 0 && (
+            <button className="clear-intent-chip" type="button" onClick={onClear} disabled={busy}>
+              重新开始
+            </button>
+          )}
+        </div>
+
+        <div className="action-composer">
+          <button className="composer-settings" type="button" aria-label="打开偏好设置" onClick={onOpenPreferences}>⚙</button>
+          <textarea
+            rows={1}
+            maxLength={200}
+            aria-label="继续告诉 TravelMind 你的要求"
+            placeholder="继续告诉我：想吃什么、还有多久、愿意走多远…"
+            value={text}
+            disabled={busy}
+            onChange={(event) => onTextChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault()
+                if (text.trim() && !busy) onSend()
+              }
+            }}
+          />
+          <button className="composer-send" type="button" disabled={busy || !text.trim()} onClick={onSend}>
+            {busy ? '思考中' : '发送'}
+          </button>
+        </div>
+        <small className="composer-hint">TravelMind 会保留本页对话；Enter 发送，Shift + Enter 换行</small>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -770,9 +919,8 @@ export function TravelResultScreen({
 function numberField(
   id: string,
   label: string,
-  key: keyof ContextForm,
-  form: ContextForm,
-  patchForm: (patch: Partial<ContextForm>) => void,
+  value: string,
+  onChange: (value: string) => void,
   placeholder: string,
   mode: 'decimal' | 'numeric',
 ) {
@@ -781,8 +929,8 @@ function numberField(
       <label htmlFor={id}>{label}</label>
       <input
         id={id}
-        value={form[key] as string}
-        onChange={(e) => patchForm({ [key]: e.target.value } as Partial<ContextForm>)}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         inputMode={mode}
       />
@@ -791,18 +939,15 @@ function numberField(
 }
 
 /** 这个场景当前是不是"生效中"——用来把按钮标成选中态。 */
-function isScenarioActive(scenario: Scenario, form: ContextForm): boolean {
-  const { patch } = scenario
-  if (patch.states) {
-    return (
-      patch.states.length === form.states.length &&
-      patch.states.every((s) => form.states.includes(s))
-    )
-  }
-  if (patch.remainingMinutes) return form.remainingMinutes === patch.remainingMinutes
-  if (patch.maxDistanceKm) return form.maxDistanceKm === patch.maxDistanceKm
-  if (patch.maxTicketPrice) return form.maxTicketPrice === patch.maxTicketPrice
-  return false
+function isScenarioActive(scenario: Scenario, query: TravelQueryState): boolean {
+  return scenario.operations.every((operation) => {
+    switch (operation.op) {
+      case 'ADD_INTENT': return query.intents.includes(operation.value)
+      case 'ADD_PREFERENCE': return query.preferences.includes(operation.value)
+      case 'SET_CONSTRAINT': return query.constraints[operation.key] === operation.value
+      default: return false
+    }
+  })
 }
 
 function RecommendationList({
@@ -813,9 +958,7 @@ function RecommendationList({
   manualMode,
   onFeedback,
   onRefresh,
-  onCorrect,
-  onPickScenario,
-  aiReason,
+  reasonTexts,
 }: {
   data: RecommendationResponse
   myFeedback: Record<number, Reaction>
@@ -824,90 +967,36 @@ function RecommendationList({
   manualMode: boolean
   onFeedback: (recommendationId: number, reaction: Reaction) => void
   onRefresh: () => void
-  onCorrect: (patch: Partial<ContextForm>) => void
-  onPickScenario: (scenario: Scenario) => void
-  aiReason: AiReasonState
+  reasonTexts: Record<number, string>
 }) {
-  const { appliedContext } = data
-  const topScore = data.places[0]?.scorePercent ?? 0
-
-  // 系统"没把握"的判据：要么最高分太低，要么候选太少。
-  // 这时才问一句——有信心的时候不该打扰用户。
-  const unsure = data.places.length > 0 && (topScore < LOW_CONFIDENCE_SCORE || data.places.length < 3)
-
   return (
-    <div className="card">
-      {/*
-        地名让定位**可被验证**：浏览器给的是「30.2420, 120.1400」这样一串数字，
-        用户没法看着它判断准不准。换成「杭州市西湖区北山街附近」，偏了一眼就能看出来。
-        ⚠️ null 是正常情况（没配高德 / 用户拒绝定位 / 高德挂了），不是错误。
-      */}
-      {data.locationLabel && (
-        <p className="hint">
-          你在<b>{data.locationLabel}</b>。定位不准的话，展开下面「改一下」手动填经纬度。
-        </p>
-      )}
-
-      <ContextBanner context={appliedContext} onCorrect={onCorrect} />
-
-      {unsure && (
-        <div className="hint">
-          这几个地方我把握不大。告诉我一句，我重新算：
-          <div className="scenario-row">
-            {SCENARIOS.slice(0, 3).map((s) => (
-              <button
-                key={s.label}
-                className="scenario-btn"
-                type="button"
-                onClick={() => onPickScenario(s)}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
+    <div className="recommendation-result">
       {data.places.length === 0 ? (
-        <>
-          <h2 className="section-title">附近没有合适的推荐</h2>
-          <p className="lede">
-            这不是出错了，而是几个条件同时没满足：没有<b>正在营业</b>、
-            且停留时长装得进你还剩下的时间、门票也在预算内的地点。
+        <div className="empty-recommendation">
+          <p>
+            这不是出错了。演示数据的 59 个地点<b>全部在杭州</b>；如果你现在不在杭州，
+            默认 10 公里的距离限制会把它们全部过滤掉。
           </p>
-          <p className="note">
+          <p>
             {manualMode ? (
-              <>把"还剩多少分钟"调大、或者放宽距离和预算再试。</>
+              <>可以在底部取消条件，或到偏好设置放宽距离和预算。</>
             ) : (
-              <>展开上面的「改一下」把条件放宽些，或者用"杭州西湖的坐标"再试。</>
+              <>可以在偏好设置中调整位置，或直接告诉我换到杭州西湖附近。</>
             )}
-            演示数据只有杭州的 59 个景点。
           </p>
-        </>
+        </div>
       ) : (
-        <>
-          <h2 className="section-title">
-            Top {data.places.length}
-            <span className="batch-tag">第 {data.batchNo} 批</span>
-          </h2>
-
-          <AiReasonBar state={aiReason} />
-
+        <div className="result-card-list">
           {data.places.map((place) => (
             <PlaceCard
               key={place.recommendationId}
               place={place}
               reaction={myFeedback[place.recommendationId]}
               onFeedback={onFeedback}
-              // 「为什么是它」里该列出哪几个因子，取决于**这次有哪些输入**——
-              // 不是看因子等不等于 1.0（那两种 1.0 含义相反，见 WhyPanel 注释）
-              showDistance={place.distanceKm !== null}
-              showState={appliedContext.states.length > 0}
-              showWeather={appliedContext.weather !== null}
-              reason={aiReason.texts[place.recommendationId]}
+              reason={reasonTexts[place.recommendationId]}
             />
           ))}
-        </>
+        </div>
       )}
 
       {lastAdjustments && lastAdjustments.length > 0 && (
@@ -924,417 +1013,14 @@ function RecommendationList({
       )}
 
       <div className="nav-row">
-        <button className="theme-btn" type="button" onClick={onRefresh} disabled={loading}>
-          换一批
+        <button className="result-refresh" type="button" onClick={onRefresh} disabled={loading}>
+          {loading ? '正在寻找…' : '这批不合适，换一批'}
         </button>
       </div>
     </div>
   )
 }
 
-/**
- * 「这次是按什么推的」。
- *
- * <p>这一行是自动模式能成立的前提：系统替用户猜了，就得摊开说清楚。
- * 推断出来的状态单独标注 + 一键否定，用户不用去翻「改一下」也能纠正。
- *
- * <p>天气也在这里，但<b>没有"不算"按钮</b>——这是个有意的区别：
- * 状态是系统猜的，猜错了可以一键否定；天气是查来的事实，
- * 用户能做的只是"知道它影响了排序"，而不是"告诉系统今天没下雨"。
- */
-function ContextBanner({
-  context,
-  onCorrect,
-}: {
-  context: AppliedContext
-  onCorrect: (patch: Partial<ContextForm>) => void
-}) {
-  const inferredKeys = new Set(context.inferredStates.map((s) => s.key))
-  const hhmm = context.now.slice(0, 5)
-
-  return (
-    <p className="context-banner">
-      我按 <b>{hhmm}</b>
-      {context.remainingMinutes ? <>、还剩 <b>{context.remainingMinutes}</b> 分钟</> : null}
-      {context.maxTicketPrice !== null ? <>、门票 <b>{context.maxTicketPrice}</b> 元以内</> : null}
-      {context.states.length > 0 ? (
-        <>
-          、以及
-          {context.states.map((s, i) => (
-            <span key={s.key}>
-              {i > 0 && ' + '}
-              <b>{s.label}</b>
-              {inferredKeys.has(s.key) && <span className="inferred-tag">我猜的</span>}
-            </span>
-          ))}
-        </>
-      ) : null}
-      推的。
-      {/*
-        天气：只在真的影响排序时才多说半句。
-        晴天也弹一句"已考虑天气"的话，这个提示很快就变成噪音，
-        用户会连真正重要的提示一起忽略。
-      */}
-      {context.weather && (
-        <>
-          {' '}
-          <span className="weather-note">
-            {context.weather.label}
-            {context.weather.affectsRecommendation && '，户外的地方已往后排'}
-          </span>
-        </>
-      )}
-      {context.inferredStates.length > 0 && (
-        <>
-          {' '}
-          <button
-            className="link-btn"
-            type="button"
-            onClick={() => onCorrect({ states: [] })}
-          >
-            猜错了，不算
-          </button>
-        </>
-      )}
-    </p>
-  )
-}
-
-/**
- * 「我把你这句话理解成什么了」。
- *
- * <h2>⚠️ 这个组件是这个功能的信誉所在</h2>
- *
- * <p>理解完就直接拿去重新推荐了。如果用户看不到系统理解成了什么，
- * 一次误解会表现成"这推荐怎么莫名其妙的"——他只会觉得这东西乱来，
- * 而完全想不到是它把"想安静"听成了别的。所以这里必须**摊开**：
- * 复述一句、列出解析出的每个条件、把用不上的如实说出来。
- *
- * <p>和项目里一直贯彻的那条原则是同一条：
- * <b>系统替用户做的判断，都要摊开给他看。</b>
- */
-function NlFeedback({
-  state,
-  dimensionLabels,
-  onRetry,
-  onKeySaved,
-  onDismiss,
-}: {
-  state: NlState
-  /** 维度名 → 中文。从画像里现取，前端不另维护一份翻译表 */
-  dimensionLabels: Record<string, string>
-  onRetry: () => void
-  onKeySaved: () => void
-  onDismiss: () => void
-}) {
-  if (state.kind === 'idle' || state.kind === 'loading') {
-    return null
-  }
-
-  if (state.kind === 'noServerAi') {
-    return (
-      <div className="nl-feedback">
-        <p>这台服务器没有配 AI，没法理解自然语言。</p>
-        <AiKeyPanel defaultOpen onSaved={onKeySaved} hint="填上你自己的 API Key 就能用了。" />
-      </div>
-    )
-  }
-
-  if (state.kind === 'keyRejected') {
-    return (
-      <div className="nl-feedback error">
-        <p>你填的 AI Key 被厂商拒绝了（可能填错、过期或额度用尽）。</p>
-        <AiKeyPanel defaultOpen onSaved={onKeySaved} hint="换一个 key 再试试。" />
-      </div>
-    )
-  }
-
-  if (state.kind === 'error') {
-    return (
-      <div className="nl-feedback error">
-        <p>没能理解：{state.message}</p>
-        <button className="link-btn" type="button" onClick={onRetry}>
-          重试
-        </button>
-      </div>
-    )
-  }
-
-  if (state.kind === 'nothing') {
-    // "这句我没听懂"是一个正常结果，不是故障。
-    // ⚠️ 这时**不要重新推荐**——拿一个空条件去跑，用户会以为"说了等于没说"，
-    //    而其实是我们没理解。如实说，让他换个说法。
-    return (
-      <div className="nl-feedback">
-        <p>{state.summary || '这句话里我没提取出可用的条件。'}</p>
-        <p className="nl-hint">换个说法试试，比如「我有点累了，不想走太远」。</p>
-        <button className="link-btn" type="button" onClick={onDismiss}>
-          好，我重说
-        </button>
-      </div>
-    )
-  }
-
-  const { result } = state
-  const biasEntries = Object.entries(result.biases)
-
-  return (
-    <div className="nl-feedback">
-      <p className="nl-summary">
-        <span className="nl-tag">我理解成</span>
-        {result.summary}
-      </p>
-
-      <div className="nl-chips">
-        {result.states.map((s) => (
-          <span className="nl-chip" key={s.key}>
-            {s.label}
-          </span>
-        ))}
-        {result.remainingMinutes !== null && (
-          <span className="nl-chip">还剩 {result.remainingMinutes} 分钟</span>
-        )}
-        {result.maxDistanceKm !== null && (
-          <span className="nl-chip">最远 {result.maxDistanceKm} 公里</span>
-        )}
-        {result.maxTicketPrice !== null && (
-          <span className="nl-chip">门票 {result.maxTicketPrice} 元以内</span>
-        )}
-        {biasEntries.map(([key, value]) => (
-          <span className="nl-chip" key={key}>
-            {dimensionLabels[key] ?? key}
-            {value >= 0 ? '↑' : '↓'}
-          </span>
-        ))}
-      </div>
-
-      {/*
-        ⚠️ 用不上的部分要如实说出来。这一条是诚实的落点：
-        说不出来就说"这句我没用上"，比假装听懂强——用户据此才知道系统的边界在哪。
-
-        （这里只列出来，不做成可点的东西：那些条件我们确实没有对应维度，
-         能做的只有诚实地告诉他。）
-      */}
-      {result.unrecognized.length > 0 && (
-        <p className="nl-unrecognized">
-          这句我没能用上：
-          {result.unrecognized.map((item, i) => (
-            <span className="nl-chip muted" key={i}>
-              {item}
-            </span>
-          ))}
-        </p>
-      )}
-
-      <button className="link-btn" type="button" onClick={onDismiss}>
-        重来
-      </button>
-    </div>
-  )
-}
-
-/**
- * 「AI 解读」的模式开关 + 状态提示。
- *
- * <p>自动 / 手动两种模式打的是**同一个接口、同一份缓存**，所以来回切换
- * 不会重复花钱，区别只是"什么时候花"：自动省一次点击，手动省 token。
- *
- * <p>⚠️ <b>AI 没启用时整条不渲染</b>（后端返回 501）。别人 clone 仓库、
- * 不配 key 直接跑，结果页应该和没有这个功能时一模一样——
- * 而不是出现一个灰掉的按钮或者一行红字，让人以为哪里坏了。
- *
- * <p>（也是出于同样的考虑，这里的模式开关<b>没有沿用虚线标签</b>的样式：
- * 那个样式在这个界面里的含义是"这是系统猜的、可以否定"，
- * 而模式选择是用户自己的设置，不是系统的判断。）
- */
-function AiReasonBar({ state }: { state: AiReasonState }) {
-  const hasTexts = Object.keys(state.texts).length > 0
-
-  // 服务器没配 AI：不藏起来，改成引导访客填自己的 key。
-  if (state.unavailable) {
-    return (
-      <div className="ai-reason-bar">
-        <span className="ai-reason-status">这台服务器没有配 AI。</span>
-        <AiKeyPanel
-          defaultOpen
-          onSaved={state.onKeySaved}
-          hint="填上你自己的 API Key 就能用了。"
-        />
-      </div>
-    )
-  }
-
-  // key 被上游拒了：让用户改输入，不是让他重试——重试一万次还是 401
-  if (state.keyRejected) {
-    return (
-      <div className="ai-reason-bar">
-        <span className="ai-reason-status error">
-          你填的 AI Key 被厂商拒绝了（可能填错、过期或额度用尽）。
-        </span>
-        <AiKeyPanel defaultOpen onSaved={state.onKeySaved} hint="换一个 key 再试试。" />
-      </div>
-    )
-  }
-
-  const showRequest = !state.loading && !state.error && (state.mode === 'manual' || hasTexts)
-
-  return (
-    <div className="ai-reason-bar">
-      <span className="ai-reason-mode">
-        AI 解读
-        <button
-          className={state.mode === 'auto' ? 'seg chosen' : 'seg'}
-          type="button"
-          title="列表出来就自动生成，不用你点"
-          onClick={() => state.onModeChange('auto')}
-        >
-          自动
-        </button>
-        <button
-          className={state.mode === 'manual' ? 'seg chosen' : 'seg'}
-          type="button"
-          title="你想看的时候再生成，省一点调用额度"
-          onClick={() => state.onModeChange('manual')}
-        >
-          手动
-        </button>
-      </span>
-
-      {state.loading && <span className="ai-reason-status">正在读你的处境…</span>}
-
-      {!state.loading && state.error && (
-        <>
-          <span className="ai-reason-status error">没能生成：{state.error}</span>
-          <button className="link-btn" type="button" onClick={state.onRequest}>
-            重试
-          </button>
-        </>
-      )}
-
-      {showRequest && (
-        <button className="link-btn" type="button" onClick={state.onRequest}>
-          {hasTexts ? '重新生成' : '让 AI 说说为什么'}
-        </button>
-      )}
-
-      <span className="spacer" />
-      {/* 平时也能主动去填自己的 key —— 不是只有出错了才让你知道有这条路 */}
-      <AiKeyPanel onSaved={state.onKeySaved} />
-    </div>
-  )
-}
-
-/**
- * 「为什么是它」——把打分因子摊开给用户看。
- *
- * <p>默认折叠着：不想让每张卡片都堆满数字。但它是这个产品敢说
- * "决策助手"而不是"排序器"的关键——用户随时能查账。
- *
- * <p>公式画成 {@code 兴趣 × 距离 × 质量 × 状态 × 天气 = 最终分} 而不是列成几行，
- * 是因为**乘法本身就是信息**：任何一项掉到 0 整个结果就是 0，
- * 所以"再好的地方，太远了也不去"。
- *
- * <h2>⚠️ 判据是「有没有参与计算」，而不是「等不等于 1.0」</h2>
- *
- * <p>没有定位的时候，距离因子恒为 1.0。这时画一个「距离 100%」是**错的**——
- * 它让用户以为"距离被考虑过、而且很合适"，而事实是根本没算距离。
- * 所以没定位就整项去掉。
- *
- * <p>但反过来，<b>参与计算也可能恰好算出 1.0，而那一项是该显示的</b>：
- * 下雨天推一个室内博物馆，天气因子正好是 1.0，含义是
- * 「今天下雨，但这个地方不受影响」——这恰恰是最该说的一句。
- *
- * <p>两种情况数值完全一样，含义却相反。所以这里按<b>输入在不在</b>来判断
- * （有没有定位、有没有状态、有没有天气），而绝不看因子本身的数值。
- */
-function WhyPanel({
-  place,
-  showDistance,
-  showState,
-  showWeather,
-  reason,
-}: {
-  place: RecommendedPlace
-  showDistance: boolean
-  showState: boolean
-  showWeather: boolean
-  /** AI 写的那句人话。没生成、或没启用 AI 时是 undefined */
-  reason?: string
-}) {
-  const [open, setOpen] = useState(false)
-  const b = place.scoreBreakdown
-  const pct = (v: number) => Math.round(v * 100)
-
-  // 兴趣和质量永远参与（兴趣是主信号，质量是每个地点都有的属性），
-  // 另外三个要看这次有没有相应的输入。
-  const factors: { label: string; value: number }[] = [
-    { label: '兴趣匹配', value: b.interest },
-  ]
-  if (showDistance) factors.push({ label: '距离', value: b.distance })
-  factors.push({ label: '质量', value: b.quality })
-  if (showState) factors.push({ label: '此刻状态', value: b.state })
-  if (showWeather) factors.push({ label: '天气', value: b.weather })
-
-  return (
-    <div className="why">
-      <button className="link-btn why-toggle" type="button" onClick={() => setOpen((v) => !v)}>
-        {/* 有 AI 解读时在按钮上就点出来——否则用户不知道折叠的面板里
-            多了一句话，那段 token 就白花了 */}
-        {open ? '收起' : reason ? '为什么是它？· 含 AI 解读' : '为什么是它？'}
-      </button>
-
-      {open && (
-        <div className="why-body">
-          {/*
-            ⚠️ AI 这段话放在**乘法式之上**，顺序不能反。
-
-            下面那一串是"账本"——准确、可验证，但读起来是数字。
-            这句话是"人话"——回答的是"为什么是它，而不是另外两个"，
-            那恰恰是账本答不了的问题（乘法式只能说明"它自己好不好"）。
-
-            先说人话再给账本，用户先拿到结论、再按需查账。
-            反过来就成了"先看一堆数字，最后才知道结论"。
-          */}
-          {reason && (
-            <p className="why-ai">
-              <span className="why-ai-tag">AI 解读</span>
-              {reason}
-            </p>
-          )}
-
-          <div className="why-formula">
-            {factors.map((factor, index) => (
-              <Fragment key={factor.label}>
-                {index > 0 && <span className="why-op">×</span>}
-                <span>
-                  {factor.label} <b>{pct(factor.value)}%</b>
-                </span>
-              </Fragment>
-            ))}
-            <span className="why-op">=</span>
-            <span className="why-final">{pct(b.finalScore)}%</span>
-          </div>
-
-          {place.reasons.length > 0 && (
-            <ul className="reasons">
-              {place.reasons.map((r) => (
-                <li key={r.dimensionKey}>
-                  你很在乎「{r.dimensionLabel}」<b>{r.userPreference}</b>，这里{' '}
-                  <b>{r.placeValue}</b>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <p className="why-note">
-            这几项是<b>相乘</b>的：任何一项掉到 0，整体就是 0。
-            所以再合口味的地方，太远、太贵或者时间不够，都不会被推荐。
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
 
 /**
  * 拼一个「在高德地图里打开这个地点」的链接。
@@ -1373,50 +1059,43 @@ function PlaceCard({
   place,
   reaction,
   onFeedback,
-  showDistance,
-  showState,
-  showWeather,
   reason,
 }: {
   place: RecommendedPlace
   reaction: Reaction | undefined
   onFeedback: (recommendationId: number, reaction: Reaction) => void
-  /** 这几个只影响「为什么是它」里列出哪几项，原样透传给 WhyPanel */
-  showDistance: boolean
-  showState: boolean
-  showWeather: boolean
   /** AI 写的那句人话，可能还没有 */
   reason?: string
 }) {
   const openHours =
     place.openFrom && place.openTo ? `${place.openFrom} – ${place.openTo}` : '全天开放'
+  const fallbackReason = place.reasons[0]
+    ? `很符合你对“${place.reasons[0].dimensionLabel}”的偏好。`
+    : place.description
 
   return (
     <article className="place-card">
-      <header className="place-head">
-        <span className="place-rank">#{place.rank}</span>
-        <h3 className="place-name">{place.name}</h3>
-        <span className="place-score">{place.scorePercent}%</span>
-      </header>
-
-      {place.description && <p className="place-desc">{place.description}</p>}
-
-      <div className="place-meta">
-        <span>{place.distanceKm === null ? '距离未知' : `${place.distanceKm.toFixed(2)} km`}</span>
-        <span>{place.ticketPrice === 0 ? '免费' : `门票 ${place.ticketPrice} 元`}</span>
-        <span>建议停留 {place.suggestedMinutes} 分钟</span>
-        <span>{openHours}</span>
+      <div className={`place-thumb category-${place.category.toLowerCase()}`} aria-hidden="true">
+        <span>{place.rank}</span>
+        <b>{place.category.slice(0, 1)}</b>
       </div>
 
-      <WhyPanel
-        place={place}
-        showDistance={showDistance}
-        showState={showState}
-        showWeather={showWeather}
-        reason={reason}
-      />
+      <div className="place-content">
+        <header className="place-head">
+          <h3 className="place-name">{place.name}</h3>
+          <span className="place-category">{place.category}</span>
+        </header>
 
-      <div className="feedback-row">
+        <div className="place-meta">
+          <span>📍 {place.distanceKm === null ? '距离未知' : `${place.distanceKm.toFixed(1)} km`}</span>
+          <span>{place.ticketPrice === 0 ? '免费' : `门票 ¥${place.ticketPrice}`}</span>
+          <span>约 {place.suggestedMinutes} 分钟</span>
+          <span>{openHours}</span>
+        </div>
+
+        <p className="place-recommendation">{reason ?? fallbackReason}</p>
+
+        <div className="feedback-row">
         {/*
           「导航过去」是个**普通链接**，不是按钮：
           它打开的是站外地址，用 <a> 才对——浏览器会显示真实目标、
@@ -1447,6 +1126,7 @@ function PlaceCard({
         >
           👎 不感兴趣
         </button>
+        </div>
       </div>
     </article>
   )

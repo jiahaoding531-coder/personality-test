@@ -78,6 +78,12 @@ body {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 32px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding: 12px 0;
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter: blur(18px);
 }
 .brand {
   font-size: 15px;
@@ -837,15 +843,6 @@ table.data td.num {
   gap: 10px;
 }
 
-/* 批次标签。"第 2 批"不放显眼位置，但用户点 👍/👎 时要能说清评的是哪一批 */
-.batch-tag {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 2px 10px;
-}
 
 /* 定位按钮那一行：窄屏允许换行，否则两个按钮会挤成一团 */
 .locate-actions {
@@ -853,6 +850,161 @@ table.data td.num {
   flex-wrap: wrap;
   gap: 10px;
   margin: 16px 0 4px;
+}
+
+/* ---- 对话式推荐入口 ---- */
+.chat-intro {
+  margin: 0 0 18px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.travel-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-1);
+}
+
+.chat-turn {
+  display: flex;
+  align-items: flex-end;
+  gap: 9px;
+}
+
+.chat-turn.user {
+  justify-content: flex-end;
+}
+
+.chat-avatar {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--series-1);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chat-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: min(76%, 620px);
+  padding: 11px 14px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--hover-wash);
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.chat-bubble b {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.chat-turn.user .chat-bubble {
+  border-radius: 14px 14px 4px 14px;
+  background: var(--series-1);
+  color: #fff;
+}
+
+.chat-warning {
+  border: 1px solid color-mix(in srgb, var(--series-1) 35%, var(--border));
+}
+
+.chat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 6px;
+}
+
+.chat-actions .btn,
+.chat-actions .theme-btn {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding-left: 39px;
+}
+
+.chat-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 9px;
+  margin-top: 2px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+}
+
+.chat-composer:focus-within {
+  border-color: var(--series-1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--series-1) 12%, transparent);
+}
+
+.chat-composer .nl-input {
+  min-height: 48px;
+  padding: 6px 8px;
+  border: 0;
+  outline: 0;
+  resize: none;
+}
+
+.chat-send {
+  flex: 0 0 auto;
+  min-width: 62px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--series-1);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat-send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.feedback-bubble {
+  width: min(76%, 620px);
+}
+
+.feedback-bubble .nl-feedback {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.typing-dot {
+  color: var(--text-muted);
+}
+
+.manual-panel {
+  margin-top: 12px;
+  padding: 2px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--hover-wash);
 }
 
 /* 经纬度和剩余时长三个输入框并排。窄屏自动换行——
@@ -1252,6 +1404,31 @@ table.data td.num {
   font-size: 13px;
 }
 
+@media (max-width: 640px) {
+  .travel-chat {
+    padding: 14px 12px;
+  }
+
+  .chat-bubble,
+  .feedback-bubble {
+    max-width: calc(100% - 39px);
+    width: auto;
+  }
+
+  .chat-suggestions {
+    padding-left: 0;
+  }
+
+  .chat-composer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .chat-send {
+    align-self: flex-end;
+  }
+}
+
 /* ---- 场景快捷按钮 ---- */
 
 .field-label {
@@ -1297,60 +1474,541 @@ table.data td.num {
   font-weight: 600;
 }
 
-/* ---- 「为什么是它」 ---- */
+/* ============================================================
+   TravelMind · 消费级对话流
+   ============================================================ */
 
-.why {
-  margin-top: 12px;
+.travel-shell {
+  position: relative;
+  width: min(960px, calc(100vw - 32px));
+  margin-inline: calc((100% - min(960px, calc(100vw - 32px))) / 2);
+  min-height: 72vh;
 }
 
-.why-toggle {
-  font-size: 12px;
-}
-
-.why-body {
-  margin-top: 10px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: var(--hover-wash);
-}
-
-/* 公式横排。窄屏允许换行——四个因子加乘号在手机上排不下 */
-.why-formula {
+.travel-product-header {
+  position: sticky;
+  top: 62px;
+  z-index: 32;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px 14px;
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(18px);
 }
 
-.why-formula b {
+.travel-product-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.travel-product-brand > span:last-child {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.travel-product-brand b {
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.travel-product-brand small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.travel-logo {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--series-1), #6aa8f2);
+  color: #fff;
+  font-weight: 750;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--series-1) 26%, transparent);
+}
+
+.preference-trigger {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.travel-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 30px 4px 250px;
+}
+
+.travel-stream-end {
+  height: 1px;
+  scroll-margin-bottom: 190px;
+}
+
+.travel-stream .chat-turn {
+  animation: travel-turn-in 0.24s ease-out both;
+}
+
+@keyframes travel-turn-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.travel-stream .chat-bubble {
+  box-shadow: 0 5px 24px rgba(0, 0, 0, 0.04);
+}
+
+.welcome-bubble small {
+  color: var(--text-muted);
+}
+
+.recommendation-message {
+  align-items: flex-start;
+}
+
+.assistant-result {
+  width: min(820px, calc(100% - 45px));
+}
+
+.assistant-lead {
+  display: inline-block;
+  max-width: 680px;
+  margin: 0 0 12px;
+  padding: 11px 15px;
+  border-radius: 15px 15px 15px 4px;
+  background: var(--hover-wash);
   color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* 乘号弱化，避免它抢了数字的注意力 */
-.why-op {
-  color: var(--text-muted);
-}
-
-/* 结果用主色，是这一行里唯一需要突出的数 */
-.why-final {
-  color: var(--series-1);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.why-note {
-  margin: 10px 0 0;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.7;
+}
+
+.recommendation-result {
+  width: 100%;
+}
+
+.result-card-list {
+  display: grid;
+  gap: 12px;
+}
+
+.travel-stream .place-card {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--surface-1);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.055);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.travel-stream .place-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.08);
+}
+
+.place-thumb {
+  position: relative;
+  display: grid;
+  flex: 0 0 112px;
+  min-height: 112px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #dcecff, #a8cdf8);
+  color: color-mix(in srgb, var(--series-1) 68%, #17324f);
+}
+
+.place-thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 72% 25%, rgba(255,255,255,.85), transparent 30%);
+}
+
+.place-thumb > span {
+  position: absolute;
+  top: 8px;
+  left: 9px;
+  z-index: 1;
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,.88);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.place-thumb > b {
+  z-index: 1;
+  font-size: 32px;
+  font-weight: 800;
+  opacity: .72;
+}
+
+.place-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.travel-stream .place-head {
+  align-items: center;
+  margin-bottom: 7px;
+}
+
+.travel-stream .place-name {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.place-category {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--hover-wash);
+  color: var(--series-1);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.travel-stream .place-meta {
+  gap: 5px 12px;
+}
+
+.place-recommendation {
+  margin: 9px 0 7px;
+  color: var(--series-1);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.55;
+}
+
+.travel-stream .feedback-row {
+  margin-top: 8px;
+}
+
+.travel-stream .fb-btn {
+  padding: 5px 9px;
+  font-size: 11px;
+}
+
+.result-refresh {
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--series-1);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.empty-recommendation {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.empty-recommendation p {
+  margin: 0 0 8px;
+}
+
+.bottom-action-wrap {
+  position: fixed;
+  z-index: 50;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 12px 18px 18px;
+  background: linear-gradient(to top, var(--page) 65%, color-mix(in srgb, var(--page) 82%, transparent));
+  box-shadow: 0 -18px 38px rgba(0, 0, 0, 0.045);
+  backdrop-filter: blur(20px);
+}
+
+.bottom-action-bar {
+  width: min(900px, 100%);
+  margin: 0 auto;
+}
+
+.action-chip-scroll {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 0 3px 9px;
+  scrollbar-width: none;
+}
+
+.action-chip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.active-action-chip,
+.suggestion-chip,
+.clear-intent-chip {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.clear-intent-chip {
+  border-style: dashed;
   color: var(--text-muted);
 }
 
-.why-note b {
-  color: var(--text-secondary);
+.active-action-chip {
+  border-color: color-mix(in srgb, var(--series-1) 55%, var(--border));
+  background: color-mix(in srgb, var(--series-1) 11%, var(--surface-1));
+  color: var(--series-1);
 }
+
+.active-action-chip span {
+  margin-left: 6px;
+  font-size: 14px;
+}
+
+.action-composer {
+  display: flex;
+  min-height: 60px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--series-1) 24%, var(--border));
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  box-shadow: 0 10px 35px rgba(0,0,0,.1);
+}
+
+.action-composer:focus-within {
+  border-color: var(--series-1);
+  box-shadow: 0 12px 38px rgba(0,0,0,.11), 0 0 0 3px color-mix(in srgb, var(--series-1) 10%, transparent);
+}
+
+.action-composer textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: 120px;
+  padding: 9px 4px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.composer-settings {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--hover-wash);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.composer-send {
+  min-width: 72px;
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 15px;
+  background: var(--series-1);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.composer-send:disabled,
+.active-action-chip:disabled,
+.suggestion-chip:disabled {
+  opacity: .42;
+  cursor: default;
+}
+
+.composer-hint {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: center;
+}
+
+.preference-backdrop {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, .28);
+  backdrop-filter: blur(4px);
+  animation: drawer-fade .18s ease-out;
+}
+
+.preference-drawer {
+  width: min(460px, 92vw);
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--surface-1);
+  box-shadow: -18px 0 60px rgba(0,0,0,.16);
+  animation: drawer-in .22s ease-out;
+}
+
+@keyframes drawer-fade { from { opacity: 0; } }
+@keyframes drawer-in { from { transform: translateX(28px); opacity: .7; } }
+
+.preference-drawer > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.preference-drawer > header small {
+  color: var(--series-1);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+.preference-drawer > header h2 {
+  font-size: 24px;
+}
+
+.drawer-close {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--hover-wash);
+  color: var(--text-secondary);
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.preference-drawer > section {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.preference-drawer h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.preference-segments {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.drawer-note {
+  color: var(--series-1);
+  font-size: 12px;
+}
+
+.profile-details {
+  padding: 22px 0 80px;
+}
+
+.profile-details summary {
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.profile-details .chart {
+  margin-top: 18px;
+}
+
+@media (max-width: 640px) {
+  .travel-shell {
+    width: calc(100vw - 20px);
+  }
+
+  .travel-product-header {
+    top: 58px;
+  }
+
+  .travel-stream {
+    padding-top: 22px;
+    padding-bottom: 270px;
+  }
+
+  .assistant-result {
+    width: calc(100% - 39px);
+  }
+
+  .travel-stream .place-card {
+    gap: 11px;
+    padding: 11px;
+  }
+
+  .place-thumb {
+    flex-basis: 82px;
+    min-height: 98px;
+  }
+
+  .place-thumb > b {
+    font-size: 24px;
+  }
+
+  .travel-stream .place-name {
+    font-size: 16px;
+  }
+
+  .place-category,
+  .travel-stream .place-meta span:nth-child(4) {
+    display: none;
+  }
+
+  .bottom-action-wrap {
+    padding: 9px 10px 12px;
+  }
+
+  .action-composer {
+    min-height: 56px;
+    border-radius: 19px;
+  }
+
+  .composer-send {
+    min-width: 60px;
+    padding: 0 12px;
+  }
+
+  .composer-hint {
+    display: none;
+  }
+}
+
 
 /* ---- 反馈按钮 ---- */
 

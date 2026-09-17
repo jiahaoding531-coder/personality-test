@@ -16,13 +16,14 @@
  */
 
 /** 和后端的 `AiProvider` 枚举一一对应。⚠️ 改了那边要同步改这里。 */
-export type AiProviderId = 'DEEPSEEK' | 'DASHSCOPE' | 'ZHIPU' | 'MOONSHOT'
+export type AiProviderId = 'DEEPSEEK' | 'DASHSCOPE' | 'ZHIPU' | 'MOONSHOT' | 'VOLCENGINE'
 
 export const AI_PROVIDERS: { id: AiProviderId; label: string }[] = [
   { id: 'DEEPSEEK', label: 'DeepSeek' },
   { id: 'DASHSCOPE', label: '通义千问' },
   { id: 'ZHIPU', label: '智谱 GLM' },
   { id: 'MOONSHOT', label: 'Kimi' },
+  { id: 'VOLCENGINE', label: '火山引擎（豆包）' },
 ]
 
 const PROVIDER_KEY = 'travelmind.aiProvider'
