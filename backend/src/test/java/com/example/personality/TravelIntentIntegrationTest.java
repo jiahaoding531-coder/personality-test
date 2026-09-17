@@ -3,6 +3,7 @@ package com.example.personality;
 import com.example.personality.ai.AiCredentialsResolver;
 import com.example.personality.ai.TextIntentGenerator;
 import com.example.personality.ai.TextIntentResult;
+import com.example.personality.ai.TravelIntentOperation;
 import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +52,20 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
                 Map.of(TravelDimension.CROWD_TOLERANCE, -0.5),
                 60, 2.0, null,
                 List.of("想找个能带狗的地方"),
-                "你有点累了，想找个安静的地方待一会儿");
+                "你有点累了，想找个安静的地方待一会儿",
+                List.of(
+                        new TravelIntentOperation(
+                                TravelIntentOperation.Type.ADD_PREFERENCE,
+                                TravelState.TIRED, List.of(), null, null, Map.of()),
+                        new TravelIntentOperation(
+                                TravelIntentOperation.Type.ADD_PREFERENCE,
+                                TravelState.QUIET, List.of(), null, null, Map.of()),
+                        new TravelIntentOperation(
+                                TravelIntentOperation.Type.SET_CONSTRAINT,
+                                null, List.of(),
+                                TravelIntentOperation.ConstraintKey.DURATION_MINUTES,
+                                60.0, Map.of())
+                ));
     }
 
     @Test
@@ -69,6 +83,11 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.biases.CROWD_TOLERANCE").value(-0.5))
                 .andExpect(jsonPath("$.remainingMinutes").value(60))
                 .andExpect(jsonPath("$.maxDistanceKm").value(2.0))
+                .andExpect(jsonPath("$.operations.length()").value(3))
+                .andExpect(jsonPath("$.operations[0].op").value("ADD_PREFERENCE"))
+                .andExpect(jsonPath("$.operations[0].value").value("TIRED"))
+                .andExpect(jsonPath("$.operations[2].key").value("durationMinutes"))
+                .andExpect(jsonPath("$.operations[2].value").value(60.0))
                 // ⚠️ 用户没提预算，就必须是 null。编一个出来比留空有害得多——
                 //    用户会看到一个自己从没要求过的条件被悄悄施加了
                 .andExpect(jsonPath("$.maxTicketPrice").doesNotExist())

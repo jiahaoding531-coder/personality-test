@@ -111,7 +111,119 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
                 parseClampedInt(root.path("maxTicketPrice"),
                         MIN_TICKET_PRICE, MAX_TICKET_PRICE),
                 parseStringList(root.path("unrecognized")),
-                text(root, "summary"));
+                text(root, "summary"),
+                parseOperations(root.path("operations")));
+    }
+
+    private static List<TravelIntentOperation> parseOperations(JsonNode node) {
+        List<TravelIntentOperation> operations = new ArrayList<>();
+        if (!node.isArray()) {
+            return operations;
+        }
+        for (JsonNode item : node) {
+            String opName = text(item, "op").trim().toUpperCase(java.util.Locale.ROOT);
+            TravelIntentOperation.Type op;
+            try {
+                op = TravelIntentOperation.Type.valueOf(opName);
+            } catch (IllegalArgumentException ignored) {
+                continue;
+            }
+
+            TravelIntentOperation parsed = switch (op) {
+                case ADD_INTENT, REMOVE_INTENT -> parseStateOperation(item, op, true);
+                case ADD_PREFERENCE, REMOVE_PREFERENCE -> parseStateOperation(item, op, false);
+                case REPLACE_INTENTS -> parseReplaceIntentsOperation(item);
+                case SET_CONSTRAINT -> parseConstraintOperation(item);
+                case MERGE_BIASES -> new TravelIntentOperation(
+                        op, null, List.of(), null, null,
+                        parseBiases(item.path("values")));
+                case CLEAR_TRAVEL_INTENT -> new TravelIntentOperation(
+                        op, null, List.of(), null, null, Map.of());
+            };
+            if (parsed != null) {
+                operations.add(parsed);
+            }
+        }
+        return operations;
+    }
+
+    private static TravelIntentOperation parseStateOperation(
+            JsonNode item, TravelIntentOperation.Type op, boolean wantsIntent) {
+        TravelState state = parseOperationState(item.path("value"));
+        if (state == null || isCoreIntent(state) != wantsIntent) {
+            return null;
+        }
+        return new TravelIntentOperation(op, state, List.of(), null, null, Map.of());
+    }
+
+    private static TravelIntentOperation parseReplaceIntentsOperation(JsonNode item) {
+        List<TravelState> states = parseOperationStates(item.path("values"), true);
+        if (states.isEmpty()) {
+            return null;
+        }
+        return new TravelIntentOperation(
+                TravelIntentOperation.Type.REPLACE_INTENTS,
+                null, states, null, null, Map.of());
+    }
+
+    private static TravelIntentOperation parseConstraintOperation(JsonNode item) {
+        String rawKey = text(item, "key").trim();
+        TravelIntentOperation.ConstraintKey key = switch (rawKey) {
+            case "durationMinutes" -> TravelIntentOperation.ConstraintKey.DURATION_MINUTES;
+            case "maxDistanceMeters" -> TravelIntentOperation.ConstraintKey.MAX_DISTANCE_METERS;
+            case "budgetMax" -> TravelIntentOperation.ConstraintKey.BUDGET_MAX;
+            default -> null;
+        };
+        if (key == null) {
+            return null;
+        }
+
+        Double rawValue = asDouble(item.path("value"));
+        if (rawValue == null) {
+            return null;
+        }
+        double value = switch (key) {
+            case DURATION_MINUTES -> Math.max(MIN_REMAINING_MINUTES,
+                    Math.min(MAX_REMAINING_MINUTES, Math.round(rawValue)));
+            case MAX_DISTANCE_METERS -> Math.max(MIN_DISTANCE_KM * 1000,
+                    Math.min(MAX_DISTANCE_KM * 1000, rawValue));
+            case BUDGET_MAX -> Math.max(MIN_TICKET_PRICE,
+                    Math.min(MAX_TICKET_PRICE, Math.round(rawValue)));
+        };
+        return new TravelIntentOperation(
+                TravelIntentOperation.Type.SET_CONSTRAINT,
+                null, List.of(), key, value, Map.of());
+    }
+
+    private static List<TravelState> parseOperationStates(JsonNode node, boolean wantsIntent) {
+        List<TravelState> states = new ArrayList<>();
+        if (!node.isArray()) {
+            return states;
+        }
+        for (JsonNode item : node) {
+            TravelState state = parseOperationState(item);
+            if (state != null && isCoreIntent(state) == wantsIntent && !states.contains(state)) {
+                states.add(state);
+            }
+        }
+        return states;
+    }
+
+    private static TravelState parseOperationState(JsonNode node) {
+        if (!node.isString()) {
+            return null;
+        }
+        String normalized = node.asString("").trim().toUpperCase(java.util.Locale.ROOT);
+        for (TravelState state : TravelState.values()) {
+            if (state.name().equals(normalized)) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isCoreIntent(TravelState state) {
+        return state == TravelState.HUNGRY || state == TravelState.WANT_WALK;
     }
 
     /**

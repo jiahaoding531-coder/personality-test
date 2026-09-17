@@ -6,6 +6,8 @@ import com.example.personality.exception.AiServiceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -22,6 +24,101 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 用户说了五件事，能听懂三件就先给三件，而不是整批作废。
  */
 class DeepSeekTextIntentGeneratorTest {
+
+    @Test
+    @DisplayName("新协议：一句话可以解析出混合的意图操作")
+    void parsesMixedTravelIntentOperations() {
+        String json = """
+                {
+                  "operations": [
+                    {"op": "REMOVE_INTENT", "value": "HUNGRY"},
+                    {"op": "ADD_INTENT", "value": "WANT_WALK"},
+                    {"op": "ADD_PREFERENCE", "value": "QUIET"},
+                    {"op": "SET_CONSTRAINT", "key": "durationMinutes", "value": 120},
+                    {"op": "CLEAR_TRAVEL_INTENT"}
+                  ],
+                  "summary": "你不想吃饭了，改成去逛逛"
+                }
+                """;
+
+        TextIntentResult result = DeepSeekTextIntentGenerator.parse(json);
+
+        assertEquals(5, result.operations().size());
+        assertEquals(TravelIntentOperation.Type.REMOVE_INTENT, result.operations().get(0).op());
+        assertEquals(TravelState.HUNGRY, result.operations().get(0).state());
+        assertEquals(TravelIntentOperation.Type.ADD_INTENT, result.operations().get(1).op());
+        assertEquals(TravelState.WANT_WALK, result.operations().get(1).state());
+        assertEquals(TravelIntentOperation.Type.ADD_PREFERENCE, result.operations().get(2).op());
+        assertEquals(TravelState.QUIET, result.operations().get(2).state());
+        assertEquals(TravelIntentOperation.ConstraintKey.DURATION_MINUTES,
+                result.operations().get(3).constraintKey());
+        assertEquals(120.0, result.operations().get(3).numberValue(), 1e-9);
+        assertEquals(TravelIntentOperation.Type.CLEAR_TRAVEL_INTENT, result.operations().get(4).op());
+        assertTrue(result.hasAnythingUsable());
+    }
+
+    @Test
+    @DisplayName("新协议：丢掉类别不匹配和编造的操作")
+    void dropsInvalidTravelIntentOperationsIndividually() {
+        String json = """
+                {
+                  "operations": [
+                    {"op": "ADD_INTENT", "value": "QUIET"},
+                    {"op": "ADD_PREFERENCE", "value": "HUNGRY"},
+                    {"op": "SET_CONSTRAINT", "key": "teleportKm", "value": 2},
+                    {"op": "SET_CONSTRAINT", "key": "budgetMax", "value": 5000},
+                    {"op": "DANCE", "value": "HUNGRY"}
+                  ]
+                }
+                """;
+
+        TextIntentResult result = DeepSeekTextIntentGenerator.parse(json);
+
+        assertEquals(1, result.operations().size());
+        TravelIntentOperation budget = result.operations().get(0);
+        assertEquals(TravelIntentOperation.Type.SET_CONSTRAINT, budget.op());
+        assertEquals(TravelIntentOperation.ConstraintKey.BUDGET_MAX, budget.constraintKey());
+        assertEquals(1000.0, budget.numberValue(), 1e-9, "预算要夹到推荐接口上限");
+    }
+
+    @Test
+    @DisplayName("新协议：缺失或非法的约束值整条丢弃，不能被误解成取消限制")
+    void dropsConstraintOperationsWhoseValueIsMissingOrInvalid() {
+        String json = """
+                {
+                  "operations": [
+                    {"op": "SET_CONSTRAINT", "key": "durationMinutes"},
+                    {"op": "SET_CONSTRAINT", "key": "budgetMax", "value": "随便"},
+                    {"op": "SET_CONSTRAINT", "key": "maxDistanceMeters", "value": 1500}
+                  ]
+                }
+                """;
+
+        TextIntentResult result = DeepSeekTextIntentGenerator.parse(json);
+
+        assertEquals(1, result.operations().size());
+        assertEquals(TravelIntentOperation.ConstraintKey.MAX_DISTANCE_METERS,
+                result.operations().get(0).constraintKey());
+    }
+
+    @Test
+    @DisplayName("新协议：缺失或全非法的替换意图整条丢弃，不能静默清空已有意图")
+    void dropsReplaceIntentOperationsWithoutAValidIntent() {
+        String json = """
+                {
+                  "operations": [
+                    {"op": "REPLACE_INTENTS"},
+                    {"op": "REPLACE_INTENTS", "values": ["QUIET", "SLEEP"]},
+                    {"op": "REPLACE_INTENTS", "values": ["WANT_WALK"]}
+                  ]
+                }
+                """;
+
+        TextIntentResult result = DeepSeekTextIntentGenerator.parse(json);
+
+        assertEquals(1, result.operations().size());
+        assertEquals(List.of(TravelState.WANT_WALK), result.operations().get(0).states());
+    }
 
     @Test
     @DisplayName("正常返回：状态、倾向、数字、复述都解析出来")

@@ -3,6 +3,7 @@ package com.example.personality.service;
 import com.example.personality.ai.AiCredentials;
 import com.example.personality.ai.TextIntentGenerator;
 import com.example.personality.ai.TextIntentResult;
+import com.example.personality.ai.TravelIntentOperation;
 import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
 import com.example.personality.dto.InterpretResponse;
@@ -74,6 +75,39 @@ public class TravelIntentService {
                 result.maxTicketPrice(),
                 result.unrecognized(),
                 result.summary(),
-                result.hasAnythingUsable());
+                result.hasAnythingUsable(),
+                toOperations(result.operations()));
+    }
+
+    private List<InterpretResponse.Operation> toOperations(List<TravelIntentOperation> operations) {
+        List<InterpretResponse.Operation> converted = new ArrayList<>(operations.size());
+        for (TravelIntentOperation operation : operations) {
+            Object value = operation.state() == null ? operation.numberValue() : operation.state().name();
+            Object values = null;
+            if (!operation.states().isEmpty()) {
+                values = operation.states().stream().map(Enum::name).toList();
+            } else if (!operation.biases().isEmpty()) {
+                Map<String, Double> namedBiases = new LinkedHashMap<>();
+                operation.biases().forEach((key, bias) -> namedBiases.put(key.name(), bias));
+                values = namedBiases;
+            }
+            converted.add(new InterpretResponse.Operation(
+                    operation.op().name(),
+                    value,
+                    values,
+                    constraintKey(operation.constraintKey())));
+        }
+        return converted;
+    }
+
+    private String constraintKey(TravelIntentOperation.ConstraintKey key) {
+        if (key == null) {
+            return null;
+        }
+        return switch (key) {
+            case DURATION_MINUTES -> "durationMinutes";
+            case MAX_DISTANCE_METERS -> "maxDistanceMeters";
+            case BUDGET_MAX -> "budgetMax";
+        };
     }
 }

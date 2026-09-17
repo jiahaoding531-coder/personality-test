@@ -41,17 +41,32 @@ public record TextIntentResult(
         Double maxDistanceKm,
         Integer maxTicketPrice,
         List<String> unrecognized,
-        String summary
+        String summary,
+        List<TravelIntentOperation> operations
 ) {
+
+    /** 兼容旧测试和非 operations 调用方，过渡期内保留。 */
+    public TextIntentResult(
+            Set<TravelState> states,
+            Map<TravelDimension, Double> biases,
+            Integer remainingMinutes,
+            Double maxDistanceKm,
+            Integer maxTicketPrice,
+            List<String> unrecognized,
+            String summary
+    ) {
+        this(states, biases, remainingMinutes, maxDistanceKm, maxTicketPrice,
+                unrecognized, summary, List.of());
+    }
 
     /** 什么都没解析出来。 */
     public static TextIntentResult empty() {
-        return new TextIntentResult(Set.of(), Map.of(), null, null, null, List.of(), "");
+        return new TextIntentResult(Set.of(), Map.of(), null, null, null, List.of(), "", List.of());
     }
 
     /** 有没有解析出任何能用的东西。全空时前端该提示用户换个说法。 */
     public boolean hasAnythingUsable() {
-        return !states.isEmpty() || !biases.isEmpty()
+        return !operations.isEmpty() || !states.isEmpty() || !biases.isEmpty()
                 || remainingMinutes != null || maxDistanceKm != null || maxTicketPrice != null;
     }
 }

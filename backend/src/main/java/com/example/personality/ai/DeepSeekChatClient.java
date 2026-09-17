@@ -21,7 +21,7 @@ import java.util.Map;
 /**
  * 调大模型的公共 HTTP 层：拼请求、发出去、把各种失败翻译成人话。
  *
- * <p>OpenAI 兼容协议，所以 DeepSeek / 通义 / 智谱 / Kimi 共用这一个客户端——
+ * <p>OpenAI 兼容协议，所以 DeepSeek / 通义 / 智谱 / Kimi / 火山方舟共用这一个客户端——
  * 路径、请求体、响应结构都一模一样。
  *
  * <h2>⚠️ 凭据每次调用现传，不放在这个对象里</h2>
@@ -46,7 +46,7 @@ public class DeepSeekChatClient {
 
     private static final Logger log = LoggerFactory.getLogger(DeepSeekChatClient.class);
 
-    /** OpenAI 兼容协议的补全路径。四家厂商都一样。 */
+    /** OpenAI 兼容协议的补全路径。白名单内的厂商都一样。 */
     private static final String COMPLETIONS_PATH = "/chat/completions";
 
     private final RestClient restClient;

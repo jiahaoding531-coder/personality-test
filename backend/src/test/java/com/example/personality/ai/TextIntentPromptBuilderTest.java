@@ -97,10 +97,35 @@ class TextIntentPromptBuilderTest {
         // 开了 response_format=json_object 时，提示词里必须出现 "json" 字样，
         // 否则多数厂商会直接拒绝这次请求
         assertTrue(prompt.toLowerCase().contains("json"), "必须出现 json 字样");
-        for (String field : new String[]{"states", "biases", "remainingMinutes",
-                "maxDistanceKm", "maxTicketPrice", "unrecognized", "summary"}) {
+        for (String field : new String[]{"operations", "op", "value", "unrecognized", "summary"}) {
             assertTrue(prompt.contains(field), "输出格式缺了字段 " + field);
         }
+    }
+
+    @Test
+    @DisplayName("自然语言必须输出操作，而不是一份新 Chip 列表")
+    void systemPromptDefinesTravelIntentOperations() {
+        String prompt = builder.systemPrompt();
+
+        for (String operation : new String[]{
+                "ADD_INTENT", "REMOVE_INTENT", "REPLACE_INTENTS",
+                "ADD_PREFERENCE", "REMOVE_PREFERENCE", "SET_CONSTRAINT",
+                "CLEAR_TRAVEL_INTENT"}) {
+            assertTrue(prompt.contains(operation), "缺少操作 " + operation);
+        }
+        assertTrue(prompt.contains("无法确定") && prompt.contains("保留"),
+                "必须明确：无法确定时保留现有条件");
+        assertTrue(prompt.contains("算了") && prompt.contains("REPLACE_INTENTS"),
+                "必须给改变主意的示例");
+    }
+
+    @Test
+    @DisplayName("有先后关系的多个活动必须保留顺序，不能误判成改变主意")
+    void systemPromptPreservesOrderedMultipleIntents() {
+        String prompt = builder.systemPrompt();
+
+        assertTrue(prompt.contains("吃完饭再") && prompt.contains("顺序"),
+                "必须明确：连续活动要保留全部核心意图及先后顺序");
     }
 
     @Test

@@ -794,6 +794,47 @@ curl -X POST "http://localhost:8080/api/test-sessions/$SID/answers" \
 
 ---
 
+## `POST /api/travel/sessions/{id}/interpret`
+
+把用户的一句自然语言解析成可验证的状态操作。AI **不直接返回一套新的 Chip**；前端必须把
+`operations` 依次交给同一个 reducer，和快捷标签、Chip 删除共用一套状态变更规则。
+
+**请求体**
+
+```json
+{ "text": "最好安静一点，一个小时以内" }
+```
+
+**200 OK（节选）**
+
+```json
+{
+  "summary": "想找安静一点、1 小时内能完成的地方",
+  "usable": true,
+  "operations": [
+    { "op": "ADD_PREFERENCE", "value": "QUIET", "values": null, "key": null },
+    { "op": "SET_CONSTRAINT", "value": 60, "values": null, "key": "durationMinutes" }
+  ],
+  "unrecognized": []
+}
+```
+
+支持的操作：
+
+| `op` | 参数 | 含义 |
+|---|---|---|
+| `ADD_INTENT` / `REMOVE_INTENT` | `value` | 增加或删除一个核心活动；目前核心活动是 `HUNGRY`、`WANT_WALK` |
+| `REPLACE_INTENTS` | `values` | 用户明确改变计划时，按顺序替换核心活动 |
+| `ADD_PREFERENCE` / `REMOVE_PREFERENCE` | `value` | 增加或删除偏好，例如 `QUIET` |
+| `SET_CONSTRAINT` | `key` + `value` | 更新同类限制；`durationMinutes`、`maxDistanceMeters`、`budgetMax` 各自独立替换 |
+| `MERGE_BIASES` | `values` | 合并旅行维度倾向 |
+| `CLEAR_TRAVEL_INTENT` | — | 清空本次意图、偏好和限制；**不清 GPS、城市、天气、当前时间或长期画像** |
+
+无法确定用户是否改变主意时，解析器优先保留已有条件，不生成破坏性的删除或替换操作。
+响应仍保留 `states`、`biases`、`remainingMinutes` 等兼容字段；新前端应以 `operations` 为准。
+
+---
+
 ## `POST /api/travel/sessions/{id}/recommendations`
 
 给这次会话推荐 Top 3 地点。

@@ -208,8 +208,21 @@ class AiCredentialsResolverTest {
     void providerNameIdentifiesProviderAndModel() {
         assertEquals("moonshot:moonshot-v1-8k",
                 AiCredentials.forUser(AiProvider.MOONSHOT, USER_KEY).providerName());
+        assertEquals("volcengine:doubao-seed-2-0-lite-260215",
+                AiCredentials.forUser(AiProvider.VOLCENGINE, USER_KEY).providerName());
         assertEquals("custom:my-model",
                 AiCredentials.forServer("http://localhost:11434/v1", "my-model", "x").providerName());
+    }
+
+    @Test
+    @DisplayName("火山方舟使用官方 OpenAI 兼容地址和豆包默认模型")
+    void volcengineUsesArkEndpointAndDoubaoModel() {
+        AiCredentials credentials = resolver(true, SERVER_KEY)
+                .resolve("VOLCENGINE", USER_KEY).orElseThrow();
+
+        assertEquals(AiProvider.VOLCENGINE, credentials.provider());
+        assertEquals("https://ark.cn-beijing.volces.com/api/v3", credentials.baseUrl());
+        assertEquals("doubao-seed-2-0-lite-260215", credentials.model());
     }
 
     // ==========================================================

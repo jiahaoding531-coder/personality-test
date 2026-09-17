@@ -36,10 +36,18 @@ public record InterpretResponse(
         Integer maxTicketPrice,
         List<String> unrecognized,
         String summary,
-        boolean usable
+        boolean usable,
+        List<Operation> operations
 ) {
 
     /** 一个状态 + 它的中文名。理由同 {@code AppliedContext.StateLabel}：不让前端维护翻译表。 */
     public record StateLabel(String key, String label) {
+    }
+
+    /**
+     * 给前端 reducer 的可验证操作。value / values 的具体类型由 op 决定：
+     * 单个状态用 value，替换意图和倾向集合用 values，约束用 key + value。
+     */
+    public record Operation(String op, Object value, Object values, String key) {
     }
 }

@@ -23,7 +23,7 @@ import java.util.Optional;
  *
  * <p>所以这里<b>没有任何 setter</b>，也不接受构造参数——URL 只能来自源码里这几行常量。
  *
- * <h2>四家都是 OpenAI 兼容协议</h2>
+ * <h2>这些厂商都支持 OpenAI 兼容协议</h2>
  *
  * <p>所以 {@code DeepSeekChatClient} 里写死的 {@code /chat/completions} 路径
  * 一个字都不用改。这是当初把 HTTP 层从 {@code DeepSeekAiReportGenerator} 里
@@ -37,7 +37,11 @@ public enum AiProvider {
 
     ZHIPU("智谱 GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash"),
 
-    MOONSHOT("Kimi", "https://api.moonshot.cn/v1", "moonshot-v1-8k");
+    MOONSHOT("Kimi", "https://api.moonshot.cn/v1", "moonshot-v1-8k"),
+
+    /** 火山方舟的 OpenAI 兼容端点；默认选 Lite，适合本项目的短文本与 JSON 提取。 */
+    VOLCENGINE("火山引擎（豆包）", "https://ark.cn-beijing.volces.com/api/v3",
+            "doubao-seed-2-0-lite-260215");
 
     private final String label;
     private final String baseUrl;

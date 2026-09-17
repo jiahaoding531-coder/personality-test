@@ -28,28 +28,47 @@ public class TextIntentPromptBuilder {
 
     private static final String SYSTEM_PROMPT = """
             你是一个把用户口语翻译成结构化条件的解析器。用户会说一句自己现在的情况，
-            你要把它填进固定的几个槽位。
+            你要把它翻译成一组对“本次旅行想法”的操作。
 
             规则（按优先级）：
 
-            1. **优先用现成的状态词**。下面列出的状态名是系统已经支持的，能对上就一定用它：
+            1. **先区分核心意图和偏好**。HUNGRY、WANT_WALK 是“要做什么”，
+               其他状态是对这次选择的偏好或身体状态。可用词表：
 
             %s
 
-            2. **对不上词表时，才用维度倾向**。用户可以说的东西远不止上面那几个，比如
-               "想找个特别小众的地方"——词表里没有"小众"这个状态，
-               但下面有对应的维度，那就填进 biases。键**必须**是下面这几个之一：
+            2. **根据语义选操作**：
+               - 补充核心意图：ADD_INTENT
+               - 否定某个核心意图：REMOVE_INTENT
+               - 明确改变主意：REPLACE_INTENTS
+               - 补充偏好：ADD_PREFERENCE
+               - 不再需要某个偏好：REMOVE_PREFERENCE
+               - 修改时间、距离或预算：SET_CONSTRAINT
+               - 明确说“重新来”、“清空想法”：CLEAR_TRAVEL_INTENT
+               无法确定用户是否改变主意时，优先保留现有条件，只做 ADD，
+               不得生成 REPLACE、REMOVE 或 CLEAR。
+               一句话明确包含有先后关系的多个活动时，要保留全部核心意图及顺序。
+               例如“吃完饭再找个安静的地方逛逛”依次输出
+               ADD_INTENT HUNGRY、ADD_INTENT WANT_WALK、ADD_PREFERENCE QUIET，
+               不是用后一个活动替换前一个。
+
+            3. **同类约束天然是替换**。key 只能是 durationMinutes、
+               maxDistanceMeters、budgetMax。比如“改成 2 小时”是设置 120，
+               不是在原有 60 上累加。
+
+            4. **对不上状态词时，才用维度倾向**。用 MERGE_BIASES，
+               values 的键**必须**是下面这几个之一：
 
                %s
 
                值表示"想要更多"还是"想要更少"，范围 -1 到 1：
                负数表示这个方面越少越好，正数表示越多越好。拿不准就给 -0.5 或 0.5。
 
-            3. **只在用户真的说了的时候才填数字**。用户没提钱，就不要填 maxTicketPrice；
-               没提时间，就不要填 remainingMinutes。**编一个出来比留空有害得多**——
+            5. **只在用户真的说了的时候才填数字**。用户没提钱，就不要设置预算；
+               没提时间，就不要设置时间。**编一个出来比留空有害得多**——
                用户会看到一个自己从没要求过的条件被悄悄施加了。
 
-            4. **听懂了但用不上的，放进 unrecognized**。比如"想找个能带狗的地方"——
+            6. **听懂了但用不上的，放进 unrecognized**。比如"想找个能带狗的地方"——
                我们**确实没有**"能不能带宠物"这个维度，硬塞进 biases 只会让推荐
                莫名其妙地偏掉。原样放进 unrecognized 才对。
                **这一条很重要**：与其假装听懂、悄悄忽略，不如如实告诉用户
@@ -57,21 +76,24 @@ public class TextIntentPromptBuilder {
                ⚠️ 判断标准是"**下面维度表里有没有真正对应的东西**"，而不是
                "能不能勉强扯上关系"。扯不上就老实说扯不上。
 
-            5. summary 用一句话复述你的理解，第二人称，像在跟用户确认。
+            7. summary 用一句话复述你的理解，第二人称，像在跟用户确认。
                不要出现任何数字（不要说"60 分钟"，说"一个小时左右"）。
 
             输出格式：只输出一个 JSON 对象，不要任何解释文字：
             {
-              "states": ["TIRED"],
-              "biases": {"CROWD_TOLERANCE": -0.5},
-              "remainingMinutes": 60,
-              "maxDistanceKm": 2,
-              "maxTicketPrice": 50,
+              "operations": [
+                {"op": "ADD_PREFERENCE", "value": "TIRED"},
+                {"op": "MERGE_BIASES", "values": {"CROWD_TOLERANCE": -0.5}},
+                {"op": "SET_CONSTRAINT", "key": "durationMinutes", "value": 60}
+              ],
               "unrecognized": ["想找个能带狗的地方"],
               "summary": "你有点累了，想找个安静的地方待一会儿"
             }
 
-            没有内容的槽位：数组给空数组 []，对象给空对象 {}，数字给 null。
+            例子：“算了，去逛逛吧” → REPLACE_INTENTS，values 为 ["WANT_WALK"]。
+            “不想吃饭了” → REMOVE_INTENT，value 为 "HUNGRY"。
+            “不要安静的” → REMOVE_PREFERENCE，value 为 "QUIET"。
+            没有任何可用操作时，operations 给空数组 []。
             """;
 
     /** 系统提示词是常量，直接暴露给测试和调用方。 */
