@@ -13,7 +13,7 @@
 - **TravelMind** —— AI 旅行决策助手（V0.6 之后并入）。8 道旅行偏好题 → 8 维画像 →
   结合**当前时间/位置/天气/用户状态**从 59 个杭州 POI 里推荐 Top 3 → 反馈闭环
 
-旅行功能的原始计划书是 `C:\Users\dingjiahao\Downloads\TravelMind.docx`（24 节）。
+旅行功能的原始计划书是 `D:\Documents\TravelMind.docx`（24 节）。
 **仓库里有一份转换好的纯文本副本：`docs/TRAVELMIND.md`** —— 查内容看这份，
 **不要**去解 docx（它是 zip + XML，用文本工具打开是一堆二进制）。
 权威原件仍是那个 docx，改计划书时改它、再重新导出。
@@ -108,7 +108,7 @@ docker compose up -d postgres
 
 ### 3.5 测试
 
-- 现共 **279 个**，改动前后都要全绿。
+- 后端现共 **289 个**，前端现共 **25 个**，改动前后都要全绿。
 - **跑测试前先确认数据库在跑**（Docker 里的 PG）。本机原生 `postgresql-x64-17` 被
   Windows 智能应用控制拦停，已弃用。
 - 不用 H2（表结构用了 `timestamptz`/`numeric`/`IDENTITY` 等 PG 特有语法）。
@@ -158,9 +158,9 @@ docker compose up -d postgres
 
 ---
 
-## 5. ⚠️ 立刻要做的第一件事：修「空结果 → 下一次推荐 500」
+## 5. 已修复：空结果后下一次推荐 500
 
-**这是目前唯一一个用户点两下就能撞上的问题，未修，已 100% 复现。**
+这个问题已在 2026-09-16 修复，并补了两个集成测试防回归。
 
 **复现**：用户在**杭州以外**（实测平顶山）用真实定位 → 第一次推荐返回 `places: []`
 （59 个 POI 全在杭州）→ **第二次点推荐直接 500**。
@@ -176,7 +176,7 @@ docker compose up -d postgres
 位置：`backend/src/main/java/com/example/personality/service/RecommendationService.java`
 （`nextBatchNo` 在 **:226**，`saveAll` 在 **:227**，`batchRepository.save` 在 **:237**）。
 
-**修法（两处）**：
+**修法（两处，已落地）**：
 
 - **`top` 为空时不写批次行**——没有推荐就没有"这批是怎么算的"可解释。
   这也恢复了"每条批次行都有对应推荐"这个不变量。
@@ -199,8 +199,6 @@ docker compose up -d postgres
 - BYOK 没做自定义 base-url（见 §3.4 约束 1）；也没做 AI 端点限流（非目标）。
 - 人格侧 V0.5 搁置项：多次结果对比、让 `rawScore`/`itemCount` 返回真实值（现在返回 `-1`）、
   前端单元测试、历史分页。**这几项未复核是否还成立。**
-- ⚠️ `TravelFlowIntegrationTest` 断言 `places.length() == 3`，
-  跑在 UTC 深夜（杭州凌晨）会红。**这是改动之前就存在的**，尚未处理（见 §3.5 的 Clock 规矩）。
 
 ---
 
