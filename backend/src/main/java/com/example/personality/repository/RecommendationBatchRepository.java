@@ -2,6 +2,8 @@ package com.example.personality.repository;
 
 import com.example.personality.entity.RecommendationBatch;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -27,4 +29,17 @@ public interface RecommendationBatchRepository extends JpaRepository<Recommendat
      * {@code (session_id, batch_no)} 上的索引。
      */
     Optional<RecommendationBatch> findFirstBySessionIdOrderByBatchNoDesc(Long sessionId);
+
+    /**
+     * 下一批的批次号：已有最大批次 + 1，没有记录时返回 1。
+     *
+     * <p>正常情况下它应当和 {@link RecommendationRepository#nextBatchNo(Long)}
+     * 算出同一个值。这里仍然单独查询，是为了兼容 V11 缺陷留下的脏数据：
+     * 当时空结果也会写 {@code recommendation_batches}，却不会写
+     * {@code recommendations}。只看推荐表会重复使用已经占掉的批次号，
+     * 最终撞上唯一约束并返回 500。
+     */
+    @Query("select coalesce(max(b.batchNo), 0) + 1 from RecommendationBatch b "
+            + "where b.sessionId = :sessionId")
+    int nextBatchNo(@Param("sessionId") Long sessionId);
 }

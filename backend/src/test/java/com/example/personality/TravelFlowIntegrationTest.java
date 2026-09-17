@@ -1,13 +1,33 @@
 package com.example.personality;
 
+import com.example.personality.entity.RecommendationBatch;
 import com.example.personality.entity.QuestionScale;
+import com.example.personality.repository.RecommendationBatchRepository;
+import com.example.personality.repository.TestSessionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -33,6 +53,16 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
     /** 杭州西湖附近的坐标。V7 灌的 59 个 POI 全在杭州，用它才有候选。 */
     private static final double WEST_LAKE_LAT = 30.2420;
     private static final double WEST_LAKE_LNG = 120.1400;
+
+    /** 河南平顶山，离杭州所有演示 POI 都远超默认的 10 公里半径。 */
+    private static final double PINGDINGSHAN_LAT = 33.7350;
+    private static final double PINGDINGSHAN_LNG = 113.3077;
+
+    @Autowired
+    private RecommendationBatchRepository batchRepository;
+
+    @Autowired
+    private TestSessionRepository sessionRepository;
 
     // ==========================================================
     // 题库：?scale=TRAVEL
@@ -182,6 +212,101 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("同一会话并发请求推荐 → 每次都成功且批次号不重复")
+    void concurrentRequestsUseDistinctBatchNumbers() throws Exception {
+        TestSessionRef ref = createTravelSession(null);
+        try {
+            answerAllTravelQuestions(ref, 4, null);
+            mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref))
+                    .andExpect(status().isOk());
+
+            String body = json(Map.of("latitude", WEST_LAKE_LAT, "longitude", WEST_LAKE_LNG));
+            int requestCount = 6;
+            CountDownLatch ready = new CountDownLatch(requestCount);
+            CountDownLatch start = new CountDownLatch(1);
+
+            List<CompletableFuture<Integer>> requests = IntStream.range(0, requestCount)
+                    .mapToObj(ignored -> CompletableFuture.supplyAsync(() -> {
+                        ready.countDown();
+                        try {
+                            start.await(5, TimeUnit.SECONDS);
+                            MvcResult result = mockMvc.perform(withToken(
+                                            post("/api/travel/sessions/{id}/recommendations", ref.id()).with(csrf())
+                                                    .contentType(MediaType.APPLICATION_JSON)
+                                                    .content(body), ref))
+                                    .andReturn();
+                            if (result.getResponse().getStatus() != 200) {
+                                throw new AssertionError("并发推荐返回 " + result.getResponse().getStatus());
+                            }
+                            return objectMapper.readTree(result.getResponse().getContentAsByteArray())
+                                    .get("batchNo").asInt();
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }))
+                    .toList();
+
+            org.junit.jupiter.api.Assertions.assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+            List<Integer> batchNumbers = requests.stream().map(CompletableFuture::join).sorted().toList();
+            org.junit.jupiter.api.Assertions.assertEquals(List.of(1, 2, 3, 4, 5, 6), batchNumbers);
+        } finally {
+            sessionRepository.deleteById(ref.id());
+        }
+    }
+
+    @Test
+    @DisplayName("定位远离杭州时连续请求两次 → 都返回空结果，不写孤儿批次也不再 500")
+    void emptyRecommendationsDoNotCreateOrphanBatch() throws Exception {
+        TestSessionRef ref = createTravelSession(null);
+        answerAllTravelQuestions(ref, 4, null);
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref))
+                .andExpect(status().isOk());
+
+        String body = json(Map.of(
+                "latitude", PINGDINGSHAN_LAT,
+                "longitude", PINGDINGSHAN_LNG));
+
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(withToken(post("/api/travel/sessions/{id}/recommendations", ref.id()).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content(body), ref))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.batchNo").value(1))
+                    .andExpect(jsonPath("$.places.length()").value(0));
+        }
+
+        // 空结果不是一批可解释、可反馈的推荐，因此不能留下批次上下文。
+        org.junit.jupiter.api.Assertions.assertTrue(
+                batchRepository.findFirstBySessionIdOrderByBatchNoDesc(ref.id()).isEmpty());
+    }
+
+    @Test
+    @DisplayName("历史上已有孤儿批次 → 新推荐从两张表的最大批次继续，不会撞唯一约束")
+    void existingOrphanBatchDoesNotBreakNextRecommendation() throws Exception {
+        TestSessionRef ref = createTravelSession(null);
+        answerAllTravelQuestions(ref, 4, null);
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref))
+                .andExpect(status().isOk());
+
+        // 模拟 V11 缺陷已经写进生产库的状态：有第 7 批上下文，却没有第 7 批推荐。
+        batchRepository.save(RecommendationBatch.of(
+                ref.id(), 7, null,
+                LocalTime.of(10, 0), 240, BigDecimal.TEN, null,
+                Set.of(), Set.of(), Map.of(), null, null));
+
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/recommendations", ref.id()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("latitude", WEST_LAKE_LAT, "longitude", WEST_LAKE_LNG))), ref))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.batchNo").value(8))
+                .andExpect(jsonPath("$.places.length()").value(3));
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                batchRepository.findBySessionIdAndBatchNo(ref.id(), 8).isPresent());
+    }
+
+    @Test
     @DisplayName("不传定位 → 400（定位是这个接口的必填项）")
     void missingLocation_isRejected() throws Exception {
         TestSessionRef ref = createTravelSession(null);
@@ -275,5 +400,20 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
                 // 501 而不是 404：接口存在，只是功能没启用。前端能据此区分
                 // "地址写错了"和"AI 没配"，并给出不同的提示
                 .andExpect(status().isNotImplemented());
+    }
+
+    /**
+     * 固定在杭州时间 10:00，让“返回哪三个地点”的断言不受本机时区和执行时刻影响。
+     * 引擎会硬过滤已经关门的地点，不固定 Clock 就可能本地绿、CI 深夜红。
+     */
+    @TestConfiguration
+    static class FixedMorningClock {
+        @Bean
+        @Primary
+        Clock fixedClock() {
+            return Clock.fixed(
+                    Instant.parse("2026-06-15T02:00:00Z"),
+                    ZoneId.of("Asia/Shanghai"));
+        }
     }
 }

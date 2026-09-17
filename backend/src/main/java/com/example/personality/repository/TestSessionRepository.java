@@ -2,9 +2,14 @@ package com.example.personality.repository;
 
 import com.example.personality.entity.QuestionScale;
 import com.example.personality.entity.TestSession;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 测试会话的数据访问接口。
@@ -20,6 +25,16 @@ import java.util.List;
  * <p>这就是"约定优于配置"：你不需要为每个实体写一遍样板 CRUD。
  */
 public interface TestSessionRepository extends JpaRepository<TestSession, Long> {
+
+    /**
+     * 锁住单个会话，直到当前事务提交。
+     *
+     * <p>它相当于 JDBC 的 {@code SELECT ... FOR UPDATE}：同一会话的并发推荐会排队，
+     * 不同会话互不影响。这样“读最大批次 + 1 + 插入”才能作为一个原子步骤执行。
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from TestSession s where s.id = :id")
+    Optional<TestSession> findByIdForUpdate(@Param("id") Long id);
 
     /**
      * 某个用户在<b>指定量表</b>下的全部测试会话，按创建时间倒序（最近的在前）。

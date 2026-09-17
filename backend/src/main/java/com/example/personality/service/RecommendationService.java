@@ -153,6 +153,12 @@ public class RecommendationService {
     public RecommendationResponse recommend(Long sessionId, RecommendationRequest request,
                                             AmbientContext ambient) {
 
+        // 同一会话的推荐必须串行分配批次号。这里锁的是 test_sessions 的单行，
+        // 等价于手写 JDBC 的 SELECT ... FOR UPDATE；事务提交后锁自动释放。
+        // 如果不锁，两个请求可能同时读到 max(batch_no)=0，都去插第 1 批并撞唯一约束。
+        TestSession lockedSession = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("测试会话不存在：id=" + sessionId));
+
         // ① 用户是谁：读这次会话的旅行画像（没画像会抛 404）
         TravelProfile profile = travelProfileService.loadProfile(sessionId);
         Map<TravelDimension, Integer> questionnaire = profile.toPreferenceMap();
@@ -171,7 +177,7 @@ public class RecommendationService {
 
         // ③ 这个会话的历史：收到过哪些反馈、看过哪些地点
         SessionHistory history = loadHistory(sessionId,
-                resolveScopeSessionIds(sessionId, userIdOf(sessionId)), placesById, questionnaire);
+                resolveScopeSessionIds(sessionId, lockedSession.getUserId()), placesById, questionnaire);
 
         // ④ 用反馈修正过的偏好。没有反馈时它和问卷画像完全一样
         Map<TravelDimension, Integer> effective = adjuster.effectivePreference(
@@ -223,7 +229,12 @@ public class RecommendationService {
 
         // ⑧ 落库：新开一批。存下来的理由是"用户反馈要挂到某条推荐上"，
         //    以及"接受率是否随使用提升"这个核心指标需要历史数据（计划书第十九节）
-        int batchNo = recommendationRepository.nextBatchNo(sessionId);
+        // 两张表一起看，才能兼容 V11 已经留下的脏数据：空结果曾经只写批次行，
+        // 没写推荐行。只从 recommendations 算会重复使用已被占掉的批次号，
+        // 撞 recommendation_batches 的唯一约束并返回 500。
+        int batchNo = Math.max(
+                recommendationRepository.nextBatchNo(sessionId),
+                batchRepository.nextBatchNo(sessionId));
         List<Recommendation> saved = recommendationRepository.saveAll(toEntities(sessionId, batchNo, top));
 
         // ⑨ 记下这批推荐当时的处境（V11）。
@@ -234,18 +245,23 @@ public class RecommendationService {
         //
         // ⚠️ 这里存的是**最终生效的**状态（用户说的 + 系统推断的），
         // 并把"哪些是推断的"单独记一份——AI 转述时不能把猜的说成用户说的。
-        batchRepository.save(RecommendationBatch.of(
-                sessionId, batchNo,
-                ambient.location() == null ? null : blankToNull(ambient.location().label()),
-                context.now(),
-                context.remainingMinutes(),
-                BigDecimal.valueOf(context.maxDistanceKm()),
-                context.maxTicketPrice(),
-                context.states(),
-                inferred,
-                context.extraBias(),
-                context.weather() == null ? null : context.weather().condition(),
-                context.weather() == null ? null : context.weather().temperature()));
+        // 空结果没有任何推荐可解释，也没有反馈能挂上去，因此不算一批。
+        // 保持「每条批次上下文至少对应一条推荐」这个不变量，避免再次造出
+        // 只有 recommendation_batches、没有 recommendations 的孤儿批次。
+        if (!top.isEmpty()) {
+            batchRepository.save(RecommendationBatch.of(
+                    sessionId, batchNo,
+                    ambient.location() == null ? null : blankToNull(ambient.location().label()),
+                    context.now(),
+                    context.remainingMinutes(),
+                    BigDecimal.valueOf(context.maxDistanceKm()),
+                    context.maxTicketPrice(),
+                    context.states(),
+                    inferred,
+                    context.extraBias(),
+                    context.weather() == null ? null : context.weather().condition(),
+                    context.weather() == null ? null : context.weather().temperature()));
+        }
 
         return new RecommendationResponse(
                 sessionId,
