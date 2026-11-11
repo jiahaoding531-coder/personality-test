@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 
 import tools.jackson.databind.JsonNode;
@@ -222,15 +223,18 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
     @DisplayName("同一会话并发请求推荐 → 每次都成功且批次号不重复")
     void concurrentRequestsUseDistinctBatchNumbers() throws Exception {
         TestSessionRef ref = createTravelSession(null);
+        int requestCount = 6;
+        // 公用ForkJoinPool在两核CI上不足6个工作线程；等待起跑门闩会占满它。
+        // 独立线程池相当于专门准备6条Thread，保证这是并发业务测试而非CPU核数测试。
+        var requestExecutor = Executors.newFixedThreadPool(requestCount);
+        CountDownLatch start = new CountDownLatch(1);
         try {
             answerAllTravelQuestions(ref, 4, null);
             mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref))
                     .andExpect(status().isOk());
 
             String body = json(Map.of("latitude", WEST_LAKE_LAT, "longitude", WEST_LAKE_LNG));
-            int requestCount = 6;
             CountDownLatch ready = new CountDownLatch(requestCount);
-            CountDownLatch start = new CountDownLatch(1);
 
             List<CompletableFuture<Integer>> requests = IntStream.range(0, requestCount)
                     .mapToObj(ignored -> CompletableFuture.supplyAsync(() -> {
@@ -250,14 +254,21 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
-                    }))
+                    }, requestExecutor))
                     .toList();
 
             org.junit.jupiter.api.Assertions.assertTrue(ready.await(5, TimeUnit.SECONDS));
             start.countDown();
-            List<Integer> batchNumbers = requests.stream().map(CompletableFuture::join).sorted().toList();
+            List<Integer> batchNumbers = requests.stream().map(request -> {
+                try { return request.get(15, TimeUnit.SECONDS); }
+                catch (Exception e) { throw new AssertionError("并发推荐未在截止时间内成功", e); }
+            }).sorted().toList();
             org.junit.jupiter.api.Assertions.assertEquals(List.of(1, 2, 3, 4, 5, 6), batchNumbers);
         } finally {
+            // 超时路径也先放行和结束请求，再清理会话，防止后台请求读到已删除的夹具。
+            start.countDown();
+            requestExecutor.shutdownNow();
+            org.junit.jupiter.api.Assertions.assertTrue(requestExecutor.awaitTermination(15, TimeUnit.SECONDS));
             sessionRepository.deleteById(ref.id());
         }
     }

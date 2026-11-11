@@ -1618,9 +1618,9 @@
     },
     {
       "path": "backend/src/test/java/com/example/personality/TravelFlowIntegrationTest.java",
-      "gitBlob": "74786e887f67e216f4106d83fa57045bb12ce595",
-      "bytes": 25212,
-      "sha256": "c567cf8788a16720d240018e392d1ebca8e47cce901b4ed9d4ccecdbfc66f263"
+      "gitBlob": "1e7f7cb51a56dc1e0764f3c3d531b8be8e286af2",
+      "bytes": 26040,
+      "sha256": "2efa4b57da67ca8c42d92242051203e3e6dfba1c9ba5210acf4e66e8df3a99cd"
     },
     {
       "path": "backend/src/test/java/com/example/personality/TravelIntentIntegrationTest.java",
@@ -2182,9 +2182,9 @@
     },
     {
       "path": "docs/release/source-checkpoint-20261111.md",
-      "gitBlob": "0a8baafcf7251fd2a02a155eeb73089941719541",
-      "bytes": 2746,
-      "sha256": "96faa66e5b23a44d95e9d8f0b7e030d427a38db23a9fc3426639d41f0e53202f"
+      "gitBlob": "3ba21356bba5069f0b5e098dbdb8bd5de889cf1c",
+      "bytes": 3601,
+      "sha256": "7fd1dabe45d2bf0d5cd03b93967354baf2652e2f724b7673cdf4ccdbe4581823"
     },
     {
       "path": "frontend/.dockerignore",

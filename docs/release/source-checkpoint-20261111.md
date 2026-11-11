@@ -28,3 +28,12 @@ AI/BYOK在运行说明中关闭，代码仓库不含实际Key。开发数据库�
 本分支不能直接当作新生产部署授权；生产发布仍需隔离验收未完成的地名搜索、备份和恢复验证，逐字节核对既有迁移与生产Flyway校验和，且保持AI关闭。此次上传不迁移、不删除、不清零任何已有数据。
 
 原有Git历史没有被改写。本轮扫描针对拟上传快照，不等于对远端既有全部历史提供密钥无泄漏证明。
+
+
+## 首次CI发现并修复的测试环境问题
+
+首次独立PostgreSQL验证实际运行687项，686项通过、1项失败：TravelFlowIntegrationTest.concurrentRequestsUseDistinctBatchNumbers。其CountDownLatch要求6个任务先就绪，但默认ForkJoinPool在小核数Runner没有6条可并行工作线程，ready在5秒后失败，finally提前删除会话造成随后404。不是已复现生产推荐并发缺陷。
+
+保留原6请求、起跑等待和1–6批次断言，改用该测试独立6线程池，每个结果最多等待15秒；finally先放行门闩、结束执行器并等待退出，再删除测试会话。没有修改RecommendationEngine、RecommendationService、SQL或业务锁。
+
+该既有失败集成测试是本次TDD的RED依据；后续真实PostgreSQL全量结果以修复提交的Actions为准，未跳过任何测试。
