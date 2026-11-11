@@ -1,6 +1,7 @@
 package com.example.personality.amap;
 
 import com.example.personality.config.AmapProperties;
+import com.example.personality.exception.AmapRequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.RestClientException;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
@@ -16,9 +18,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 调高德 Web 服务接口的薄封装：拼 URL、带 key、判响应、吞异常。
+ * 调高德 Web 服务接口的薄封装：拼 URL、带 key、校验响应并分类错误。
  *
- * <h2>⚠️ 这里最重要的设计：失败一律返回 {@link Optional#empty()}，从不抛异常</h2>
+ * <h2>天气/地名使用 get 软失败；餐饮主功能使用 getRequired 明确报错。</h2>
  *
  * <p>这是它和 {@code DeepSeekAiReportGenerator} 最根本的区别。那个类失败了要抛
  * {@code AiServiceException}（接口返回 502），因为<b>AI 报告本身就是用户要的东西</b>——
@@ -81,6 +83,17 @@ public class AmapClient {
      * @return 响应 JSON；任何形式的失败都返回空
      */
     public Optional<JsonNode> get(String path, Map<String, String> params) {
+        try {
+            return Optional.of(getRequired(path, params));
+        } catch (AmapRequestException e) {
+            // 旧的天气和地名增强继续软失败；只记录安全分类，不记录完整请求或异常。
+            log.warn("高德增强暂不可用 path={} code={}", path, e.code());
+            return Optional.empty();
+        }
+    }
+
+    /** 餐饮等主功能使用严格调用，不能把权限或网络失败伪装成没有地点。 */
+    public JsonNode getRequired(String path, Map<String, String> params) {
         JsonNode body;
         try {
             body = restClient.get()
@@ -93,52 +106,27 @@ public class AmapClient {
                     .retrieve()
                     .body(JsonNode.class);
         } catch (RestClientResponseException e) {
-            // 上游返回了 4xx / 5xx。把 info/infocode 一起记下来——
-            // 高德的错误说明全在那两个字段里，不记就只能靠猜。
-            log.warn("高德接口返回错误 path={} status={} body={}",
-                    path, e.getStatusCode(), abbreviate(e.getResponseBodyAsString()));
-            return Optional.empty();
+            int status = e.getStatusCode().value();
+            throw new AmapRequestException(status == 401 || status == 403 ? "AMAP_PERMISSION_DENIED"
+                    : status == 429 ? "AMAP_QUOTA_EXCEEDED" : "AMAP_SEARCH_FAILED");
         } catch (ResourceAccessException e) {
-            // 连不上 或 超时。国内调高德一般不会遇到，但代理/VPN 开着的时候会。
-            log.warn("高德接口连接失败 path={} msg={}", path, e.getMessage());
-            return Optional.empty();
+            throw new AmapRequestException("AMAP_NETWORK_ERROR");
+        } catch (RestClientException e) {
+            throw new AmapRequestException("AMAP_SEARCH_FAILED");
         }
 
-        return checkEnvelope(path, body);
-    }
-
-    /**
-     * 检查高德自己的响应信封。
-     *
-     * <p><b>⚠️ 高德 HTTP 状态码永远是 200。</b>哪怕 key 错了、配额用完了，
-     * 它也是 200 + 一个 {@code status: "0"} 的包体。所以"HTTP 通了"
-     * 完全不等于"这次调用成功了"，必须再看 body 里的 status。
-     *
-     * <p>常见的 {@code infocode}：
-     * <ul>
-     *   <li>{@code 10000} 成功</li>
-     *   <li>{@code 10001} key 不正确或已过期</li>
-     *   <li>{@code 10003} 日调用量已用完</li>
-     *   <li>{@code 10009} 请求 key 与绑定平台不符（就是"Key 类型选错了"）</li>
-     * </ul>
-     * 把这几个记进日志，排查时能省掉一轮搜索。
-     */
-    private Optional<JsonNode> checkEnvelope(String path, JsonNode body) {
-        if (body == null) {
-            log.warn("高德接口返回空响应 path={}", path);
-            return Optional.empty();
+        if (body == null) throw new AmapRequestException("AMAP_SEARCH_FAILED");
+        if (!"1".equals(text(body, "status"))) {
+            String code = text(body, "infocode");
+            throw new AmapRequestException(switch (code) {
+                case "10001", "10002", "10005", "10006", "10007", "10008", "10009",
+                     "10012", "10013", "10041", "40002" -> "AMAP_PERMISSION_DENIED";
+                case "10003", "10004", "10010", "10014", "10019", "10020", "10021",
+                     "10044", "40000" -> "AMAP_QUOTA_EXCEEDED";
+                default -> "AMAP_SEARCH_FAILED";
+            });
         }
-
-        // ⚠️ status 是**字符串** "1" / "0"，不是数字 1 / 0。
-        // 写成 body.path("status").asInt() == 1 会永远不成立，
-        // 而且因为返回的是 0 而不是抛异常，表现得就像"接口一直失败"。
-        String status = text(body, "status");
-        if (!"1".equals(status)) {
-            log.warn("高德接口业务失败 path={} info={} infocode={}",
-                    path, text(body, "info"), text(body, "infocode"));
-            return Optional.empty();
-        }
-        return Optional.of(body);
+        return body;
     }
 
     /**
@@ -158,10 +146,4 @@ public class AmapClient {
         return value.asString("");
     }
 
-    private static String abbreviate(String text) {
-        if (text == null) {
-            return "";
-        }
-        return text.length() <= 300 ? text : text.substring(0, 300) + "...";
-    }
 }

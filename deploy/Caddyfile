@@ -1,0 +1,52 @@
+{
+	email {$ACME_EMAIL}
+	admin localhost:2019
+	# 代理故障日志也可能带请求头；删除整个请求对象，而非只依赖默认 Cookie 脱敏。
+	log {
+		format filter {
+			wrap json
+			fields {
+				request delete
+				resp_headers delete
+			}
+		}
+	}
+}
+
+(backend_proxy) {
+	reverse_proxy backend:8080 {
+		# 不接受外来 Forwarded 覆盖由 Caddy 生成的代理信息。
+		header_up -Forwarded
+	}
+}
+
+{$DEPLOY_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 1MB
+	}
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Permissions-Policy "geolocation=(self)"
+		-Server
+	}
+	# 不启用访问日志，健康检查数据库错误正文不穿透公网入口。
+	handle /api/health {
+		reverse_proxy backend:8080 {
+			header_up -Forwarded
+			@unhealthy status 5xx
+			handle_response @unhealthy {
+				header Content-Type application/json
+				respond `{"status":"DOWN"}` 503
+			}
+		}
+	}
+	handle /api/* {
+		header Cache-Control "no-store"
+		import backend_proxy
+	}
+	handle {
+		reverse_proxy frontend:80
+	}
+}

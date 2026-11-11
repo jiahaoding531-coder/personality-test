@@ -1,0 +1,423 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "PILOT_EVIDENCE_REGISTER",
+  "registerId": "yexian-pilot-evidence-v1",
+  "reviewedOn": "2026-10-27",
+  "status": "NOT_READY_FOR_EXPERIMENT",
+  "scope": "叶县首批三场所调查准备；不预设距离或步行路线，不直接并入离线运行输入",
+  "baseline": {
+    "branch": "feat/travelmind-ui-v2",
+    "head": "1e2315dac20289057096aeb9fb5385713562eb81",
+    "previousRegister": "pingdingshan-cultural-evidence-v1.json"
+  },
+  "policy": {
+    "databaseWrites": false,
+    "productionChanges": false,
+    "amapCalls": 0,
+    "llmCalls": 0,
+    "personalGpsCollected": false,
+    "coordinateConversionPerformed": false
+  },
+  "sources": [
+    {
+      "id": "G01",
+      "title": "叶县县衙博物馆公共服务信息",
+      "publishedOn": "2024-06-28",
+      "url": "https://yexian.gov.cn/contents/62012/447654.html",
+      "type": "OFFICIAL_SERVICE_PAGE",
+      "checkedOn": "2026-10-27",
+      "readStatus": "正文已读取",
+      "reuseScope": "只保存短事实摘要和出处，不复制全文图片；不声明统一开放数据集许可"
+    },
+    {
+      "id": "G02",
+      "title": "平发改收费〔2025〕86号县衙门票批复",
+      "publishedOn": "2025-05-06",
+      "url": "https://pds.gov.cn/contents/25929/435543.html",
+      "type": "OFFICIAL_PRICE_APPROVAL",
+      "checkedOn": "2026-10-27",
+      "readStatus": "正文已读取",
+      "reuseScope": "只保存短事实摘要和出处，不复制全文图片；不声明统一开放数据集许可"
+    },
+    {
+      "id": "G03",
+      "title": "叶县文庙公共服务信息",
+      "publishedOn": "2024-06-28",
+      "url": "https://yexian.gov.cn/contents/62012/447655.html",
+      "type": "OFFICIAL_SERVICE_PAGE",
+      "checkedOn": "2026-10-27",
+      "readStatus": "正文已读取",
+      "reuseScope": "只保存短事实摘要和出处，不复制全文图片；不声明统一开放数据集许可"
+    },
+    {
+      "id": "G04",
+      "title": "叶县文庙文化遗产介绍",
+      "publishedOn": "2019-12-25",
+      "url": "https://wglj.pds.gov.cn/contents/12739/262918.html",
+      "type": "OFFICIAL_HERITAGE_PAGE",
+      "checkedOn": "2026-10-27",
+      "readStatus": "正文已读取",
+      "reuseScope": "只保存短事实摘要和出处，不复制全文图片；不声明统一开放数据集许可"
+    },
+    {
+      "id": "G05",
+      "title": "叶公古街蹲点报道",
+      "publishedOn": "2025-10-23",
+      "url": "https://gaj.pds.gov.cn/contents/18987/726433.html",
+      "type": "DATED_FIELD_REPORT",
+      "checkedOn": "2026-10-27",
+      "readStatus": "正文已读取",
+      "reuseScope": "只保存短事实摘要和出处，不复制全文图片；不声明统一开放数据集许可"
+    },
+    {
+      "id": "G06",
+      "title": "县文旅局第21号提案答复",
+      "publishedOn": "2025-09-12",
+      "url": "https://yexian.gov.cn/contents/65043/447351.html",
+      "type": "OFFICIAL_PROJECT_PROGRESS",
+      "checkedOn": "2026-10-27",
+      "readStatus": "正文已读取",
+      "reuseScope": "只保存短事实摘要和出处，不复制全文图片；不声明统一开放数据集许可"
+    },
+    {
+      "id": "G07",
+      "title": "县衙门票听证会公告（二）",
+      "publishedOn": "2025-04-01",
+      "url": "https://www.yexian.gov.cn/contents/21752/702313.html",
+      "type": "PROPOSED_PRICE_HEARING",
+      "checkedOn": "2026-10-27",
+      "readStatus": "正文已读取",
+      "reuseScope": "只保存短事实摘要和出处，不复制全文图片；不声明统一开放数据集许可"
+    },
+    {
+      "id": "G08",
+      "title": "县城市管理局第25号提案答复",
+      "publishedOn": "2025-09-05",
+      "url": "https://yexian.gov.cn/contents/65043/447356.html",
+      "type": "DATED_MANAGEMENT_NOTICE",
+      "checkedOn": "2026-10-27",
+      "readStatus": "正文已读取",
+      "reuseScope": "只保存短事实摘要和出处，不复制全文图片；不声明统一开放数据集许可"
+    },
+    {
+      "id": "P01",
+      "title": "20260903 Ye County Yamen 10.jpg",
+      "url": "https://commons.wikimedia.org/w/index.php?title=File:20260903_Ye_County_Yamen_10.jpg&oldid=1277868032",
+      "type": "PUBLIC_PHOTO_METADATA",
+      "author": "Windmemories",
+      "publishedOn": "2026-09-17",
+      "capturedLocalTime": "2026-09-03T13:44:41",
+      "checkedOn": "2026-10-27",
+      "imageLicense": "CC BY-SA 4.0",
+      "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "caption": "县衙大门（上传者图注）",
+      "readStatus": "文件说明页及元数据已读取；未下载图片或独立核验照片内容",
+      "reuseScope": "保留作者、许可、版本链接；照片许可不证明坐标准确或入口可用"
+    },
+    {
+      "id": "P02",
+      "title": "20260903 Ye County Confucian Temple 08.jpg",
+      "url": "https://commons.wikimedia.org/w/index.php?title=File:20260903_Ye_County_Confucian_Temple_08.jpg&oldid=1277868030",
+      "type": "PUBLIC_PHOTO_METADATA",
+      "author": "Windmemories",
+      "publishedOn": "2026-09-17",
+      "capturedLocalTime": "2026-09-03T14:20:23",
+      "checkedOn": "2026-10-27",
+      "imageLicense": "CC BY-SA 4.0",
+      "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "caption": "叶县文庙（上传者图注）",
+      "readStatus": "文件说明页及元数据已读取；未下载图片或独立核验照片内容",
+      "reuseScope": "保留作者、许可、版本链接；照片许可不证明坐标准确或入口可用"
+    }
+  ],
+  "failedRetrievals": [
+    {
+      "provider": "OPENSTREETMAP",
+      "objectType": "way",
+      "objectId": "511900865",
+      "url": "https://www.openstreetmap.org/api/0.6/way/511900865/full.json",
+      "attemptedOn": "2026-10-27",
+      "status": "RETRIEVAL_FAILED",
+      "usableDataObtained": false,
+      "note": "本轮读取未成功，未获得可用于坐标核验的响应；不据此认定该对象不存在或地图没有相关数据。"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "YEX-01",
+      "name": "叶县县衙博物馆",
+      "aliases": [
+        "叶县县衙"
+      ],
+      "previousNodeId": "PDS-C09",
+      "identitySourceIds": [
+        "G01",
+        "G02"
+      ],
+      "documentedLocation": "叶县县城中心街北侧（G01）；尚未确认当前公共入口",
+      "culturalSummary": "明代县衙建筑及地方治理文化展示场所，按场所整体统计，不把内部展厅拆为独立候选。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "sourceId": null,
+        "accuracyMeters": null,
+        "verified": false
+      },
+      "coordinateLeads": [
+        {
+          "sourceId": "P01",
+          "latitude": 33.622136,
+          "longitude": 113.344483,
+          "pointRole": "CAMERA_LOCATION",
+          "coordinateSystem": "UNKNOWN",
+          "adopted": false,
+          "reason": "公开照片的相机位置，不是经独立核验的公共入口；所读元数据未明确证明原坐标基准和定位精度。"
+        }
+      ],
+      "priceEvidence": [
+        {
+          "sourceId": "G01",
+          "publishedOn": "2024-06-28",
+          "fullCny": 32,
+          "halfCny": 16,
+          "status": "OLDER_SERVICE_PAGE"
+        },
+        {
+          "sourceId": "G02",
+          "publishedOn": "2025-05-06",
+          "fullCny": 50,
+          "halfCny": 25,
+          "status": "LATEST_FORMAL_APPROVAL_FOUND",
+          "halfPriceBasis": "文件规定符合条件者半价；25元由50元乘以0.5计算，非另一项独立票价条文。",
+          "conditions": "全日制大中专学生持有效学生证等符合条文对象；叶县本地居民法定假期外持本人身份证免票。",
+          "currentOnSiteVerified": false
+        }
+      ],
+      "operatingEvidence": {
+        "sourceId": "G01",
+        "asOf": "2024-06-28",
+        "summer": "08:00–18:00",
+        "winter": "08:00–17:30",
+        "currentVerified": false
+      },
+      "showEvidence": {
+        "sourceId": "G01",
+        "asOf": "2024-06-28",
+        "bells": [
+          "09:00",
+          "10:00",
+          "11:00",
+          "15:30",
+          "16:30",
+          "17:30"
+        ],
+        "hearingDrama": [
+          "10:30",
+          "15:30"
+        ],
+        "currentVerified": false,
+        "note": "页面明示场次随淡旺季调整。"
+      },
+      "proposalEvidence": {
+        "sourceId": "G07",
+        "status": "HEARING_PROPOSAL_ONLY",
+        "proposedPackage": "县衙、文庙、观光车、演出",
+        "approvedPackageScopeConfirmed": false
+      },
+      "conflicts": [
+        "G01出现4A与5A相互矛盾表述；G02引正式文件明确4A，未采用旧页5A。",
+        "用户汇总的夏季19:00没有本轮可靠来源支持，不能自动覆盖G01，也不认定G01仍为今日时刻表。",
+        "用户推算坐标不采纳；新发现的相机坐标也不替代最终入口坐标。"
+      ],
+      "currentOperationalValues": {
+        "ticketPrice": null,
+        "openingHours": null,
+        "reservationRequired": null,
+        "freeParking": null
+      },
+      "annotation": null,
+      "popularityEvidence": null,
+      "experimentEligible": false,
+      "blockers": [
+        "公共入口与坐标系未核验",
+        "当前访问条件尚待实地或机构确认",
+        "人工属性和长尾定义未完成"
+      ]
+    },
+    {
+      "id": "YEX-02",
+      "name": "叶县文庙",
+      "aliases": [
+        "叶县文庙博物馆",
+        "孔庙"
+      ],
+      "previousNodeId": null,
+      "identitySourceIds": [
+        "G03",
+        "G04"
+      ],
+      "documentedLocation": "叶县中心街、昆阳古城东南隅（G03/G04）；公共入口待核验",
+      "culturalSummary": "儒学与祭孔建筑场所，保留大成殿等建筑。官方页面亭名写作愤乐亭，不采用无来源的奋乐亭写法。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "sourceId": null,
+        "accuracyMeters": null,
+        "verified": false
+      },
+      "coordinateLeads": [
+        {
+          "sourceId": "P02",
+          "latitude": 33.619642,
+          "longitude": 113.345811,
+          "pointRole": "CAMERA_LOCATION",
+          "coordinateSystem": "UNKNOWN",
+          "adopted": false,
+          "reason": "文件说明页的相机位置线索；并非公开入口定位或对坐标基准、精度的独立验证。"
+        }
+      ],
+      "priceEvidence": [
+        {
+          "sourceId": "G03",
+          "publishedOn": "2024-06-28",
+          "fullCny": 30,
+          "halfCny": 15,
+          "status": "DATED_SERVICE_PAGE",
+          "currentOnSiteVerified": false
+        }
+      ],
+      "operatingEvidence": {
+        "sourceId": "G03",
+        "asOf": "2024-06-28",
+        "summer": "08:00–18:00",
+        "winter": "08:00–17:30",
+        "currentVerified": false
+      },
+      "showEvidence": {
+        "sourceId": "G03",
+        "asOf": "2024-06-28",
+        "times": [
+          "10:30",
+          "16:00"
+        ],
+        "currentVerified": false
+      },
+      "accessEvidence": "已有2024年官方对公众开放及售票资料；不再仅有古建介绍，但当前现场是否开放尚未实测。",
+      "conflicts": [
+        "2025年县衙听证方案出现联票设想，正式批复未明确联票范围；不得默认当前县衙票已包含文庙或文庙仍单独执行30元。"
+      ],
+      "currentOperationalValues": {
+        "ticketPrice": null,
+        "openingHours": null,
+        "reservationRequired": null,
+        "freeParking": null
+      },
+      "annotation": null,
+      "popularityEvidence": null,
+      "experimentEligible": false,
+      "blockers": [
+        "公共入口与坐标系未核验",
+        "当前访问条件尚待实地或机构确认",
+        "人工属性和长尾定义未完成"
+      ]
+    },
+    {
+      "id": "YEX-03",
+      "name": "叶公古街",
+      "aliases": [],
+      "previousNodeId": null,
+      "identitySourceIds": [
+        "G05",
+        "G08"
+      ],
+      "documentedLocation": "叶县城区商业街；第五小学附近是报道中的地标，不能代替街道起讫点",
+      "culturalSummary": "官方报道中的地方生活与商业街区，是否纳入文化节点集应按统一标注规则确定。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "sourceId": null,
+        "accuracyMeters": null,
+        "verified": false
+      },
+      "coordinateLeads": [],
+      "datedObservations": [
+        {
+          "sourceId": "G05",
+          "observedOn": "2025-10-16",
+          "publishedOn": "2025-10-23",
+          "observation": "报道记录夜市活动，描述街道长2公里多、摊位近500个。",
+          "currentVerified": false,
+          "mayDefinePopularity": false
+        }
+      ],
+      "temporalNotes": [
+        "G08发布于2025-09-05，整治行动描述期为2025-07-01至10-01。",
+        "G05观察日2025-10-16晚于该行动描述期；不能将较早整治材料误写成后续关闭证据。",
+        "近500摊和一次现场热闹描述不是统一窗口的独立曝光统计。"
+      ],
+      "currentOperationalValues": {
+        "ticketPrice": null,
+        "openingHours": null,
+        "reservationRequired": null,
+        "freeParking": null
+      },
+      "annotation": null,
+      "popularityEvidence": null,
+      "experimentEligible": false,
+      "blockers": [
+        "公共入口与坐标系未核验",
+        "当前访问条件尚待实地或机构确认",
+        "人工属性和长尾定义未完成",
+        "街道范围与代表点规则尚未明确"
+      ]
+    }
+  ],
+  "entityRelations": [
+    {
+      "names": [
+        "叶公古街",
+        "明清街"
+      ],
+      "status": "UNRESOLVED",
+      "sourceIds": [
+        "G05",
+        "G06"
+      ],
+      "decision": "不自动合并为别名，也不把二者当成已核验的两个独立候选。",
+      "note": "G06为2025年工程进度及拟建闭环，不是路线全线开放公告。"
+    }
+  ],
+  "unadoptedUserClaims": [
+    {
+      "claim": "县衙推算坐标33.427,113.357",
+      "reason": "地址推算，无原始坐标来源及基准。",
+      "useAllowed": false
+    },
+    {
+      "claim": "县衙夏季开放至19:00及各项固定演出场次",
+      "reason": "本轮未找到更新且可靠的对应时刻表。",
+      "useAllowed": false
+    },
+    {
+      "claim": "无需预约、停车免费、古街全天开放",
+      "reason": "未完成适用日期和具体区域核验。",
+      "useAllowed": false
+    },
+    {
+      "claim": "真迹、独一无二、固定祭典日期等精确文化断言",
+      "reason": "需逐条对应文物档案或机构发布，不能整段采纳汇总。",
+      "useAllowed": false
+    }
+  ],
+  "followUp": {
+    "primaryNeed": "三个场所的公共入口或街区起讫点的地图分享链接与带坐标系的定位证据；最新门票/开放公告。",
+    "noPrivateData": "只采公共文化场所，不采住宅、个人轨迹、身份证或人脸信息。",
+    "executionGate": "未补证前不导出OfflineExperimentInput，不执行真实节点公平效果实验。"
+  }
+}

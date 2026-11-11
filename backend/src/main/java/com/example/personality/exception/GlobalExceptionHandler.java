@@ -65,12 +65,12 @@ public class GlobalExceptionHandler {
         log.warn("业务异常 status={} path={} message={}",
                 status.value(), request.getRequestURI(), ex.getMessage());
 
-        return ResponseEntity.status(status).body(ApiErrorResponse.of(
-                status.value(),
-                status.getReasonPhrase(),
-                ex.getMessage(),
-                request.getRequestURI()
-        ));
+        ApiErrorResponse body = ex.code() == null
+                ? ApiErrorResponse.of(status.value(), status.getReasonPhrase(),
+                        ex.getMessage(), request.getRequestURI())
+                : ApiErrorResponse.withCode(status.value(), status.getReasonPhrase(), ex.code(),
+                        ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(status).body(body);
     }
 
     /**

@@ -71,8 +71,8 @@ public class AiProperties {
     /** DeepSeek 的 OpenAI 兼容端点。换成别的厂商（通义、智谱、Kimi）通常也兼容这个协议。 */
     private String baseUrl = "https://api.deepseek.com/v1";
 
-    /** 模型名。deepseek-chat 是通用对话模型，够用且比 reasoner 快、便宜。 */
-    private String model = "deepseek-chat";
+    /** 模型名。Flash 用于短文本理解与解释；客户端显式关闭思考模式。 */
+    private String model = "deepseek-flash";
 
     /**
      * API Key。

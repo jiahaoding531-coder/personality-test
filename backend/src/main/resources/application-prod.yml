@@ -1,0 +1,48 @@
+# 仅 prod profile 生效，保留本地开发配置和业务实现。
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+  flyway:
+    validate-on-migrate: true
+    clean-disabled: true
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        secure: true
+        http-only: true
+        same-site: lax
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+logging:
+  level:
+    root: INFO
+    com.example.personality: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate.orm.jdbc.error: OFF
+    org.hibernate.orm.jdbc.warn: OFF
+    org.springframework.web.client: OFF
+    # 既有类可能输出上游原文/异常全文；仅禁用日志，不改业务。
+    com.example.personality.ai.DeepSeekChatClient: OFF
+    com.example.personality.ai.DeepSeekTextIntentGenerator: OFF
+    com.example.personality.ai.DeepSeekTravelReasonGenerator: OFF
+    com.example.personality.service.AmbientService: OFF
+    com.example.personality.service.WeatherService: OFF
+    com.example.personality.exception.GlobalExceptionHandler: OFF
+app:
+  behavior-retention:
+    event-days: 90
+    snapshot-days: 7
+    cleanup-enabled: true

@@ -6,6 +6,7 @@ import com.example.personality.entity.QuestionScale;
 import com.example.personality.entity.TestSession;
 import com.example.personality.entity.TravelProfile;
 import com.example.personality.exception.ResourceNotFoundException;
+import com.example.personality.exception.TravelProfileRequiredException;
 import com.example.personality.repository.TestSessionRepository;
 import com.example.personality.repository.TravelProfileRepository;
 import org.springframework.stereotype.Service;
@@ -71,7 +72,7 @@ public class TravelProfileService {
             return own.get();
         }
         return findLatestProfileOfSessionOwner(sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException(
+                .orElseThrow(() -> new TravelProfileRequiredException(
                         "会话 " + sessionId + " 还没有旅行画像，请先调用 submit 完成计分"));
     }
 

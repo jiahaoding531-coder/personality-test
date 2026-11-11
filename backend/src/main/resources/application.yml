@@ -32,8 +32,8 @@ spring:
     #    跑 docker compose 时要用 DB_URL 覆盖成服务名：
     #      DB_URL=jdbc:postgresql://postgres:5432/personality_mvp
     url: ${DB_URL:jdbc:postgresql://localhost:5432/personality_mvp}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:postgres}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
 
     # HikariCP 是 Spring Boot 默认的连接池，性能最好的 Java 连接池之一。
     # 你写 JdbcCrud.java 时每次操作都新建连接（DriverManager.getConnection），
@@ -126,8 +126,8 @@ app:
     # 只要改这里和 model，Java 代码一行不用动。
     base-url: ${AI_BASE_URL:https://api.deepseek.com/v1}
 
-    # deepseek-chat 是通用对话模型，做人格解读够用，比 reasoner 快且便宜。
-    model: ${AI_MODEL:deepseek-chat}
+    # Flash 用于短文本理解和解释；客户端显式关闭思考，不依赖厂商默认模式。
+    model: ${AI_MODEL:deepseek-flash}
 
     # ⚠️ API Key 只从环境变量读，绝对不要在这里写明文。
     #    这个文件要提交到 Git，一旦推上去，即使马上删除，
@@ -153,6 +153,18 @@ app:
     # 采样温度。人格解读属于创作类任务，用厂商默认值即可。
     # 调低会让每次输出趋同，调高会开始跑题。
     temperature: 1.0
+
+    # 同一用户只允许一个在途请求；预算在真实 HTTP 调用前独立提交。
+    # token 为保守预留单位，不是供应商返回的精确计费 token，更不是美元。
+    safety:
+      per-user-per-minute: ${AI_PER_USER_PER_MINUTE:6}
+      max-concurrent: ${AI_MAX_CONCURRENT:2}
+      max-daily-requests: ${AI_MAX_DAILY_REQUESTS:100}
+      max-total-requests: ${AI_MAX_TOTAL_REQUESTS:300}
+      max-daily-reserved-tokens: ${AI_MAX_DAILY_RESERVED_TOKENS:200000}
+      max-total-reserved-tokens: ${AI_MAX_TOTAL_RESERVED_TOKENS:1000000}
+      max-prompt-characters: ${AI_MAX_PROMPT_CHARACTERS:20000}
+      max-tracked-users: ${AI_MAX_TRACKED_USERS:1024}
 
 # ============================================================
 # 高德地图配置

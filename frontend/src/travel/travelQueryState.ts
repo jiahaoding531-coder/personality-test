@@ -27,6 +27,27 @@ export type TravelQueryOperation =
   | { op: 'REMOVE_BIAS'; key: string }
   | { op: 'CLEAR_TRAVEL_INTENT' }
 
+/** 后端 interpret/feedback 共用的操作类型名。 */
+export type InterpretOperation = TravelQueryOperation
+
+const TRAVEL_DIMENSIONS = new Set([
+  'NATURE',
+  'CULTURE',
+  'FOOD',
+  'PHOTOGRAPHY',
+  'HIDDEN_GEMS',
+  'CROWD_TOLERANCE',
+  'WALKING',
+  'PLANNING',
+])
+
+const CONSTRAINT_RANGES: Record<keyof TravelConstraints, { min: number; max: number; integer: boolean }> = {
+  durationMinutes: { min: 15, max: 1440, integer: true },
+  // operation 协议使用米；后端解析器的范围是 0.5~50 公里。
+  maxDistanceMeters: { min: 500, max: 50000, integer: false },
+  budgetMax: { min: 0, max: 1000, integer: true },
+}
+
 export function createEmptyTravelQueryState(): TravelQueryState {
   return {
     intents: [],
@@ -83,6 +104,166 @@ export function reduceTravelQueryOperations(
   operations: readonly TravelQueryOperation[],
 ): TravelQueryState {
   return operations.reduce(reduceTravelQuery, state)
+}
+
+/**
+ * 从后端 JSON 中提取受控操作。
+ *
+ * 后端响应来自模型解析链路，不能因为 TypeScript 的类型断言就把未知 JSON
+ * 直接交给 reducer；这里是普通 interpret 和自然语言反馈共用的运行时边界。
+ */
+export function interpretOperations(result: unknown): TravelQueryOperation[] {
+  if (!isRecord(result)) return []
+
+  const rawOperations = result.operations
+  if (Array.isArray(rawOperations)) {
+    if (rawOperations.length > 0) {
+      return rawOperations.flatMap((operation) => {
+        const parsed = parseTravelQueryOperation(operation)
+        return parsed === null ? [] : [parsed]
+      })
+    }
+  }
+
+  const operations: TravelQueryOperation[] = []
+  if (Array.isArray(result.states)) {
+    for (const item of result.states) {
+      if (!isRecord(item)) continue
+      const state = item.key
+      if (isTravelIntent(state)) {
+        appendParsedOperation(operations, { op: 'ADD_INTENT', value: state })
+      } else if (isTravelPreference(state)) {
+        appendParsedOperation(operations, { op: 'ADD_PREFERENCE', value: state })
+      }
+    }
+  }
+  if (isRecord(result.biases)) {
+    const values: Record<string, number> = {}
+    for (const [key, value] of Object.entries(result.biases)) {
+      const dimension = normalizeTravelDimension(key)
+      if (dimension !== null && isFiniteNumber(value) && value >= -1 && value <= 1) {
+        values[dimension] = value
+      }
+    }
+    if (Object.keys(values).length > 0) {
+      appendParsedOperation(operations, { op: 'MERGE_BIASES', values })
+    }
+  }
+  if (isFiniteNumber(result.remainingMinutes)) {
+    appendParsedOperation(operations, {
+      op: 'SET_CONSTRAINT', key: 'durationMinutes', value: result.remainingMinutes,
+    })
+  }
+  if (isFiniteNumber(result.maxDistanceKm)) {
+    appendParsedOperation(operations, {
+      op: 'SET_CONSTRAINT', key: 'maxDistanceMeters', value: result.maxDistanceKm * 1000,
+    })
+  }
+  if (isFiniteNumber(result.maxTicketPrice)) {
+    appendParsedOperation(operations, {
+      op: 'SET_CONSTRAINT', key: 'budgetMax', value: result.maxTicketPrice,
+    })
+  }
+  return operations
+}
+
+/** 只解析反馈响应已经返回的 operations，不从其它字段推断新状态。 */
+export function interpretFeedbackOperations(rawOperations: unknown): TravelQueryOperation[] {
+  return interpretOperations({ operations: rawOperations })
+}
+
+function parseTravelQueryOperation(value: unknown): TravelQueryOperation | null {
+  if (!isRecord(value) || typeof value.op !== 'string') return null
+  switch (value.op) {
+    case 'ADD_INTENT':
+      return isTravelIntent(value.value) ? { op: value.op, value: value.value } : null
+    case 'REMOVE_INTENT':
+      return isTravelIntent(value.value) ? { op: value.op, value: value.value } : null
+    case 'REPLACE_INTENTS':
+      {
+        const values = parseIntentList(value.values)
+        return values.length > 0 ? { op: 'REPLACE_INTENTS', values } : null
+      }
+    case 'ADD_PREFERENCE':
+      return isTravelPreference(value.value) ? { op: value.op, value: value.value } : null
+    case 'REMOVE_PREFERENCE':
+      return isTravelPreference(value.value) ? { op: value.op, value: value.value } : null
+    case 'SET_CONSTRAINT':
+      return isConstraintKey(value.key) && isValidConstraintValue(value.key, value.value)
+        ? { op: value.op, key: value.key, value: value.value }
+        : null
+    case 'MERGE_BIASES': {
+      if (!isRecord(value.values)) return null
+      const biases: Record<string, number> = {}
+      for (const [key, bias] of Object.entries(value.values)) {
+        const dimension = normalizeTravelDimension(key)
+        if (dimension !== null && isFiniteNumber(bias) && bias >= -1 && bias <= 1) {
+          biases[dimension] = bias
+        }
+      }
+      return Object.keys(biases).length > 0 ? { op: value.op, values: biases } : null
+    }
+    case 'REMOVE_BIAS':
+      return normalizeTravelDimension(value.key) === null
+        ? null
+        : { op: value.op, key: normalizeTravelDimension(value.key) as string }
+    case 'CLEAR_TRAVEL_INTENT':
+      return { op: value.op }
+    default:
+      return null
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function parseIntentList(value: unknown): TravelIntent[] {
+  if (!Array.isArray(value)) return []
+  const intents: TravelIntent[] = []
+  for (const item of value) {
+    if (isTravelIntent(item) && !intents.includes(item)) intents.push(item)
+  }
+  return intents
+}
+
+function isTravelIntent(value: unknown): value is TravelIntent {
+  return value === 'HUNGRY' || value === 'WANT_WALK'
+}
+
+function isTravelPreference(value: unknown): value is TravelPreference {
+  return value === 'TIRED' || value === 'QUIET' || value === 'PHOTO'
+    || value === 'CULTURE' || value === 'NATURE'
+}
+
+function isConstraintKey(value: unknown): value is keyof TravelConstraints {
+  return value === 'durationMinutes' || value === 'maxDistanceMeters' || value === 'budgetMax'
+}
+
+function isValidConstraintValue(key: keyof TravelConstraints, value: unknown): value is number | null {
+  if (value === null) return true
+  if (!isFiniteNumber(value)) return false
+  const range = CONSTRAINT_RANGES[key]
+  return value >= range.min && value <= range.max
+    && (!range.integer || Number.isInteger(value))
+}
+
+function normalizeTravelDimension(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim().toUpperCase()
+  return TRAVEL_DIMENSIONS.has(normalized) ? normalized : null
+}
+
+function appendParsedOperation(
+  operations: TravelQueryOperation[],
+  candidate: unknown,
+): void {
+  const parsed = parseTravelQueryOperation(candidate)
+  if (parsed !== null) operations.push(parsed)
 }
 
 const QUERY_LABELS: Record<TravelState, string> = {

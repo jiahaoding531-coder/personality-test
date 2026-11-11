@@ -20,7 +20,7 @@ services:
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?请在本地环境中设置独立数据库密码}
       POSTGRES_DB: personality_mvp
     volumes:
       # 具名卷：容器删了数据还在。
@@ -64,7 +64,7 @@ services:
     environment:
       # 用服务名而不是 localhost——容器里的 localhost 是它自己
       DB_URL: jdbc:postgresql://postgres:5432/personality_mvp
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?请在本地环境中设置独立数据库密码}
       # AI 默认关闭。不给 key 也能跑，只是「生成 AI 解读」返回 501。
       AI_ENABLED: ${AI_ENABLED:-false}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}

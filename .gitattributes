@@ -29,3 +29,6 @@
 *.zip  binary
 *.docx binary
 *.xlsx binary
+
+# 合成实验原报告按原始字节追溯，不能做行尾转换。
+/research/web-demo/fixtures/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

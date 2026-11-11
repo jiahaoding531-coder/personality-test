@@ -7,6 +7,11 @@ export default defineConfig({
   server: {
     port: 5173,
 
+    // Cloudflare Quick Tunnel 会使用随机的 *.trycloudflare.com 域名访问
+    // 本机 Vite。只放行这个后缀，不能写 allowedHosts: true，否则任意
+    // Host 都能穿过 Vite 的 DNS rebinding 防护。
+    allowedHosts: ['.trycloudflare.com'],
+
     // ---------------------------------------------------------------
     // 开发代理：把 /api 开头的请求转发到后端。
     //
@@ -24,6 +29,17 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        // 手机通过局域网 IP 打开 Vite 时，浏览器会把这个 IP 放进 Origin。
+        // 对浏览器而言 /api 仍是同源请求；跨到 8080 只是开发代理的内部细节，
+        // 因此不应把外层 Origin 继续交给后端做 CORS 校验。
+        configure(proxy) {
+          const eventProxy = proxy as unknown as {
+            on(event: 'proxyReq', listener: (request: { removeHeader(name: string): void }) => void): void
+          }
+          eventProxy.on('proxyReq', (proxyRequest) => {
+            proxyRequest.removeHeader('origin')
+          })
+        },
         // AI 生成需要 3~30 秒，默认超时不够，这里放宽到 2 分钟
         timeout: 120_000,
         proxyTimeout: 120_000,

@@ -1,0 +1,11 @@
+{
+  "artifactType": "EVIDENCE_FILE_CHECKSUMS",
+  "reviewedOn": "2026-10-27",
+  "algorithm": "SHA-256",
+  "meaning": "只验证本地文件是否变化，不证明事实、坐标或许可已经核实",
+  "files": {
+    "docs/experiments/data/pingdingshan-cultural-evidence-v1.json": "2764b786623f8c59ff2e906483b6eb83f5eb6dddf835660d3322ea497568d476",
+    "docs/experiments/pingdingshan-cultural-data-readiness.md": "ecd852649edaad90e828bec7a39004ffed9ee27f2335ab7901f9505214229d2b",
+    "docs/experiments/pingdingshan-cultural-annotation-v1.md": "4af0beb93f7656556f233f84261d82242884865add9b56fe1e3ab960f1fcd159"
+  }
+}

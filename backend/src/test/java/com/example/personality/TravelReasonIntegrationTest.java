@@ -60,7 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 // ⚠️ 这个类特意配了**服务端 key**，和默认配置（什么都不配）不一样。
 //
-// 默认配置下没有任何凭据，接口一律 501——那条路径由
+// 默认配置下没有任何凭据，登录本人调用接口返回 501——那条路径由
 // TravelFlowIntegrationTest.reasonsReturnNotImplementedWhenAiIsDisabled 守着。
 // 这里要测的是"有凭据时怎么选、怎么用"，所以得先让服务端有一把。
 @SpringBootTest(properties = {
@@ -73,35 +73,37 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
 
     private static final double WEST_LAKE_LAT = 30.2420;
     private static final double WEST_LAKE_LNG = 120.1400;
+    private MockHttpSession login;
 
     @Autowired
     private RecommendationRepository recommendationRepository;
 
     @BeforeEach
-    void resetFake() {
+    void resetFake() throws Exception {
+        login = registerAndLogin(uniqueUsername("reason_owner"), "password123");
         FakeReasonGenerator.calls.set(0);
         FakeReasonGenerator.countToReturn = 3;
         FakeReasonGenerator.lastCredentials = null;
     }
 
     // ==========================================================
-    // 访客自带 key（BYOK）
+    // 登录用户自带 key（BYOK）
     // ==========================================================
 
     @Test
-    @DisplayName("【核心】访客带了 key → 用的就是他的，不是服务端那把")
+    @DisplayName("【核心】登录用户带了 key → 用的就是他的，不是服务端那把")
     void visitorKeyTakesPrecedenceOverServerKey() throws Exception {
         TestSessionRef ref = prepareSession();
 
         mockMvc.perform(reasonRequestWithAi(ref, "MOONSHOT", "sk-visitor-own-key"))
                 .andExpect(status().isOk())
-                // providerName 反映的是访客选的厂商和它的默认模型
+                // providerName 反映的是用户选的厂商和它的默认模型
                 .andExpect(jsonPath("$.provider").value("moonshot:moonshot-v1-8k"));
 
         AiCredentials used = FakeReasonGenerator.lastCredentials;
         assertNotNull(used, "生成器应该收到凭据");
-        assertEquals("sk-visitor-own-key", used.apiKey(), "用的应该是访客自己的 key");
-        assertTrue(used.userSupplied(), "应该被标记为访客自带");
+        assertEquals("sk-visitor-own-key", used.apiKey(), "用的应该是用户自己的 key");
+        assertTrue(used.userSupplied(), "应该被标记为用户自带");
         // ⚠️ URL 必须来自白名单常量，不能来自请求
         assertEquals(AiProvider.MOONSHOT.baseUrl(), used.baseUrl());
     }
@@ -116,7 +118,7 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
         AiCredentials used = FakeReasonGenerator.lastCredentials;
         assertNotNull(used);
         assertEquals("server-test-key", used.apiKey());
-        assertFalse(used.userSupplied(), "服务端那把不该被标记成访客自带");
+        assertFalse(used.userSupplied(), "服务端那把不该被标记成用户自带");
     }
 
     @Test
@@ -127,7 +129,7 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
         // 厂商是可选项，不该因为它没填就让整个功能用不了
         mockMvc.perform(reasonRequestWithAi(ref, null, "sk-visitor-own-key"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.provider").value("deepseek:deepseek-chat"));
+                .andExpect(jsonPath("$.provider").value("deepseek:deepseek-flash"));
     }
 
     @Test
@@ -184,7 +186,7 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionId").value(ref.id()))
                 .andExpect(jsonPath("$.batchNo").value(1))
-                // 没带访客 key → 用服务端配置的那把，所以回报的是服务端的模型
+                // 没带用户 key → 用服务端配置的那把，所以回报的是服务端的模型
                 .andExpect(jsonPath("$.provider").value("custom:test-model"))
                 // 第一次生成，不是缓存
                 .andExpect(jsonPath("$.cached").value(false))
@@ -205,7 +207,9 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
             assertTrue(row.getReason() != null && !row.getReason().isBlank(),
                     "第 " + row.getRankNo() + " 名的理由没有落库");
         }
-        assertTrue(saved.get(0).getReason().contains("第1名"), "落库的内容应该是生成器给的那句");
+        var cache=objectMapper.readTree(saved.get(0).getReason());
+        assertEquals(1,cache.path("version").asInt());
+        assertTrue(cache.path("evidenceIds").isArray(),"只保存可验证依据，不保存模型自由文本");
     }
 
     @Test
@@ -239,7 +243,7 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("只生成了一部分时，下次请求会补全（不把半成品当缓存）")
+    @DisplayName("只选择了一部分时本地补全并缓存，不自动追加付费请求")
     void partialResultIsNotTreatedAsCache() throws Exception {
         TestSessionRef ref = prepareSession();
 
@@ -247,15 +251,15 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
         FakeReasonGenerator.countToReturn = 2;
         mockMvc.perform(reasonRequest(ref, false))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.reasons.length()").value(2));
+                .andExpect(jsonPath("$.reasons.length()").value(3));
 
-        // 还有地点没有理由 → 不算缓存命中，应该再试一次
+        // 未选择的地点已有确定性依据，再次访问只复用缓存。
         FakeReasonGenerator.countToReturn = 3;
         mockMvc.perform(reasonRequest(ref, false))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reasons.length()").value(3));
 
-        assertEquals(2, FakeReasonGenerator.calls.get());
+        assertEquals(1, FakeReasonGenerator.calls.get());
     }
 
     // ==========================================================
@@ -263,30 +267,46 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
     // ==========================================================
 
     @Test
-    @DisplayName("【安全】别人的会话拿不到理由")
+    @DisplayName("【安全】登录用户拿不到别人的理由，即使拿到正确令牌")
     void cannotGenerateReasonsForSomeoneElsesSession() throws Exception {
         TestSessionRef victim = prepareSession();
-        TestSessionRef attacker = prepareSession();
+        MockHttpSession attackerLogin = registerAndLogin(uniqueUsername("reason_attacker"), "password123");
+        TestSessionRef attacker = createTravelSession(attackerLogin);
 
-        // 匿名会话之间靠 accessToken 区分；拿自己的 token 去请求别人的会话
-        mockMvc.perform(post("/api/travel/sessions/{id}/recommendations/reasons", victim.id())
-                        .with(csrf())
-                        .header(SESSION_TOKEN_HEADER, attacker.token()))
-                // ⚠️ 404 而不是 403：403 会泄露"这个会话存在"
-                .andExpect(status().isNotFound());
+        // AI 必须属于当前登录用户，泄露的正确 token 也不能替代会话归属。
+        for (String token : List.of(attacker.token(), victim.token(), "not-a-uuid")) {
+            mockMvc.perform(post("/api/travel/sessions/{id}/recommendations/reasons", victim.id())
+                            .with(csrf())
+                            .session(attackerLogin)
+                            .header(SESSION_TOKEN_HEADER, token))
+                    // ⚠️ 404 而不是 403：403 会泄露"这个会话存在"
+                    .andExpect(status().isNotFound());
+        }
 
         assertEquals(0, FakeReasonGenerator.calls.get(),
                 "被拦下的请求绝不该走到调用大模型那一步——那一步是要花钱的");
     }
 
     @Test
-    @DisplayName("没有访问令牌的匿名请求也拿不到")
+    @DisplayName("没有访问令牌的匿名请求返回 401")
     void anonymousRequestWithoutTokenIsRejected() throws Exception {
         TestSessionRef victim = prepareSession();
 
         mockMvc.perform(post("/api/travel/sessions/{id}/recommendations/reasons", victim.id())
                         .with(csrf()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnauthorized());
+
+        assertEquals(0, FakeReasonGenerator.calls.get());
+    }
+
+    @Test
+    @DisplayName("匿名请求即使持有正确令牌也不能生成理由")
+    void anonymousRequestWithCorrectTokenIsRejected() throws Exception {
+        TestSessionRef ref = prepareSession();
+
+        mockMvc.perform(withToken(
+                        post("/api/travel/sessions/{id}/recommendations/reasons", ref.id()).with(csrf()), ref))
+                .andExpect(status().isUnauthorized());
 
         assertEquals(0, FakeReasonGenerator.calls.get());
     }
@@ -294,9 +314,10 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
     @Test
     @DisplayName("还没推荐过就请求理由 → 404，且不调用大模型")
     void reasonsBeforeAnyRecommendationIsNotFound() throws Exception {
-        TestSessionRef ref = createTravelSession(null);
-        answerAllTravelQuestions(ref, 4, null);
-        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref))
+        TestSessionRef ref = createTravelSession(login);
+        answerAllTravelQuestions(ref, 4, login);
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id())
+                        .with(csrf()).session(login), ref))
                 .andExpect(status().isOk());
 
         // 建了会话、也提交了，但从来没请求过推荐
@@ -312,14 +333,16 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
 
     /** 建会话 → 答题 → 提交 → 拿一次推荐。返回的会话已经有一批推荐了。 */
     private TestSessionRef prepareSession() throws Exception {
-        TestSessionRef ref = createTravelSession(null);
-        answerAllTravelQuestions(ref, 4, null);
-        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref))
+        TestSessionRef ref = createTravelSession(login);
+        answerAllTravelQuestions(ref, 4, login);
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id())
+                        .with(csrf()).session(login), ref))
                 .andExpect(status().isOk());
 
         mockMvc.perform(withToken(
                         post("/api/travel/sessions/{id}/recommendations", ref.id())
                                 .with(csrf())
+                                .session(login)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(json(Map.of(
                                         "latitude", WEST_LAKE_LAT,
@@ -330,22 +353,19 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
         return ref;
     }
 
-    private static MockHttpServletRequestBuilder reasonRequest(TestSessionRef ref,
-                                                               boolean regenerate) {
-        return withToken(
-                post("/api/travel/sessions/{id}/recommendations/reasons", ref.id())
+    private MockHttpServletRequestBuilder reasonRequest(TestSessionRef ref,
+                                                        boolean regenerate) {
+        // 本人凭登录身份调用 AI，无需附带会话令牌。
+        return post("/api/travel/sessions/{id}/recommendations/reasons", ref.id())
                         .with(csrf())
-                        .param("regenerate", String.valueOf(regenerate)),
-                ref);
+                        .session(login)
+                        .param("regenerate", String.valueOf(regenerate));
     }
 
-    /** 带上访客自带的 AI 凭据。传 null 表示该项不带头。 */
-    private static MockHttpServletRequestBuilder reasonRequestWithAi(
+    /** 带上登录用户自带的 AI 凭据。传 null 表示该项不带头。 */
+    private MockHttpServletRequestBuilder reasonRequestWithAi(
             TestSessionRef ref, String provider, String key) {
-        MockHttpServletRequestBuilder builder = withToken(
-                post("/api/travel/sessions/{id}/recommendations/reasons", ref.id())
-                        .with(csrf()),
-                ref);
+        MockHttpServletRequestBuilder builder = reasonRequest(ref, false);
         if (provider != null) {
             builder = builder.header(AiCredentialsResolver.PROVIDER_HEADER, provider);
         }
@@ -386,7 +406,7 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
         /**
          * 最后一次收到的凭据。
          *
-         * <p>⚠️ <b>这是"访客的 key 到底有没有被用上"唯一能验证的地方。</b>
+         * <p>⚠️ <b>这是"用户的 key 到底有没有被用上"唯一能验证的地方。</b>
          * 接口的响应里不会（也绝不该）出现 key，所以只能在这一层看。
          * 光断言"生成成功了"是不够的——用服务端 key 跑也"成功"。
          */
@@ -399,9 +419,11 @@ class TravelReasonIntegrationTest extends IntegrationTestBase {
             lastCredentials = credentials;
 
             List<RankedReason> reasons = new ArrayList<>();
+            var catalog=com.example.personality.ai.TravelReasonEvidence.from(input);
             int count = Math.min(countToReturn, input.places().size());
             for (int i = 0; i < count; i++) {
-                reasons.add(new RankedReason(i + 1, "第" + (i + 1) + "名的理由"));
+                var ids=catalog.fallbackIds(i+1);
+                reasons.add(new RankedReason(i+1,catalog.render(i+1,ids),ids,true));
             }
             return reasons;
         }

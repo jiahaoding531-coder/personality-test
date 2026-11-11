@@ -164,6 +164,11 @@ public class SecurityConfig {
                 // 授权规则
                 // ---------------------------------------------------------
                 .authorizeHttpRequests(auth -> auth
+                        // 所有付费 AI 端点必须先登录；Controller 再严格验证会话本人归属。
+                        .requestMatchers(HttpMethod.POST, "/api/test-sessions/*/ai-report",
+                                "/api/travel/sessions/*/interpret",
+                                "/api/travel/sessions/*/feedback-events",
+                                "/api/travel/sessions/*/recommendations/reasons").authenticated()
                         // 认证相关端点必须匿名可访问，否则没人能登录进来
                         .requestMatchers("/api/auth/register", "/api/auth/login",
                                 "/api/auth/logout", "/api/auth/me").permitAll()
@@ -188,7 +193,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/travel/sessions/*/submit").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/travel/sessions/*/profile").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/travel/sessions/*/recommendations").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/travel/sessions/*/restaurants/search").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/travel/sessions/*/behavior-events").permitAll()
                         .requestMatchers(HttpMethod.POST,
+                                "/api/travel/sessions/*/recommendations/*/feedback").permitAll()
+                        .requestMatchers(HttpMethod.DELETE,
                                 "/api/travel/sessions/*/recommendations/*/feedback").permitAll()
 
                         // 「我的」数据必须登录

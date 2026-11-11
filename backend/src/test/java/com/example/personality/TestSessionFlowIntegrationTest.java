@@ -308,9 +308,12 @@ class TestSessionFlowIntegrationTest extends IntegrationTestBase {
     @Test
     @DisplayName("未配置 API Key 时 AI 报告返回 501，而不是 500")
     void aiReportReturns501WhenDisabled() throws Exception {
-        TestSessionRef session = createTestSession(null);
-        answerAllQuestions(session, 3, null);
-        submitRequest(session).andExpect(status().isOk());
+        var login = registerAndLogin(uniqueUsername("disabled_report_owner"), "password123");
+        TestSessionRef session = createTestSession(login);
+        answerAllQuestions(session, 3, login);
+        mockMvc.perform(withToken(post("/api/test-sessions/{id}/submit", session.id())
+                        .with(csrf()).session(login), session))
+                .andExpect(status().isOk());
 
         // ⚠️ 这段文案不是随手写的，它是**用户真的会看到的那句话**。
         //
@@ -324,7 +327,7 @@ class TestSessionFlowIntegrationTest extends IntegrationTestBase {
         // 断言这几件事，是为了防止有人日后顺手把它改回一句"功能未实现"——
         // 那一改，这个功能的全部意义就没了，而且不会有任何报错。
         mockMvc.perform(withToken(post("/api/test-sessions/{id}/ai-report", session.id())
-                        .with(csrf()), session))
+                        .with(csrf()).session(login), session))
                 .andExpect(status().isNotImplemented())
                 .andExpect(jsonPath("$.message")
                         .value(org.hamcrest.Matchers.containsString("自己的")))

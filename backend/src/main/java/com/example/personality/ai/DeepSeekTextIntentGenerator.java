@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
@@ -27,7 +28,8 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(DeepSeekTextIntentGenerator.class);
 
-    private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final JsonMapper JSON = JsonMapper.builder()
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
 
     /**
      * 数值槽位的合法区间。
@@ -97,9 +99,10 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
         try {
             root = JSON.readTree(json);
         } catch (RuntimeException e) {
-            log.warn("文本解析返回的不是合法 JSON，前 200 字：{}", abbreviate(json));
-            throw new AiServiceException("AI 返回的内容不是合法的 JSON，无法解析", e);
+            log.warn("文本解析返回的不是合法 JSON");
+            throw new AiServiceException("AI 返回的内容不是合法的 JSON，无法解析");
         }
+        if (root == null || !root.isObject()) throw new AiServiceException("AI 返回的 JSON 根节点必须是对象");
 
         return new TextIntentResult(
                 parseStates(root.path("states")),
@@ -115,7 +118,7 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
                 parseOperations(root.path("operations")));
     }
 
-    private static List<TravelIntentOperation> parseOperations(JsonNode node) {
+    static List<TravelIntentOperation> parseOperations(JsonNode node) {
         List<TravelIntentOperation> operations = new ArrayList<>();
         if (!node.isArray()) {
             return operations;
@@ -128,17 +131,25 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
             } catch (IllegalArgumentException ignored) {
                 continue;
             }
+            // 只接受操作所需的字段，禁止夹带 userId、地点或任意业务指令。
+            Set<String> allowed = switch (op) {
+                case ADD_INTENT, REMOVE_INTENT, ADD_PREFERENCE, REMOVE_PREFERENCE -> Set.of("op", "value");
+                case REPLACE_INTENTS, MERGE_BIASES -> Set.of("op", "values");
+                case SET_CONSTRAINT -> Set.of("op", "key", "value");
+                case REMOVE_BIAS -> Set.of("op", "key");
+                case CLEAR_TRAVEL_INTENT -> Set.of("op");
+            };
+            if (!item.isObject() || item.properties().stream().anyMatch(e -> !allowed.contains(e.getKey()))) continue;
 
             TravelIntentOperation parsed = switch (op) {
                 case ADD_INTENT, REMOVE_INTENT -> parseStateOperation(item, op, true);
                 case ADD_PREFERENCE, REMOVE_PREFERENCE -> parseStateOperation(item, op, false);
                 case REPLACE_INTENTS -> parseReplaceIntentsOperation(item);
                 case SET_CONSTRAINT -> parseConstraintOperation(item);
-                case MERGE_BIASES -> new TravelIntentOperation(
-                        op, null, List.of(), null, null,
-                        parseBiases(item.path("values")));
-                case CLEAR_TRAVEL_INTENT -> new TravelIntentOperation(
-                        op, null, List.of(), null, null, Map.of());
+                case MERGE_BIASES -> parseBiases(item.path("values")).isEmpty() ? null
+                        : TravelIntentOperation.mergeBiases(parseBiases(item.path("values")));
+                case REMOVE_BIAS -> parseRemoveBiasOperation(item);
+                case CLEAR_TRAVEL_INTENT -> TravelIntentOperation.clearTravelIntent();
             };
             if (parsed != null) {
                 operations.add(parsed);
@@ -153,7 +164,13 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
         if (state == null || isCoreIntent(state) != wantsIntent) {
             return null;
         }
-        return new TravelIntentOperation(op, state, List.of(), null, null, Map.of());
+        return switch (op) {
+            case ADD_INTENT -> TravelIntentOperation.addIntent(state);
+            case REMOVE_INTENT -> TravelIntentOperation.removeIntent(state);
+            case ADD_PREFERENCE -> TravelIntentOperation.addPreference(state);
+            case REMOVE_PREFERENCE -> TravelIntentOperation.removePreference(state);
+            default -> throw new IllegalArgumentException("不是状态操作：" + op);
+        };
     }
 
     private static TravelIntentOperation parseReplaceIntentsOperation(JsonNode item) {
@@ -161,9 +178,7 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
         if (states.isEmpty()) {
             return null;
         }
-        return new TravelIntentOperation(
-                TravelIntentOperation.Type.REPLACE_INTENTS,
-                null, states, null, null, Map.of());
+        return TravelIntentOperation.replaceIntents(states);
     }
 
     private static TravelIntentOperation parseConstraintOperation(JsonNode item) {
@@ -178,21 +193,27 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
             return null;
         }
 
-        Double rawValue = asDouble(item.path("value"));
+        JsonNode valueNode = item.path("value");
+        if (valueNode.isNull()) {
+            return TravelIntentOperation.clearConstraint(key);
+        }
+        Double rawValue = asDouble(valueNode);
         if (rawValue == null) {
             return null;
         }
-        double value = switch (key) {
-            case DURATION_MINUTES -> Math.max(MIN_REMAINING_MINUTES,
-                    Math.min(MAX_REMAINING_MINUTES, Math.round(rawValue)));
-            case MAX_DISTANCE_METERS -> Math.max(MIN_DISTANCE_KM * 1000,
-                    Math.min(MAX_DISTANCE_KM * 1000, rawValue));
-            case BUDGET_MAX -> Math.max(MIN_TICKET_PRICE,
-                    Math.min(MAX_TICKET_PRICE, Math.round(rawValue)));
+        boolean valid = switch (key) {
+            case DURATION_MINUTES -> rawValue >= MIN_REMAINING_MINUTES && rawValue <= MAX_REMAINING_MINUTES && rawValue == Math.rint(rawValue);
+            case MAX_DISTANCE_METERS -> rawValue >= MIN_DISTANCE_KM * 1000 && rawValue <= MAX_DISTANCE_KM * 1000;
+            case BUDGET_MAX -> rawValue >= MIN_TICKET_PRICE && rawValue <= MAX_TICKET_PRICE && rawValue == Math.rint(rawValue);
         };
-        return new TravelIntentOperation(
-                TravelIntentOperation.Type.SET_CONSTRAINT,
-                null, List.of(), key, value, Map.of());
+        return valid ? TravelIntentOperation.setConstraint(key, rawValue) : null;
+    }
+
+    private static TravelIntentOperation parseRemoveBiasOperation(JsonNode item) {
+        String rawKey = text(item, "key").trim();
+        return TravelDimension.fromName(rawKey)
+                .map(TravelIntentOperation::removeBias)
+                .orElse(null);
     }
 
     private static List<TravelState> parseOperationStates(JsonNode node, boolean wantsIntent) {
@@ -265,8 +286,8 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
         node.properties().forEach(entry -> {
             TravelDimension.fromName(entry.getKey()).ifPresent(dimension -> {
                 Double value = asDouble(entry.getValue());
-                if (value != null) {
-                    biases.put(dimension, Math.max(-1.0, Math.min(1.0, value)));
+                if (value != null && value >= -1.0 && value <= 1.0 && dimension.affectsPlaceChoice()) {
+                    biases.put(dimension, value);
                 }
             });
         });
@@ -278,7 +299,7 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
         if (value == null) {
             return null;
         }
-        return (int) Math.max(min, Math.min(max, Math.round(value)));
+        return value >= min && value <= max && value == Math.rint(value) ? value.intValue() : null;
     }
 
     private static Double parseClampedDouble(JsonNode node, double min, double max) {
@@ -286,7 +307,7 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
         if (value == null) {
             return null;
         }
-        return Math.max(min, Math.min(max, value));
+        return value >= min && value <= max ? value : null;
     }
 
     private static List<String> parseStringList(JsonNode node) {
@@ -311,11 +332,13 @@ public class DeepSeekTextIntentGenerator implements TextIntentGenerator {
             return null;
         }
         if (node.isNumber()) {
-            return node.asDouble();
+            double number = node.asDouble();
+            return Double.isFinite(number) ? number : null;
         }
         if (node.isString()) {
             try {
-                return Double.parseDouble(node.asString("").trim());
+                double number = Double.parseDouble(node.asString("").trim());
+                return Double.isFinite(number) ? number : null;
             } catch (NumberFormatException e) {
                 return null;
             }

@@ -105,6 +105,16 @@ public class SessionAccessGuard {
         }
     }
 
+    /** AI 是登录用户的付费能力，不能用匿名令牌或泄露的旧令牌替代归属校验。 */
+    @Transactional(readOnly = true)
+    public TestSession requireAiAccess(Long sessionId, AppUserPrincipal principal) {
+        if (principal == null) {
+            throw new com.example.personality.exception.AiRequestRejectedException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "AI_LOGIN_REQUIRED", "请登录后使用 AI");
+        }
+        return requireAccess(sessionId, null, principal);
+    }
+
     /**
      * 构造「不存在」异常。
      *

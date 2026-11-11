@@ -28,8 +28,12 @@ import java.util.List;
 public record FeedbackResponse(
         Long recommendationId,
         String reaction,
-        List<Adjustment> adjustments
+        List<Adjustment> adjustments,
+        FeedbackState feedbackState
 ) {
+    public FeedbackResponse(Long recommendationId,String reaction,List<Adjustment> adjustments) {
+        this(recommendationId,reaction,adjustments,null);
+    }
 
     /**
      * 单个维度的调整明细。

@@ -1,0 +1,692 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "CULTURAL_NODE_EVIDENCE_REGISTER",
+  "datasetId": "pingdingshan-cultural-evidence-v1",
+  "reviewedOn": "2026-10-27",
+  "status": "NOT_READY_FOR_EXPERIMENT",
+  "purpose": "离线实验的数据准备与证据追溯；不是可直接执行的OfflineExperimentInput",
+  "scope": "平顶山地级市文化节点证据池，跨多个区县；不是单一附近推荐候选集",
+  "sourceBaseline": {
+    "branch": "feat/travelmind-ui-v2",
+    "head": "1e2315dac20289057096aeb9fb5385713562eb81",
+    "migrationFileSha256": "ee50c8222df477c2a7cee850d5facbdac6e6a5766485f805b6fda78fde1af0cf"
+  },
+  "policy": {
+    "noDatabaseWrites": true,
+    "noLegacyCoordinateAdoption": true,
+    "noAmapDatasetExtraction": true,
+    "noLiveExposureClaims": true,
+    "noPersonalGps": true,
+    "publicationLicense": "未声明整份混合证据清单为开放许可数据集；引用网页公开可读不等于授权复制全文、图片或地图数据"
+  },
+  "retrievalNotes": [
+    "官方页面用于身份、地址和文化事实核查；发布时间不等于当前开放时间核验日期。",
+    "对OpenStreetMap Overpass执行了有限次只读尝试，遇到本地连接/TLS失败及读取超时，没有取得有效坐标响应；不能解释为OSM没有这些地点。",
+    "Wikidata实体页读取未取得有效内容；不从搜索摘要补造坐标。",
+    "本轮未调用高德接口、LLM或生产服务，未采集用户位置。"
+  ],
+  "sources": [
+    {
+      "id": "S01",
+      "title": "平顶山博物馆",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2023-09-05",
+      "url": "https://wglj.pds.gov.cn/contents/12520/241021.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S02",
+      "title": "香山普门禅寺",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2023-09-04",
+      "url": "https://wglj.pds.gov.cn/contents/12520/241024.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S03",
+      "title": "香山寺相关非遗介绍",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2019-07-26",
+      "url": "https://wglj.pds.gov.cn/contents/12740/241490.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S04",
+      "title": "鲁山文庙",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2019-12-26",
+      "url": "https://wglj.pds.gov.cn/contents/12739/262967.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S05",
+      "title": "汝州文庙",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2023-07-09",
+      "url": "https://wglj.pds.gov.cn/contents/12520/447017.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S06",
+      "title": "汝州文庙与汝瓷博物馆介绍",
+      "publisher": "汝州市人民政府网站",
+      "publishedOn": "2025-11-28",
+      "url": "https://www.ruzhou.gov.cn/contents/65037/453129.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S07",
+      "title": "风穴寺景区",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2023-08-25",
+      "url": "https://wglj.pds.gov.cn/contents/12520/445772.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S08",
+      "title": "三苏园景区",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2023-08-27",
+      "url": "https://wglj.pds.gov.cn/contents/12520/241026.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S09",
+      "title": "郏县文庙博物馆",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2022-12-07",
+      "url": "https://wglj.pds.gov.cn/contents/12739/262641.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S10",
+      "title": "临沣寨",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2022-12-07",
+      "url": "https://wglj.pds.gov.cn/contents/12739/241480.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S11",
+      "title": "叶县县衙博物馆",
+      "publisher": "叶县人民政府网站",
+      "publishedOn": "2024-06-28",
+      "url": "https://yexian.gov.cn/contents/62012/447654.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    },
+    {
+      "id": "S12",
+      "title": "清凉寺汝官窑遗址",
+      "publisher": "平顶山市文化广电和旅游局",
+      "publishedOn": "2019-07-28",
+      "url": "https://wglj.pds.gov.cn/contents/12739/241477.html",
+      "reviewedOn": "2026-10-27",
+      "reviewMethod": "已阅读官方页面正文，保存短事实摘要与链接；没有保存网页全文或图片",
+      "licenseStatus": "未查到可直接据此授权批量转载的数据许可"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "PDS-C01",
+      "canonicalName": "平顶山博物馆",
+      "aliases": [],
+      "entityLevel": "场所整体",
+      "area": "市区新城片区",
+      "address": "长安大道与怀仁路交叉口平安广场西侧",
+      "culturalFact": "馆内以地方历史文化陈列和文物收藏为主要功能。",
+      "sourceIds": [
+        "S01"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": {
+        "file": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+        "name": "平顶山博物馆",
+        "line": 23,
+        "coordinateAdopted": false
+      },
+      "notes": "地址可核实；示范区管理片区与法定行政区不能混为一谈。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    },
+    {
+      "id": "PDS-C02",
+      "canonicalName": "香山普门禅寺",
+      "aliases": [
+        "香山寺"
+      ],
+      "entityLevel": "场所整体",
+      "area": "宝丰县与新华区交界",
+      "address": "以官方交界及景区地址口径为线索，入口待核验",
+      "culturalFact": "寺院是本地观音文化传说的重要实体载体。",
+      "sourceIds": [
+        "S02",
+        "S03"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": {
+        "file": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+        "name": "香山寺",
+        "line": 38,
+        "coordinateAdopted": false
+      },
+      "notes": "官方区划表述有交界、示范区等不同口径；未强行赋单一行政区。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    },
+    {
+      "id": "PDS-C03",
+      "canonicalName": "鲁山文庙",
+      "aliases": [],
+      "entityLevel": "场所整体",
+      "area": "鲁山县",
+      "address": "官方资料记为鲁山县城第一高中院内",
+      "culturalFact": "保存大成殿、崇圣祠及与历次修缮相关的碑刻。",
+      "sourceIds": [
+        "S04"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": {
+        "file": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+        "name": "鲁山文庙",
+        "line": 43,
+        "coordinateAdopted": false
+      },
+      "notes": "页面保护级别句存在省政府与全国重点的矛盾，不采纳该等级；位于学校内，当前访客可达性未知。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    },
+    {
+      "id": "PDS-C04",
+      "canonicalName": "汝州文庙",
+      "aliases": [
+        "汝州学宫"
+      ],
+      "entityLevel": "场所整体",
+      "area": "汝州市",
+      "address": "望嵩中路65号",
+      "culturalFact": "保存明伦堂、大成殿等建筑，是地方教育与儒学文化场所。",
+      "sourceIds": [
+        "S05",
+        "S06"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": {
+        "file": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+        "name": "汝州文庙",
+        "line": 83,
+        "coordinateAdopted": false
+      },
+      "notes": "汝瓷博物馆馆址设在文庙；按一个实体场所分组。不能据此把V14的汝州青瓷博物馆自动视为同馆。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    },
+    {
+      "id": "PDS-C05",
+      "canonicalName": "风穴寺",
+      "aliases": [
+        "风穴寺景区"
+      ],
+      "entityLevel": "场所整体",
+      "area": "汝州市",
+      "address": "骑岭乡黄庄村",
+      "culturalFact": "保留多个历史时期的寺院建筑与塔林。",
+      "sourceIds": [
+        "S07"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": {
+        "file": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+        "name": "风穴寺",
+        "line": 77,
+        "coordinateAdopted": false
+      },
+      "notes": "寺院与塔林暂作同一整体，不拆成多个候选提高入选机会。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [
+        {
+          "url": "https://zh.wikipedia.org/wiki/风穴寺",
+          "observation": "公开百科条目坐标与V14种子数值不一致；不能据此判断哪个正确，也不能归因为某种坐标偏移。",
+          "adopted": false,
+          "status": "仅为后续核验线索"
+        }
+      ],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    },
+    {
+      "id": "PDS-C06",
+      "canonicalName": "三苏园景区",
+      "aliases": [
+        "三苏园"
+      ],
+      "entityLevel": "场所整体",
+      "area": "郏县",
+      "address": "茨芭镇苏坟村",
+      "culturalFact": "园内包括苏轼、苏辙墓及苏洵衣冠冢等三苏文化纪念场所。",
+      "sourceIds": [
+        "S08"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": {
+        "file": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+        "name": "三苏园景区",
+        "line": 91,
+        "coordinateAdopted": false
+      },
+      "notes": "三苏祠、纪念馆、碑林和陵园属于同一景区的组成部分；不得混合整体与子节点统计。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [
+        {
+          "url": "https://zh.wikipedia.org/wiki/三苏墓",
+          "observation": "条目对应墓址，未证实是三苏园公共入口；不能用子节点坐标代替整座景区入口。",
+          "adopted": false,
+          "status": "仅为后续核验线索"
+        }
+      ],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    },
+    {
+      "id": "PDS-C07",
+      "canonicalName": "郏县文庙博物馆",
+      "aliases": [
+        "郏县文庙"
+      ],
+      "entityLevel": "场所整体",
+      "area": "郏县",
+      "address": "龙山街道文前街38号",
+      "culturalFact": "文庙建筑保留具有中原特征的木雕、彩绘和盘龙柱。",
+      "sourceIds": [
+        "S09"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": {
+        "file": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+        "name": "郏县文庙",
+        "line": 94,
+        "coordinateAdopted": false
+      },
+      "notes": "文庙和同址博物馆按一个实体场所统计。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    },
+    {
+      "id": "PDS-C08",
+      "canonicalName": "临沣寨",
+      "aliases": [],
+      "entityLevel": "场所整体",
+      "area": "郏县",
+      "address": "堂街镇朱洼行政村",
+      "culturalFact": "村寨保存红石寨墙、寨门和明清民居。",
+      "sourceIds": [
+        "S10"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": {
+        "file": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+        "name": "临沣寨",
+        "line": 97,
+        "coordinateAdopted": false
+      },
+      "notes": "村寨整体与内部单栋民居不混用同一候选层级。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    },
+    {
+      "id": "PDS-C09",
+      "canonicalName": "叶县县衙博物馆",
+      "aliases": [
+        "叶县县衙"
+      ],
+      "entityLevel": "场所整体",
+      "area": "叶县",
+      "address": "叶县县城；公共入口待核验",
+      "culturalFact": "县衙建筑群可作为研究古代基层治理与衙署布局的实物材料。",
+      "sourceIds": [
+        "S11"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": {
+        "file": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+        "name": "叶县县衙",
+        "line": 105,
+        "coordinateAdopted": false
+      },
+      "notes": "县衙和县衙博物馆按一个实体场所统计。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [
+        {
+          "url": "https://zh.wikipedia.org/wiki/叶县县衙",
+          "observation": "可找到坐标线索，但本轮未取得原始测量来源、精度和可验证的坐标系证据。",
+          "adopted": false,
+          "status": "仅为后续核验线索"
+        }
+      ],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    },
+    {
+      "id": "PDS-C10",
+      "canonicalName": "清凉寺汝官窑遗址",
+      "aliases": [],
+      "entityLevel": "场所整体",
+      "area": "宝丰县",
+      "address": "大营镇清凉寺、韩庄村",
+      "culturalFact": "遗址出土窑炉和作坊等遗迹，展示本地汝瓷生产历史。",
+      "sourceIds": [
+        "S12"
+      ],
+      "identityStatus": "官方页面支持场所身份与文化内容；不代表当前开放状态",
+      "legacySeedRef": null,
+      "notes": "遗址展示馆是其保护展示设施；宝丰汝窑博物馆是否同一实体尚未核验，不自动合并。",
+      "coordinate": {
+        "latitude": null,
+        "longitude": null,
+        "coordinateSystem": "UNKNOWN",
+        "pointRole": null,
+        "accuracyMeters": null,
+        "sourceUrl": null,
+        "verified": false
+      },
+      "coordinateLeads": [],
+      "annotation": {
+        "traits": null,
+        "indoor": null,
+        "quality": null,
+        "ticketPrice": null,
+        "suggestedMinutes": null,
+        "openFrom": null,
+        "openTo": null,
+        "annotatorId": null,
+        "reviewerId": null,
+        "evidenceIds": []
+      },
+      "popularityEvidence": null,
+      "accessStatus": "未核验",
+      "experimentEligible": false,
+      "blockers": [
+        "坐标来源、坐标系与入口位置未核验",
+        "当前可达性及引擎必填属性尚未核验或标注",
+        "真实长尾定义与证据未确定",
+        "数据公开再利用许可尚未逐项审核"
+      ]
+    }
+  ]
+}

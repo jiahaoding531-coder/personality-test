@@ -152,7 +152,8 @@ class TravelProfileReuseIntegrationTest extends IntegrationTestBase {
         TestSessionRef session = createTravelSession(login);
 
         mockMvc.perform(get("/api/travel/sessions/{id}/profile", session.id()).session(login))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("TRAVEL_PROFILE_REQUIRED"));
     }
 
     // ==========================================================

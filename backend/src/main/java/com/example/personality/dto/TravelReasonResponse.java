@@ -18,12 +18,11 @@ import java.util.List;
  *                  <p>⚠️ 前端必须用它和当前展示的批次比对——连点「换一批」会并发
  *                  好几个请求，先发的可能后回来，不比对就会把旧批次的理由
  *                  贴到新列表上
- * @param provider  哪个模型写的，比如 "deepseek:deepseek-chat"。
+ * @param provider  依据选择来源，例如 "custom:deepseek-flash"；全部降级时为 "local:evidence-v1"。
  *                  排查"这次内容怎么怪怪的"时能立刻知道是谁产出的
  * @param cached    true 表示直接返回了之前生成好的，<b>这次没有调用大模型</b>。
  *                  用户误点两次不该白花两次 token，也不该看到两段不一样的话
- * @param reasons   每条理由。可能<b>比地点数少</b>——模型偶尔会漏掉某个名次，
- *                  那种情况下宁可少给一条，也不该让整批作废
+ * @param reasons   每条服务端渲染的理由；模型漏选的地点使用确定性依据补齐。
  */
 public record TravelReasonResponse(
         Long sessionId,

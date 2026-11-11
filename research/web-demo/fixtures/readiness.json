@@ -1,0 +1,225 @@
+{
+  "version" : "evidence-readiness-v1",
+  "registerId" : "yexian-pilot-evidence-v1",
+  "status" : "NOT_READY_FOR_EXPERIMENT",
+  "structurallyValid" : true,
+  "dataVerifiedByTool" : false,
+  "experimentAuthorized" : false,
+  "issues" : [ {
+    "severity" : "REVIEW",
+    "code" : "TOP3_COMPETITION_INSUFFICIENT",
+    "path" : "$.nodes",
+    "message" : "总候选不超过 Top3，难以检验入选竞争；更多节点也仍须核对逐轮可行集合"
+  }, {
+    "severity" : "GAP",
+    "code" : "ENTITY_RELATION_UNRESOLVED",
+    "path" : "$.entityRelations[0]",
+    "message" : "同名/相邻/重叠关系未解决，不自动合并或拆为独立节点"
+  }, {
+    "severity" : "REVIEW",
+    "code" : "MANUAL_REVIEW_REQUIRED",
+    "path" : "$",
+    "message" : "还需人工确认真实性、时效性、入口、许可和实验冻结条件；检查通过不授予资格"
+  } ],
+  "nodes" : [ {
+    "nodeId" : "YEX-01",
+    "name" : "叶县县衙博物馆",
+    "declaredEligible" : false,
+    "issues" : [ {
+      "severity" : "GAP",
+      "code" : "COORDINATE_MISSING",
+      "path" : "$.nodes[0].coordinate",
+      "message" : "正式经纬度尚未取得，不采用地址推算或相机线索"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_SYSTEM_UNKNOWN",
+      "path" : "$.nodes[0].coordinate.coordinateSystem",
+      "message" : "坐标基准未明确，不自动转换或贴标签"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_ROLE_UNCONFIRMED",
+      "path" : "$.nodes[0].coordinate.pointRole",
+      "message" : "需确认公共入口或街区点位规则，相机/建筑中心不等于入口"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_SOURCE_MISSING",
+      "path" : "$.nodes[0].coordinate.sourceId",
+      "message" : "正式坐标缺少有效来源引用"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_NOT_VERIFIED",
+      "path" : "$.nodes[0].coordinate.verified",
+      "message" : "正式坐标仍声明未核验"
+    }, {
+      "severity" : "REVIEW",
+      "code" : "ACCURACY_UNKNOWN",
+      "path" : "$.nodes[0].coordinate.accuracyMeters",
+      "message" : "精度未记录，小数位数不能代表定位精度"
+    }, {
+      "severity" : "REVIEW",
+      "code" : "PROPOSAL_NOT_CURRENT_APPROVAL",
+      "path" : "$.nodes[0].proposalEvidence",
+      "message" : "听证拟案不能自动作为现行票价或联票范围的正式批准"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[0].currentOperationalValues.ticketPrice",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[0].currentOperationalValues.openingHours",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[0].currentOperationalValues.reservationRequired",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[0].currentOperationalValues.freeParking",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "ANNOTATION_MISSING",
+      "path" : "$.nodes[0].annotation",
+      "message" : "待补齐人工属性及独立复核"
+    }, {
+      "severity" : "GAP",
+      "code" : "POPULARITY_MISSING",
+      "path" : "$.nodes[0].popularityEvidence",
+      "message" : "待补齐独立人气资料或预声明分组定义"
+    } ]
+  }, {
+    "nodeId" : "YEX-02",
+    "name" : "叶县文庙",
+    "declaredEligible" : false,
+    "issues" : [ {
+      "severity" : "GAP",
+      "code" : "COORDINATE_MISSING",
+      "path" : "$.nodes[1].coordinate",
+      "message" : "正式经纬度尚未取得，不采用地址推算或相机线索"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_SYSTEM_UNKNOWN",
+      "path" : "$.nodes[1].coordinate.coordinateSystem",
+      "message" : "坐标基准未明确，不自动转换或贴标签"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_ROLE_UNCONFIRMED",
+      "path" : "$.nodes[1].coordinate.pointRole",
+      "message" : "需确认公共入口或街区点位规则，相机/建筑中心不等于入口"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_SOURCE_MISSING",
+      "path" : "$.nodes[1].coordinate.sourceId",
+      "message" : "正式坐标缺少有效来源引用"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_NOT_VERIFIED",
+      "path" : "$.nodes[1].coordinate.verified",
+      "message" : "正式坐标仍声明未核验"
+    }, {
+      "severity" : "REVIEW",
+      "code" : "ACCURACY_UNKNOWN",
+      "path" : "$.nodes[1].coordinate.accuracyMeters",
+      "message" : "精度未记录，小数位数不能代表定位精度"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[1].currentOperationalValues.ticketPrice",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[1].currentOperationalValues.openingHours",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[1].currentOperationalValues.reservationRequired",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[1].currentOperationalValues.freeParking",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "ANNOTATION_MISSING",
+      "path" : "$.nodes[1].annotation",
+      "message" : "待补齐人工属性及独立复核"
+    }, {
+      "severity" : "GAP",
+      "code" : "POPULARITY_MISSING",
+      "path" : "$.nodes[1].popularityEvidence",
+      "message" : "待补齐独立人气资料或预声明分组定义"
+    } ]
+  }, {
+    "nodeId" : "YEX-03",
+    "name" : "叶公古街",
+    "declaredEligible" : false,
+    "issues" : [ {
+      "severity" : "GAP",
+      "code" : "COORDINATE_MISSING",
+      "path" : "$.nodes[2].coordinate",
+      "message" : "正式经纬度尚未取得，不采用地址推算或相机线索"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_SYSTEM_UNKNOWN",
+      "path" : "$.nodes[2].coordinate.coordinateSystem",
+      "message" : "坐标基准未明确，不自动转换或贴标签"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_ROLE_UNCONFIRMED",
+      "path" : "$.nodes[2].coordinate.pointRole",
+      "message" : "需确认公共入口或街区点位规则，相机/建筑中心不等于入口"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_SOURCE_MISSING",
+      "path" : "$.nodes[2].coordinate.sourceId",
+      "message" : "正式坐标缺少有效来源引用"
+    }, {
+      "severity" : "GAP",
+      "code" : "COORDINATE_NOT_VERIFIED",
+      "path" : "$.nodes[2].coordinate.verified",
+      "message" : "正式坐标仍声明未核验"
+    }, {
+      "severity" : "REVIEW",
+      "code" : "ACCURACY_UNKNOWN",
+      "path" : "$.nodes[2].coordinate.accuracyMeters",
+      "message" : "精度未记录，小数位数不能代表定位精度"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[2].currentOperationalValues.ticketPrice",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[2].currentOperationalValues.openingHours",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[2].currentOperationalValues.reservationRequired",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "CURRENT_VALUE_UNKNOWN",
+      "path" : "$.nodes[2].currentOperationalValues.freeParking",
+      "message" : "现行条件尚未确认；不使用历史材料自动补值"
+    }, {
+      "severity" : "GAP",
+      "code" : "ANNOTATION_MISSING",
+      "path" : "$.nodes[2].annotation",
+      "message" : "待补齐人工属性及独立复核"
+    }, {
+      "severity" : "GAP",
+      "code" : "POPULARITY_MISSING",
+      "path" : "$.nodes[2].popularityEvidence",
+      "message" : "待补齐独立人气资料或预声明分组定义"
+    } ]
+  } ]
+}

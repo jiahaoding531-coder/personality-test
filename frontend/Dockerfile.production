@@ -1,0 +1,5 @@
+# 只消费本机 npm run build 输出，云服务器不安装 Node 或编译。
+FROM nginx:alpine@sha256:72ba65eb42c10344912a84ff42408db7d34f2feb642204570ab8fc5ffd29f1d3
+COPY nginx.production.conf /etc/nginx/conf.d/default.conf
+COPY dist/ /usr/share/nginx/html/
+EXPOSE 80

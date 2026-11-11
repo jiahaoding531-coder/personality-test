@@ -1,7 +1,9 @@
 package com.example.personality;
 
+import com.example.personality.repository.RecommendationFeedbackRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
@@ -19,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,6 +37,9 @@ class TravelFeedbackIntegrationTest extends IntegrationTestBase {
 
     private static final double WEST_LAKE_LAT = 30.2420;
     private static final double WEST_LAKE_LNG = 120.1400;
+
+    @Autowired
+    RecommendationFeedbackRepository feedbackRepository;
 
     // ==========================================================
     // 反馈本身
@@ -105,6 +111,20 @@ class TravelFeedbackIntegrationTest extends IntegrationTestBase {
         assertEquals(disliked.get("adjustments").get(0).get("questionnaireScore").asInt() + 10,
                 likedAfter, "改主意后应该变成上调 10，而不是两次叠加");
         assertNotEquals(dislikedAfter, likedAfter);
+    }
+
+    @Test
+    @DisplayName("再次点击已选反馈 → 删除反馈记录")
+    void cancellingReactionDeletesFeedback() throws Exception {
+        Session s = preparedSession();
+        feedback(s.ref(), s.firstRecommendationId(), "DISLIKE");
+
+        mockMvc.perform(withToken(delete(
+                        "/api/travel/sessions/{id}/recommendations/{rid}/feedback",
+                        s.sessionId(), s.firstRecommendationId()).with(csrf()), s.ref()))
+                .andExpect(status().isNoContent());
+
+        assertFalse(feedbackRepository.existsByRecommendationId(s.firstRecommendationId()));
     }
 
     // ==========================================================

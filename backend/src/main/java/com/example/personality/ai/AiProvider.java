@@ -31,7 +31,7 @@ import java.util.Optional;
  */
 public enum AiProvider {
 
-    DEEPSEEK("DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"),
+    DEEPSEEK("DeepSeek", "https://api.deepseek.com/v1", "deepseek-flash"),
 
     DASHSCOPE("通义千问", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
 

@@ -1,9 +1,15 @@
 import { aiRequestHeaders } from './aiSettings'
+import type { LocationSearchScope, LocationSearchResponse } from './travel/locationSearch'
+import type { RestaurantContext, RestaurantSearchResponse } from './travel/restaurantSearch'
+import type { BehaviorEnvelope, BehaviorMetadata, BehaviorReceipt, BehaviorScope } from './travel/behaviorTypes'
 import type {
   AiReportResponse,
   AnswersSavedResponse,
   ApiErrorBody,
   FeedbackResponse,
+  FeedbackReactionState,
+  FeedbackEventRequest,
+  FeedbackEventResponse,
   InterpretResponse,
   QuestionsResponse,
   Reaction,
@@ -38,6 +44,7 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly fieldErrors: ApiErrorBody['fieldErrors'] = [],
+    readonly code: string | null = null,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -114,7 +121,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (err?.fieldErrors?.length) {
       message += '\n' + err.fieldErrors.map((f) => `· ${f.field}：${f.message}`).join('\n')
     }
-    throw new ApiError(message, res.status, err?.fieldErrors ?? [])
+    throw new ApiError(message, res.status, err?.fieldErrors ?? [], err?.code ?? null)
   }
 
   return body as T
@@ -135,6 +142,19 @@ const emptyJsonPost = (): RequestInit => ({
  * 后者在文件顶部看 import 列表时，根本不知道这个函数属于谁。
  */
 export const api = {
+  searchLocations: (scope: LocationSearchScope, keyword: string, signal?: AbortSignal) =>
+    request<LocationSearchResponse>(`/api/travel/sessions/${scope.sessionId}/locations/search`,
+      withSessionToken({ method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword }), signal }, scope.sessionToken)),
+  recordBehavior: (scope: BehaviorScope, event: BehaviorEnvelope, signal?: AbortSignal) =>
+    request<BehaviorReceipt>(`/api/travel/sessions/${scope.sessionId}/behavior-events`,
+      withSessionToken({ method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event), keepalive: true, signal }, scope.sessionToken)),
+  searchRestaurants: (context: RestaurantContext, page: number) =>
+    request<RestaurantSearchResponse>(`/api/travel/sessions/${context.sessionId}/restaurants/search`,
+      withSessionToken({ method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: context.latitude, longitude: context.longitude, coordinateSystem: context.coordinateSystem, radius: context.radius, page, searchSessionId: context.searchSessionId }),
+      }, context.sessionToken)),
   // ---------- 认证 ----------
 
   /**
@@ -284,7 +304,7 @@ export const api = {
    * **是 POST 不是 GET**：每次调用都会在服务端新写一批推荐记录
    * （用户反馈要挂上去），有副作用，不符合 GET 的幂等语义。
    *
-   * ⚠️ 定位必填。59 个模拟 POI 全在杭州，用真实定位多半会返回空列表——
+   * ⚠️ 定位必填。地点库目前覆盖杭州和平顶山；覆盖范围外会返回空列表——
    * 这不是 bug，是"模拟数据只有一个城市"的必然结果。
    */
   getRecommendations: (
@@ -316,10 +336,11 @@ export const api = {
    *
    * @param regenerate 为 false 时，这批已经生成过就直接返回缓存，
    *                   不会重复花钱。用户点「重新生成」时才传 true。
+   * @param batchNo 明确解释哪一批；省略时兼容旧调用，由后端选择最新批次。
    */
-  getTravelReasons: (sessionId: number, regenerate: boolean, sessionToken?: string) =>
+  getTravelReasons: (sessionId: number, regenerate: boolean, sessionToken?: string, batchNo?: number) =>
     request<TravelReasonResponse>(
-      `/api/travel/sessions/${sessionId}/recommendations/reasons?regenerate=${regenerate}`,
+      `/api/travel/sessions/${sessionId}/recommendations/reasons?regenerate=${regenerate}${batchNo === undefined ? '' : `&batchNo=${batchNo}`}`,
       withSessionToken(
         // 同上：访客填过 key 就自动带上，调用点不用管
         { method: 'POST', headers: aiRequestHeaders() },
@@ -350,6 +371,41 @@ export const api = {
     ),
 
   /**
+   * 记录一条自然语言反馈。
+   *
+   * `query` 在前端是分层状态，后端快照协议则把约束字段放在 query 同层；
+   * 这里集中做一次映射，页面只需要传当前状态，不会再维护第二份协议。
+   */
+  createFeedbackEvent: (
+    sessionId: number,
+    body: FeedbackEventRequest,
+    sessionToken?: string,
+  ) => {
+    const { query, ...rest } = body
+    return request<FeedbackEventResponse>(
+      `/api/travel/sessions/${sessionId}/feedback-events`,
+      withSessionToken(
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...aiRequestHeaders() },
+          body: JSON.stringify({
+            ...rest,
+            query: {
+              intents: query.intents,
+              preferences: query.preferences,
+              durationMinutes: query.constraints.durationMinutes,
+              maxDistanceMeters: query.constraints.maxDistanceMeters,
+              budgetMax: query.constraints.budgetMax,
+              biases: query.biases,
+            },
+          }),
+        },
+        sessionToken,
+      ),
+    )
+  },
+
+  /**
    * 对某一条推荐点 👍 / 👎。
    *
    * 响应里带回画像被调整的结果，用来告诉用户"这次点击确实有影响"。
@@ -360,18 +416,47 @@ export const api = {
     recommendationId: number,
     reaction: Reaction,
     sessionToken?: string,
+    metadata?: BehaviorMetadata,
   ) =>
-    request<FeedbackResponse>(
+    reactionRequest<FeedbackResponse>(
       `/api/travel/sessions/${sessionId}/recommendations/${recommendationId}/feedback`,
       withSessionToken(
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...behaviorHeaders(metadata) },
           body: JSON.stringify({ reaction }),
         },
         sessionToken,
       ),
+      metadata,
     ),
+
+  /** 再次点击已选中的 👍 / 👎 时撤销该反馈。 */
+  removeFeedback: (
+    sessionId: number,
+    recommendationId: number,
+    sessionToken?: string,
+    metadata?: BehaviorMetadata,
+  ) =>
+    reactionRequest<FeedbackReactionState | void>(
+      `/api/travel/sessions/${sessionId}/recommendations/${recommendationId}/feedback`,
+      withSessionToken({ method: 'DELETE', headers: { ...behaviorHeaders(metadata), 'X-Feedback-State': '1' } }, sessionToken),
+      metadata,
+    ),
+}
+
+/** 新反馈命令最多等待十秒；失败后由页面沿用同一事件身份重试，不把未确认当成功。 */
+async function reactionRequest<T>(path: string, init: RequestInit, metadata?: BehaviorMetadata): Promise<T> {
+  if(!metadata) return request<T>(path,init)
+  const controller=new AbortController()
+  const timer=setTimeout(()=>controller.abort(),10000)
+  try { return await request<T>(path,{...init,signal:controller.signal}) }
+  finally { clearTimeout(timer) }
+}
+
+function behaviorHeaders(metadata?: BehaviorMetadata): Record<string,string> {
+  return metadata ? { 'X-Behavior-Event-Id': metadata.eventId, 'X-Behavior-Occurred-At': metadata.occurredAt,
+    ...(metadata.expectedFeedbackVersion == null ? {} : {'X-Feedback-Version':String(metadata.expectedFeedbackVersion)}) } : {}
 }
 
 /**

@@ -102,7 +102,7 @@ class SessionAccessControlIntegrationTest extends IntegrationTestBase {
      * 遍历 id 就能把别人的报告跑一遍，账单算在项目主人头上。
      */
     @Test
-    @DisplayName("匿名不能跑别人的 AI 报告（否则账单算你头上）")
+    @DisplayName("匿名不能跑 AI 报告，即使拿到正确会话令牌也返回 401")
     void anonymousCannotGenerateAiReportForOthersSession() throws Exception {
         MockHttpSession owner = registerAndLogin(uniqueUsername("victim4"), "password123");
         TestSessionRef session = createTestSession(owner);
@@ -112,7 +112,65 @@ class SessionAccessControlIntegrationTest extends IntegrationTestBase {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/test-sessions/{id}/ai-report", session.id()).with(csrf()))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(withToken(post("/api/test-sessions/{id}/ai-report", session.id())
+                        .with(csrf()), session))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("登录非本人即使拿到正确令牌也不能生成 AI 报告")
+    void loggedInUserCannotGenerateAiReportForOthersSession() throws Exception {
+        MockHttpSession owner = registerAndLogin(uniqueUsername("report_owner"), "password123");
+        TestSessionRef ref = createTestSession(owner);
+        answerAllQuestions(ref, 3, owner);
+        mockMvc.perform(post("/api/test-sessions/{id}/submit", ref.id())
+                        .with(csrf()).session(owner))
+                .andExpect(status().isOk());
+        MockHttpSession other = registerAndLogin(uniqueUsername("report_other"), "password123");
+
+        mockMvc.perform(post("/api/test-sessions/{id}/ai-report", ref.id())
+                        .with(csrf()).session(other))
                 .andExpect(status().isNotFound());
+        for (String token : List.of(ref.token(), UUID.randomUUID().toString(), "not-a-uuid")) {
+            mockMvc.perform(post("/api/test-sessions/{id}/ai-report", ref.id())
+                            .with(csrf()).session(other).header(TOKEN_HEADER, token))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    @Test
+    @DisplayName("登录用户不能用匿名会话的正确令牌生成 AI 报告")
+    void loggedInUserCannotGenerateAiReportForAnonymousSession() throws Exception {
+        TestSessionRef ref = createTestSession(null);
+        answerAllQuestions(ref, 3, null);
+        mockMvc.perform(withToken(post("/api/test-sessions/{id}/submit", ref.id())
+                        .with(csrf()), ref))
+                .andExpect(status().isOk());
+        MockHttpSession login = registerAndLogin(uniqueUsername("anonymous_report_other"), "password123");
+
+        mockMvc.perform(withToken(post("/api/test-sessions/{id}/ai-report", ref.id())
+                        .with(csrf()).session(login), ref))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("登录本人无需令牌即可通过 AI 归属校验，AI 未启用时返回 501")
+    void ownerDoesNotNeedTokenForAiReportWhenAiIsDisabled() throws Exception {
+        MockHttpSession owner = registerAndLogin(uniqueUsername("report_owned"), "password123");
+        TestSessionRef ref = createTestSession(owner);
+        answerAllQuestions(ref, 3, owner);
+        mockMvc.perform(post("/api/test-sessions/{id}/submit", ref.id())
+                        .with(csrf()).session(owner))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/test-sessions/{id}/ai-report", ref.id())
+                        .with(csrf()).session(owner))
+                .andExpect(status().isNotImplemented());
+        // 本人凭身份放行；旧 token 是否有效不应覆盖本人身份。
+        mockMvc.perform(post("/api/test-sessions/{id}/ai-report", ref.id())
+                        .with(csrf()).session(owner).header(TOKEN_HEADER, "not-a-uuid"))
+                .andExpect(status().isNotImplemented());
     }
 
     // ==========================================================

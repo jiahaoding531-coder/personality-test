@@ -2,6 +2,11 @@ package com.example.personality.service;
 
 import com.example.personality.ai.AiCredentials;
 import com.example.personality.ai.TravelReasonGenerator;
+import com.example.personality.ai.TravelReasonEvidence;
+import com.example.personality.ai.DeepSeekTravelReasonGenerator;
+import com.example.personality.exception.AiServiceException;
+import com.example.personality.exception.AiRequestRejectedException;
+import com.example.personality.exception.InvalidAiCredentialsException;
 import com.example.personality.dto.TravelReasonResponse;
 import com.example.personality.entity.Recommendation;
 import com.example.personality.repository.RecommendationRepository;
@@ -58,43 +63,66 @@ public class TravelReasonService {
      *                   <b>不调用大模型</b>。这个默认行为很重要：用户误点两次
      *                   不该白白消耗两次 token，而且两次生成的文本不一样
      *                   反而让人困惑（和人格报告那边是同一个取舍）。
-     * @throws com.example.personality.exception.NotImplementedException
-     *         未配置 AI 时（装配的是桩实现）→ HTTP 501
-     * @throws com.example.personality.exception.AiServiceException
-     *         调用上游失败、或返回的内容解析不出来 → HTTP 502
+     * <p>AI关闭/缺少凭据由控制器保持既有501契约；已进入解释流程后的模型错误、
+     * 格式错误和保护拒绝使用本批次确定性解释，不自动重试。
      */
     public TravelReasonResponse generate(Long sessionId, boolean regenerate,
                                          AiCredentials credentials) {
+        return generate(sessionId,regenerate,credentials,null);
+    }
+
+    public TravelReasonResponse generate(Long sessionId, boolean regenerate,
+                                         AiCredentials credentials,Integer batchNo) {
 
         // ---------- ① 短事务：重建"这批是怎么算的" ----------
         RecommendationService.ReasonContext context =
-                recommendationService.buildReasonContext(sessionId);
-
-        int placeCount = context.input().places().size();
-
-        // 已经都有理由了，而且用户没要求重新生成 → 直接吃缓存。
-        // ⚠️ 这条路径上**一次大模型都不调**，所以哪怕凭据是坏的也不会报错——
-        //    用户看到的还是上次那份结果。这是对的：缓存里的东西本来就已经生成好了。
-        if (!regenerate && context.existingReasons().size() >= placeCount) {
-            return toResponse(sessionId, context, context.existingReasons(), true,
-                    credentials.providerName());
+                batchNo == null ? recommendationService.buildReasonContext(sessionId)
+                        : recommendationService.buildReasonContext(sessionId,batchNo);
+        var catalog=TravelReasonEvidence.from(context.input());
+        Map<Integer,TravelReasonEvidence.CacheSelection> selected=new LinkedHashMap<>();
+        boolean untrustedCache=false;
+        for(int rank:catalog.ranks()) {
+            String raw=context.existingReasons().get(rank);
+            if(raw==null) continue;
+            var cached=catalog.readCache(rank,raw);
+            if(cached.isPresent()) selected.put(rank,cached.get()); else untrustedCache=true;
         }
-
-        // ---------- ② 事务外：调用大模型（几秒） ----------
-        // 凭据随调用传进去，不存在这个单例 Bean 的任何字段里
-        List<TravelReasonGenerator.RankedReason> generated =
-                reasonGenerator.generateReasons(credentials, context.input());
-
-        // 名次 → 理由。模型偶尔会同一个名次给两条，保留先出现的那个。
-        Map<Integer, String> byRank = new LinkedHashMap<>();
-        for (TravelReasonGenerator.RankedReason ranked : generated) {
-            byRank.putIfAbsent(ranked.rank(), ranked.reason());
+        boolean cached=!regenerate && !untrustedCache && selected.size()==catalog.ranks().size();
+        if(!cached) {
+            // 发现旧/跨批次/损坏缓存时直接本地修复，不为替换不可信缓存自动付费。
+            List<TravelReasonGenerator.RankedReason> generated;
+            if(untrustedCache) generated=DeepSeekTravelReasonGenerator.fallback(catalog);
+            else {
+                try {generated=reasonGenerator.generateReasons(credentials,context.input());}
+                catch(AiServiceException | AiRequestRejectedException | InvalidAiCredentialsException unavailable) {
+                    generated=DeepSeekTravelReasonGenerator.fallback(catalog);
+                }
+            }
+            selected.clear();
+            // 即使未来更换生成器，也只接收可验证ID，绝不信任生成器携带的文本。
+            for(var ranked:generated) {
+                if(selected.containsKey(ranked.rank())) continue;
+                try {
+                    catalog.render(ranked.rank(),ranked.evidenceIds());
+                    selected.put(ranked.rank(),new TravelReasonEvidence.CacheSelection(ranked.evidenceIds(),ranked.modelSelected()));
+                } catch(IllegalArgumentException invalid) { /* 下方统一补本地解释 */ }
+            }
+            for(var fallback:DeepSeekTravelReasonGenerator.fallback(catalog)) {
+                selected.putIfAbsent(fallback.rank(),new TravelReasonEvidence.CacheSelection(fallback.evidenceIds(),false));
+            }
+            Map<Integer,String> envelopes=new LinkedHashMap<>();
+            for(var entry:selected.entrySet()) envelopes.put(entry.getKey(),catalog.encodeCache(entry.getKey(),
+                    entry.getValue().evidenceIds(),entry.getValue().modelSelected()));
+            // 保存的是带版本/批次指纹的ID，而不是模型自由文本。仍按最初批次回填。
+            recommendationService.attachReasons(sessionId,context.batchNo(),envelopes);
         }
-
-        // ---------- ③ 短事务：回填到推荐记录 ----------
-        recommendationService.attachReasons(sessionId, context.batchNo(), byRank);
-
-        return toResponse(sessionId, context, byRank, false, credentials.providerName());
+        Map<Integer,String> rendered=new LinkedHashMap<>();
+        boolean modelSelected=false;
+        for(var entry:selected.entrySet()) {
+            rendered.put(entry.getKey(),catalog.render(entry.getKey(),entry.getValue().evidenceIds()));
+            modelSelected |= entry.getValue().modelSelected();
+        }
+        return toResponse(sessionId,context,rendered,cached,modelSelected?credentials.providerName():"local:evidence-v1");
     }
 
     /**

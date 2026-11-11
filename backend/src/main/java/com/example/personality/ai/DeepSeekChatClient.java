@@ -4,6 +4,7 @@ import com.example.personality.config.AiProperties;
 import com.example.personality.exception.AiServiceException;
 import com.example.personality.exception.InvalidAiCredentialsException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -12,8 +13,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.example.personality.security.AppUserPrincipal;
+import com.example.personality.exception.AiRequestRejectedException;
+import org.springframework.http.HttpStatus;
+import java.nio.charset.StandardCharsets;
 
 import java.time.Duration;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +58,7 @@ public class DeepSeekChatClient {
     private static final String COMPLETIONS_PATH = "/chat/completions";
 
     private final RestClient restClient;
+    private final AiCallGuard callGuard;
 
     /**
      * 生成参数（温度、上限）来自服务端配置。
@@ -60,7 +69,8 @@ public class DeepSeekChatClient {
     private final double temperature;
     private final int maxTokens;
 
-    public DeepSeekChatClient(AiProperties properties) {
+    public DeepSeekChatClient(AiProperties properties, AiCallGuard callGuard) {
+        this.callGuard = callGuard;
         this.temperature = properties.getTemperature();
         this.maxTokens = properties.getMaxTokens();
 
@@ -104,6 +114,29 @@ public class DeepSeekChatClient {
     public String complete(AiCredentials credentials, String systemPrompt,
                            String userPrompt, boolean jsonMode) {
 
+        var authentication=SecurityContextHolder.getContext().getAuthentication();
+        if(authentication==null || !authentication.isAuthenticated()
+                || !(authentication.getPrincipal() instanceof AppUserPrincipal principal)) {
+            throw new AiRequestRejectedException(HttpStatus.UNAUTHORIZED,"AI_LOGIN_REQUIRED","请登录后使用 AI");
+        }
+        String safeSystem=privateText(systemPrompt,credentials);
+        String safeUser=privateText(userPrompt,credentials);
+        if((long)safeSystem.length()+safeUser.length()>callGuard.maxPromptCharacters()
+                || maxTokens<=0 || maxTokens>4096) {
+            throw new AiRequestRejectedException(HttpStatus.BAD_REQUEST,"AI_REQUEST_TOO_LARGE","AI 请求超过长度限制");
+        }
+        // UTF-8 字节数加协议余量作为输入 token 的保守预留，不冒充厂商实际计费。
+        long reserved=(long)safeSystem.getBytes(StandardCharsets.UTF_8).length
+                +safeUser.getBytes(StandardCharsets.UTF_8).length+1024+maxTokens;
+        try(var lease=callGuard.begin(principal.getId(),reserved,!credentials.userSupplied())) {
+            return completeAllowed(credentials,safeSystem,safeUser,jsonMode);
+        }
+    }
+
+    private String completeAllowed(AiCredentials credentials,String systemPrompt,String userPrompt,boolean jsonMode) {
+
+        URI endpoint = URI.create(completionsUri(credentials));
+
         // LinkedHashMap 而不是 Map.of：要按条件增删字段，Map.of 是不可变的。
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", credentials.model());
@@ -114,6 +147,13 @@ public class DeepSeekChatClient {
         body.put("temperature", temperature);
         body.put("max_tokens", maxTokens);
         body.put("stream", false);
+        // 服务端凭据的 provider 为 null，因此同时识别官方 HTTPS 主机。
+        // 不按模型名字猜厂商，也不把 DeepSeek 专属字段发给其他兼容服务。
+        if (credentials.provider() == AiProvider.DEEPSEEK
+                || ("https".equalsIgnoreCase(endpoint.getScheme())
+                && "api.deepseek.com".equalsIgnoreCase(endpoint.getHost()))) {
+            body.put("thinking", Map.of("type", "disabled"));
+        }
         if (jsonMode) {
             body.put("response_format", Map.of("type", "json_object"));
         }
@@ -122,7 +162,7 @@ public class DeepSeekChatClient {
         ChatCompletionResponse response;
         try {
             response = restClient.post()
-                    .uri(completionsUri(credentials))
+                    .uri(endpoint)
                     // ⚠️ Authorization 设在**单次请求**上，不是 RestClient 的默认头。
                     //    这样它就只活在这一个调用里，不会被后续请求复用、也不会
                     //    跟着客户端对象一直留在内存中。
@@ -135,11 +175,13 @@ public class DeepSeekChatClient {
             throw translateUpstreamError(credentials, e);
         } catch (ResourceAccessException e) {
             // 连不上或超时
-            log.error("大模型连接失败 endpoint={} {}", credentials.providerName(), e.getMessage());
-            throw new AiServiceException("连接 AI 服务超时或失败，请稍后重试", e);
+            log.warn("大模型连接超时或失败 endpoint={}", credentials.providerName());
+            throw new AiServiceException("连接 AI 服务超时或失败，请稍后重试");
+        } catch (RestClientException e) {
+            throw new AiServiceException("AI 服务返回格式错误，请稍后重试");
         }
 
-        String content = extractContent(response);
+        String content = privateText(extractContent(response),credentials);
         log.info("大模型调用成功 endpoint={} jsonMode={} 耗时={}ms 字数={}",
                 credentials.providerName(), jsonMode,
                 System.currentTimeMillis() - startedAt, content.length());
@@ -161,13 +203,11 @@ public class DeepSeekChatClient {
     private RuntimeException translateUpstreamError(AiCredentials credentials,
                                                     RestClientResponseException e) {
         int status = e.getStatusCode().value();
-        String body = abbreviate(e.getResponseBodyAsString());
 
         // ⚠️ 日志里只记 providerName()，**绝不记 apiKey**。
         //    这是 key 泄露最常见的路径：某天有人为了排查问题，
         //    顺手把整个请求（含 Authorization 头）打了出来。
-        log.error("大模型返回错误 status={} endpoint={} body={}",
-                status, credentials.providerName(), body);
+        log.warn("大模型返回错误 status={} endpoint={}", status, credentials.providerName());
 
         if (status == 401 || status == 403) {
             if (credentials.userSupplied()) {
@@ -180,7 +220,17 @@ public class DeepSeekChatClient {
         }
 
         return new AiServiceException(
-                "AI 服务返回错误（HTTP " + status + "），请稍后重试", e);
+                "AI 服务返回错误（HTTP " + status + "），请稍后重试");
+    }
+
+    /** 只移除常见隐私标识；不能代替用户同意或声称识别所有个人信息。 */
+    private static String privateText(String text,AiCredentials credentials) {
+        String value=text==null?"":text;
+        if(credentials.hasKey()) value=value.replace(credentials.apiKey(),"[密钥已隐藏]");
+        return value.replaceAll("(?<![0-9])1[3-9][0-9]{9}(?![0-9])","[电话已隐藏]")
+                .replaceAll("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}","[邮箱已隐藏]")
+                .replaceAll("(?<![0-9])[0-9]{17}[0-9Xx](?![0-9])","[身份标识已隐藏]")
+                .replaceAll("-?[0-9]{1,3}\\.[0-9]{4,}\\s*[,，]\\s*-?[0-9]{1,3}\\.[0-9]{4,}","[精确坐标已隐藏]");
     }
 
     /**
@@ -223,7 +273,19 @@ public class DeepSeekChatClient {
         if (response.choices() == null || response.choices().isEmpty()) {
             throw new AiServiceException("AI 服务没有返回任何内容（可能触发了内容审核）");
         }
-        ChatMessage message = response.choices().get(0).message();
+        Choice choice = response.choices().get(0);
+        if (choice == null) {
+            throw new AiServiceException("AI 服务返回了无效的回答结构");
+        }
+        // 非流式补全只有 stop 才代表完整生成；即使正文恰好能解析也不能接受截断结果。
+        // 缺失/未知结束标志同样关闭失败，不透传上游原文，也不自动重试付费请求。
+        if (!"stop".equals(choice.finishReason())) {
+            if ("length".equals(choice.finishReason())) {
+                throw new AiServiceException("AI 输出达到长度上限，本次结果未应用，请精简要求后手动重试");
+            }
+            throw new AiServiceException("AI 未正常完成生成，本次结果未应用，请稍后手动重试");
+        }
+        ChatMessage message = choice.message();
         if (message == null || message.content() == null || message.content().isBlank()) {
             throw new AiServiceException("AI 返回的内容为空（可能达到了长度上限）");
         }
@@ -253,7 +315,7 @@ public class DeepSeekChatClient {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Choice(ChatMessage message) {
+    public record Choice(ChatMessage message, @JsonProperty("finish_reason") String finishReason) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

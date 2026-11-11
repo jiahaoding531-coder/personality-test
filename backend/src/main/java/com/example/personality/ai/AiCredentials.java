@@ -39,6 +39,13 @@ public record AiCredentials(
         boolean userSupplied
 ) {
 
+    /** 防止异常调试或对象拼接把密钥意外写进日志。 */
+    @Override
+    public String toString() {
+        return "AiCredentials[provider=" + providerName() + ", apiKey=[已隐藏], userSupplied="
+                + userSupplied + "]";
+    }
+
     /** 访客自带：URL 和默认模型都来自白名单，请求影响不了它们。 */
     public static AiCredentials forUser(AiProvider provider, String apiKey) {
         return new AiCredentials(provider, provider.baseUrl(), provider.defaultModel(),

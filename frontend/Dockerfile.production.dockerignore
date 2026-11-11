@@ -1,0 +1,5 @@
+**
+!Dockerfile.production
+!nginx.production.conf
+!dist/
+!dist/**

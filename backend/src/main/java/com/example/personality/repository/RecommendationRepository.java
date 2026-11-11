@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 推荐记录的数据访问接口。
@@ -21,6 +22,9 @@ import java.util.List;
  * {@code test_sessions} 被删除时才该发生的事，数据库的 ON DELETE CASCADE 已经处理了。
  */
 public interface RecommendationRepository extends JpaRepository<Recommendation, Long> {
+
+    /** 按主键和会话同时查询，避免先查到别人的推荐再暴露其存在。 */
+    Optional<Recommendation> findByIdAndSessionId(Long id, Long sessionId);
 
     /** 某个会话的<b>全部</b>推荐记录（含历史批次），按批次、名次升序。 */
     List<Recommendation> findBySessionIdOrderByBatchNoAscRankNoAsc(Long sessionId);

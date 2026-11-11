@@ -1,11 +1,20 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
+import { createRestaurantSearch, isRestaurantIntent, type RestaurantCandidate } from '../travel/restaurantSearch'
+import { createBehaviorClient, createBehaviorMetadata, isTemporaryBehaviorError } from '../travel/behaviorEvents'
+import type { BehaviorDraft, BehaviorMetadata } from '../travel/behaviorTypes'
+import { RestaurantResults } from '../components/RestaurantResults'
+import { DiningLocationPicker } from '../components/DiningLocationPicker'
+import type { LocationCandidate } from '../travel/locationSearch'
 
 import { ApiError, api } from '../api'
+import { fromBrowserPosition, fromUnconfirmedPosition, type LocationState } from '../travel/travelLocation'
 import { AiKeyPanel } from '../components/AiKeyPanel'
 import { BarChart } from '../components/BarChart'
+import { TravelConversationWelcome } from '../components/TravelConversationWelcome'
 import type {
   DimensionAdjustment,
-  InterpretResponse,
+  FeedbackReactionState,
+  RecommendationReplyTarget,
   Reaction,
   RecommendationRequest,
   RecommendationResponse,
@@ -16,12 +25,18 @@ import {
   createEmptyTravelQueryState,
   createTravelQueryChips,
   describeTravelQueryOperations,
+  interpretOperations,
   reduceTravelQueryOperations,
   toRecommendationFilters,
   type TravelQueryOperation,
   type TravelQueryChip,
   type TravelQueryState,
 } from '../travel/travelQueryState'
+import {
+  applyFeedbackOperations,
+  clearReplyTarget,
+  selectReplyTarget,
+} from '../travel/travelFeedbackState'
 import {
   chooseAiRetryTarget,
   createLatestRequestGate,
@@ -69,13 +84,12 @@ const REASON_MODE_KEY = 'travelmind.reasonMode'
 
 function loadReasonMode(): ReasonMode {
   try {
-    // 只有明确存过 'manual' 才算手动。其它任何情况（没存过、存了脏值、
-    // localStorage 不可用）都退回自动——它是更省心的那个默认值。
-    return localStorage.getItem(REASON_MODE_KEY) === 'manual' ? 'manual' : 'auto'
+    // 只有用户明确选择自动时才付费生成；新用户和非法存储值默认按需。
+    return localStorage.getItem(REASON_MODE_KEY) === 'auto' ? 'auto' : 'manual'
   } catch {
     // ⚠️ 隐私模式 / 禁用 Cookie 时 localStorage 会直接抛异常。
     // 一个偏好设置读不到，不该让整个结果页崩掉。
-    return 'auto'
+    return 'manual'
   }
 }
 
@@ -87,16 +101,15 @@ function saveReasonMode(mode: ReasonMode) {
   }
 }
 
-interface LocationState {
-  latitude: string
-  longitude: string
-}
-
 interface RecommendationRunOptions {
   excludeSeen?: boolean
   auto?: boolean
   message?: string | null
   operationFeedback?: string
+  onSuccess?: () => void
+  onFailure?: () => void
+  /** 调用方上下文变化后，丢弃已经在途的推荐结果。 */
+  isStillRelevant?: () => boolean
 }
 
 interface RecommendationRunTask {
@@ -108,10 +121,13 @@ interface RecommendationRunTask {
 const EMPTY_LOCATION: LocationState = {
   latitude: '',
   longitude: '',
+  coordinateSystem: 'UNKNOWN',
 }
 
 interface Scenario {
   label: string
+  shortLabel: string
+  icon: string
   operations: TravelQueryOperation[]
 }
 
@@ -124,13 +140,13 @@ interface Scenario {
  * <p>快捷标签都是确定性操作：意图 / 偏好只追加，同类约束只替换自己。
  */
 const SCENARIOS: Scenario[] = [
-  { label: '我想散步一下', operations: [{ op: 'ADD_INTENT', value: 'WANT_WALK' }] },
-  { label: '我有点累了', operations: [{ op: 'ADD_PREFERENCE', value: 'TIRED' }] },
-  { label: '我想吃饭', operations: [{ op: 'ADD_INTENT', value: 'HUNGRY' }] },
-  { label: '想安静点', operations: [{ op: 'ADD_PREFERENCE', value: 'QUIET' }] },
-  { label: '只剩 1 小时', operations: [{ op: 'SET_CONSTRAINT', key: 'durationMinutes', value: 60 }] },
-  { label: '不想走远', operations: [{ op: 'SET_CONSTRAINT', key: 'maxDistanceMeters', value: 2000 }] },
-  { label: '预算不多', operations: [{ op: 'SET_CONSTRAINT', key: 'budgetMax', value: 50 }] },
+  { label: '我想散步一下', shortLabel: '附近逛逛', icon: '🧭', operations: [{ op: 'ADD_INTENT', value: 'WANT_WALK' }] },
+  { label: '我有点累了', shortLabel: '轻松一点', icon: '🌿', operations: [{ op: 'ADD_PREFERENCE', value: 'TIRED' }] },
+  { label: '我想吃饭', shortLabel: '找点吃的', icon: '🍜', operations: [{ op: 'ADD_INTENT', value: 'HUNGRY' }] },
+  { label: '想安静点', shortLabel: '安静一点', icon: '☕', operations: [{ op: 'ADD_PREFERENCE', value: 'QUIET' }] },
+  { label: '只剩 1 小时', shortLabel: '只有 1 小时', icon: '⏱', operations: [{ op: 'SET_CONSTRAINT', key: 'durationMinutes', value: 60 }] },
+  { label: '不想走远', shortLabel: '离我近些', icon: '📍', operations: [{ op: 'SET_CONSTRAINT', key: 'maxDistanceMeters', value: 2000 }] },
+  { label: '预算不多', shortLabel: '预算友好', icon: '¥', operations: [{ op: 'SET_CONSTRAINT', key: 'budgetMax', value: 50 }] },
 ]
 
 /**
@@ -152,6 +168,11 @@ type NlState =
   | { kind: 'keyRejected' }
   | { kind: 'error'; message: string }
 
+type FeedbackState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+
 type RecState =
   | { kind: 'idle' }
   | { kind: 'done'; data: RecommendationResponse }
@@ -161,17 +182,25 @@ interface ChatTurn {
   id: string
   userMessage: string | null
   assistantMessage: string
-  data: RecommendationResponse
+  data?: RecommendationResponse
+}
+
+interface FeedbackRefreshRetry {
+  location: LocationState
+  query: TravelQueryState
+  excludeSeen: boolean
 }
 
 export function TravelResultScreen({
   profile,
   sessionToken,
   onRestart,
+  userId = null,
 }: {
   profile: TravelProfileResponse
   sessionToken?: string
   onRestart: () => void
+  userId?: number | null
 }) {
   const [location, setLocation] = useState<LocationState>(EMPTY_LOCATION)
   const [query, setQuery] = useState<TravelQueryState>(createEmptyTravelQueryState)
@@ -184,6 +213,7 @@ export function TravelResultScreen({
   const [busy, setBusy] = useState(false)
   const [showPreferences, setShowPreferences] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [locationDisplayName, setLocationDisplayName] = useState<string | null>(null)
 
   const [myFeedback, setMyFeedback] = useState<Record<number, Reaction>>({})
   const [lastAdjustments, setLastAdjustments] = useState<DimensionAdjustment[] | null>(null)
@@ -191,6 +221,10 @@ export function TravelResultScreen({
   // ---- 自然语言输入 ----
   const [nlText, setNlText] = useState('')
   const [nlState, setNlState] = useState<NlState>({ kind: 'idle' })
+  const [feedbackState, setFeedbackState] = useState<FeedbackState>({ kind: 'idle' })
+  /** 当前输入是在回复哪一张推荐卡片；为空时保持原有普通条件输入。 */
+  const [replyTarget, setReplyTarget] = useState<RecommendationReplyTarget | null>(null)
+  const [feedbackRefreshRetry, setFeedbackRefreshRetry] = useState<FeedbackRefreshRetry | null>(null)
 
   /**
    * 请求序号，用来**丢弃过期响应**。
@@ -200,10 +234,14 @@ export function TravelResultScreen({
    * 两段话都是通顺的，只是对不上用户最后一次说的话。
    */
   const nlSeq = useRef(0)
+  const feedbackSeq = useRef(0)
+  const composerInputRef = useRef<HTMLTextAreaElement | null>(null)
   /** 推荐请求也只允许最后一次更新界面，避免旧响应覆盖用户刚改的新条件。 */
   const recommendationGate = useRef(createLatestRequestGate())
   /** 请求发出到落库前都不允许第二条推荐进入，保持 UI 当前批次就是数据库最新批次。 */
   const recommendationFlight = useRef(createSingleFlightGate<RecommendationRunTask>())
+  /** 普通推荐失败时保留原请求快照，让用户重试而不用重新输入条件。 */
+  const recommendationRetry = useRef<RecommendationRunTask | null>(null)
   /** 用户手动改定位后，让更早发起的浏览器定位回调失效。 */
   const locationSequence = useRef(0)
 
@@ -211,6 +249,23 @@ export function TravelResultScreen({
   const [reasonTexts, setReasonTexts] = useState<Record<number, string>>({})
   const [reasonMode, setReasonMode] = useState<ReasonMode>(loadReasonMode)
   const [reasonError, setReasonError] = useState<string | null>(null)
+  const [reasonBusy, setReasonBusy] = useState(false)
+  const reasonInFlight = useRef<string | null>(null)
+  const reasonOwner = useRef('')
+  const reasonContextVersion = useRef(0)
+  const reasonOwnerKey = `${userId ?? 'guest'}:${profile.sessionId}`
+  if (reasonOwner.current !== reasonOwnerKey) {
+    reasonOwner.current = reasonOwnerKey
+    reasonContextVersion.current += 1
+  }
+  useEffect(() => {
+    reasonInFlight.current = null
+    setReasonBusy(false)
+    setReasonTexts({})
+    setReasonError(null)
+    setAiUnavailable(false)
+    setAiKeyRejected(false)
+  }, [reasonOwnerKey])
   /** 后端说"这台服务器没配 AI"（501）。这时引导访客填自己的 key */
   const [aiUnavailable, setAiUnavailable] = useState(false)
   /** 访客填的 key 被厂商拒了（400）。该让他重填，不是重试 */
@@ -230,6 +285,73 @@ export function TravelResultScreen({
   const streamEndRef = useRef<HTMLDivElement | null>(null)
 
   const sessionId = profile.sessionId
+  const behaviorClient = useRef<ReturnType<typeof createBehaviorClient> | null>(null)
+  const behaviorGeneration = useRef(0)
+  type ReactionCommand = { metadata: BehaviorMetadata; previous?: Reaction; reaction: Reaction; cancelling: boolean; failed: boolean }
+  const reactionCommands = useRef(new Map<number,ReactionCommand>())
+  const reactionVersions = useRef<Record<number,number>>({})
+  /** 服务端版本低于已确认版本时忽略；旧接口的无版本应答也不能覆盖新确认。 */
+  const acceptReactionState = useCallback((id: number, state: FeedbackReactionState | null | undefined,
+      fallback: Reaction | null, expected: number) => {
+    const currentVersion=reactionVersions.current[id] ?? 0
+    if(state ? state.version < currentVersion : currentVersion > expected) return false
+    if(state) reactionVersions.current[id]=state.version
+    const reaction=state ? state.reaction : fallback
+    setMyFeedback(current=>{ const next={...current}; if(reaction) next[id]=reaction; else delete next[id]; return next })
+    return true
+  },[])
+  const [reactionPending,setReactionPending] = useState<Record<number,boolean>>({})
+  const [reactionErrors,setReactionErrors] = useState<Record<number,string>>({})
+  useEffect(() => {
+    const generation = ++behaviorGeneration.current
+    const client = createBehaviorClient(api.recordBehavior,{ userId, sessionId, sessionToken, generation })
+    behaviorClient.current = client
+    reactionCommands.current.clear(); reactionVersions.current={}; setMyFeedback({}); setReactionPending({}); setReactionErrors({})
+    return () => { client.dispose(); behaviorClient.current = null; behaviorGeneration.current++; reactionCommands.current.clear() }
+  },[userId,sessionId,sessionToken])
+  const recordBehavior = useCallback((draft: BehaviorDraft) => {
+    try { behaviorClient.current?.record(draft) } catch { /* 行为记录失败不阻断导航、排除、换批。 */ }
+  },[])
+  const [diningActive, setDiningActive] = useState(false)
+  const diningMode = useRef(false)
+  // 已确认的高德中心独立保存，绝不能传给使用历史景点坐标的 run/反馈链路。
+  const locationOwner=JSON.stringify([userId,sessionId,sessionToken])
+  const [diningCenter,setDiningCenter]=useState<{owner:string;candidate:LocationCandidate} | null>(null)
+  const diningCenterRevision=useRef(0)
+  const confirmedCenter=diningCenter?.owner===locationOwner ? diningCenter.candidate : null
+  const diningLocation=confirmedCenter ? {
+    latitude:String(confirmedCenter.latitude),longitude:String(confirmedCenter.longitude),coordinateSystem:confirmedCenter.coordinateSystem,
+  } : location
+  useLayoutEffect(()=>{setDiningCenter(null)},[locationOwner])
+  const [restaurants] = useState(() => createRestaurantSearch(api.searchRestaurants))
+  const restaurantState = useSyncExternalStore(restaurants.subscribe, restaurants.getSnapshot)
+  useLayoutEffect(() => {
+    restaurants.setContext(diningActive ? {
+      sessionId, sessionToken, userId, latitude: diningLocation.latitude ? Number(diningLocation.latitude) : NaN,
+      longitude: diningLocation.longitude ? Number(diningLocation.longitude) : NaN,
+      coordinateSystem: diningLocation.coordinateSystem, radius: query.constraints.maxDistanceMeters ?? 3000,
+    } : null)
+    if (diningActive) void restaurants.next()
+  }, [restaurants, diningActive, sessionId, sessionToken, userId, diningLocation.latitude, diningLocation.longitude, diningLocation.coordinateSystem, query.constraints.maxDistanceMeters])
+  useEffect(() => () => restaurants.setContext(null), [restaurants])
+
+  const switchExperience = (dining: boolean) => {
+    diningMode.current = dining
+    if (!dining) restaurants.setContext(null)
+    setDiningActive(dining)
+  }
+
+  const nextRestaurants = useCallback(() => {
+    const before=restaurants.getSnapshot()
+    if(before.loading || before.exhausted) return
+    if(before.contextExpired) { restaurants.restart(); void restaurants.next(); return }
+    // 失败后的重试仍属于上一次用户动作，不能重复记录成主动换批。
+    if(before.error) { void restaurants.next(); return }
+    if(before.lastSource) recordBehavior({targetType:'RESTAURANT',provider:'AMAP',targetId:null,action:'NEXT_BATCH_REQUESTED',
+      searchSessionId:before.lastSource.searchSessionId,resultSetId:before.lastSource.resultSetId,
+      visibleSources:before.visible.map(r=>({targetId:r.poiId,searchSessionId:r.source.searchSessionId,resultSetId:r.source.resultSetId}))})
+    void restaurants.next()
+  },[restaurants,recordBehavior])
 
   /**
    * 进页面时自动跑一次的守卫。
@@ -239,10 +361,21 @@ export function TravelResultScreen({
    */
   const autoStarted = useRef(false)
 
-  const patchLocation = useCallback((patch: Partial<LocationState>) => {
-    locationSequence.current++
-    setLocation((current) => ({ ...current, ...patch }))
+  /** 上下文发生变化时，反馈响应只能作废，不能把旧条件写回来。 */
+  const invalidateFeedbackRequest = useCallback(() => {
+    feedbackSeq.current += 1
+    setFeedbackRefreshRetry(null)
+    setFeedbackState({ kind: 'idle' })
+    setPendingMessage(null)
   }, [])
+
+  const patchLocation = useCallback((patch: Partial<LocationState>) => {
+    invalidateFeedbackRequest()
+    locationSequence.current++
+    setLocationDisplayName(null)
+    setDiningCenter(null)
+    setLocation((current) => ({ ...current, ...patch, coordinateSystem: 'UNKNOWN' }))
+  }, [invalidateFeedbackRequest])
 
   /**
    * 发一次推荐请求。
@@ -280,6 +413,7 @@ export function TravelResultScreen({
         return
       }
 
+      recommendationRetry.current = task
       setPendingMessage(options.message ?? null)
       setBusy(true)
       setNotice(null)
@@ -299,8 +433,10 @@ export function TravelResultScreen({
         }
 
         const data = await api.getRecommendations(sessionId, body, sessionToken)
-        if (!recommendationGate.current.isCurrent(requestSequence)) return
+        if (!recommendationGate.current.isCurrent(requestSequence)
+          || options.isStillRelevant?.() === false) return
         setRec({ kind: 'done', data })
+        recommendationRetry.current = null
         setLastAdjustments(null)
         setTurns((items) => [
           ...items,
@@ -320,9 +456,12 @@ export function TravelResultScreen({
         currentBatch.current = data.batchNo
         reasonRequestedFor.current = null
         setReasonError(null)
+        options.onSuccess?.()
       } catch (e: unknown) {
-        if (!recommendationGate.current.isCurrent(requestSequence)) return
+        if (!recommendationGate.current.isCurrent(requestSequence)
+          || options.isStillRelevant?.() === false) return
         setRec({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+        options.onFailure?.()
       } finally {
         const latest = recommendationFlight.current.takeLatest()
         recommendationFlight.current.finish()
@@ -345,17 +484,25 @@ export function TravelResultScreen({
    */
   const loadReasons = useCallback(
     async (batchNo: number, regenerate = false) => {
+      const owner = reasonOwner.current
+      const contextVersion = reasonContextVersion.current
+      const requestKey = `${owner}:${contextVersion}:${batchNo}`
+      if (reasonInFlight.current === requestKey) return
+      reasonInFlight.current = requestKey
+      setReasonBusy(true)
       setReasonError(null)
+      setAiKeyRejected(false)
       try {
-        const res = await api.getTravelReasons(sessionId, regenerate, sessionToken)
+        const res = await api.getTravelReasons(sessionId, regenerate, sessionToken, batchNo)
 
         // ⚠️ 两道校验，缺一不可。见 currentBatch 的注释。
         //
-        // ① 后端给的是不是我们要的那批？接口返回的永远是"最新一批"，
-        //    如果在途期间又生成了新批次，回来的就不是当初问的那一批。
+        // ① 后端给的是不是明确请求的那批？即使另一标签页换批，
+        //    也只能接受这次请求绑定的批次，避免错配解释。
         // ② 我们要的那批还是当前展示的吗？用户可能已经点了「换一批」，
         //    旧批次的理由贴到新列表上完全看不出错——句子都是通顺的。
-        if (res.batchNo !== batchNo || batchNo !== currentBatch.current) {
+        if (contextVersion !== reasonContextVersion.current || owner !== reasonOwner.current || res.sessionId !== sessionId
+          || res.batchNo !== batchNo || batchNo !== currentBatch.current) {
           return
         }
 
@@ -365,13 +512,14 @@ export function TravelResultScreen({
         }
         setReasonTexts((current) => ({ ...current, ...texts }))
       } catch (e: unknown) {
+        if (contextVersion !== reasonContextVersion.current || owner !== reasonOwner.current || batchNo !== currentBatch.current) return
         if (e instanceof ApiError && e.status === 501) {
           // 这台服务器没替访客配 AI。以前这里是把入口藏起来，
           // 现在改成引导他填自己的 key——见 AiReasonState.unavailable 的注释。
           setAiUnavailable(true)
           return
         }
-        if (e instanceof ApiError && e.status === 400) {
+        if (e instanceof ApiError && e.status === 400 && !e.code) {
           // 400 = 调用方给的东西有问题（厂商名认不出 / key 被上游拒了）。
           // 后端刻意把它和 502（上游故障）分开，就是为了让这里能弹"重新填写"
           // 而不是"重试"——重试一万次还是 401。
@@ -379,6 +527,11 @@ export function TravelResultScreen({
           return
         }
         setReasonError(e instanceof Error ? e.message : String(e))
+      } finally {
+        if (reasonInFlight.current === requestKey) {
+          reasonInFlight.current = null
+          setReasonBusy(false)
+        }
       }
     },
     [sessionId, sessionToken],
@@ -409,6 +562,23 @@ export function TravelResultScreen({
     saveReasonMode(mode)
   }, [])
 
+  const chooseReplyTarget = useCallback((target: RecommendationReplyTarget) => {
+    invalidateFeedbackRequest()
+    setReplyTarget((current) => selectReplyTarget(current, target))
+    setFeedbackState({ kind: 'idle' })
+    requestAnimationFrame(() => {
+      composerInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      composerInputRef.current?.focus()
+    })
+  }, [invalidateFeedbackRequest])
+
+  const cancelReply = useCallback(() => {
+    invalidateFeedbackRequest()
+    setReplyTarget((current) => clearReplyTarget(current))
+    setFeedbackState({ kind: 'idle' })
+    setPendingMessage(null)
+  }, [invalidateFeedbackRequest])
+
   /**
    * 把用户打的那句话发给后端解析，然后把解析结果**摊开**，再按它重新推荐。
    *
@@ -422,6 +592,16 @@ export function TravelResultScreen({
       return
     }
 
+    if (isRestaurantIntent(text)) {
+      nlSeq.current++
+      switchExperience(true)
+      setNlText('')
+      if (diningActive) nextRestaurants()
+      return
+    }
+    switchExperience(false)
+
+    invalidateFeedbackRequest()
     setPendingMessage(text)
     const seq = ++nlSeq.current
     setNlState({ kind: 'loading' })
@@ -468,7 +648,105 @@ export function TravelResultScreen({
       setNlState({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
       setPendingMessage(null)
     }
-  }, [nlText, sessionId, sessionToken, query, location, run])
+  }, [invalidateFeedbackRequest, nlText, sessionId, sessionToken, query, location, run, diningActive, nextRestaurants])
+
+  /**
+   * 针对某张推荐卡片发送自然语言反馈。
+   *
+   * <p>反馈请求使用独立序号；上下文变化会调用失效函数，
+   * 更早回来的响应就只能被丢弃，不能覆盖最新 query 或聊天上下文。</p>
+   */
+  const submitFeedback = useCallback(async () => {
+    const text = nlText.trim()
+    const target = replyTarget
+    const latitude = Number(location.latitude)
+    const longitude = Number(location.longitude)
+    if (!text || !target || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return
+
+    const seq = ++feedbackSeq.current
+    const expectedVersion=reactionVersions.current[target.recommendationId] ?? 0
+    setFeedbackState({ kind: 'loading' })
+    setPendingMessage(text)
+
+    try {
+      const response = await api.createFeedbackEvent(
+        sessionId,
+        {
+          text,
+          recommendationId: target.recommendationId,
+          query,
+          latitude,
+          longitude,
+          // 按钮应答未确认时，新自然语言操作由服务端在解析前读实际版本；
+          // 不能把客户端尚未获知的版本误当成用户仍想执行旧动作。
+          expectedFeedbackVersion: reactionCommands.current.has(target.recommendationId) ? undefined : expectedVersion,
+        },
+        sessionToken,
+      )
+
+      if (seq !== feedbackSeq.current) return
+
+      const applied = applyFeedbackOperations(query, response)
+      const nextQuery = applied.query
+      setQuery(nextQuery)
+      if(response.feedbackState || response.reaction) acceptReactionState(target.recommendationId,
+        response.feedbackState,response.reaction,expectedVersion)
+      setNlText('')
+      setReplyTarget((current) => clearReplyTarget(current))
+      setFeedbackState({ kind: 'idle' })
+      setTurns((items) => [
+        ...items,
+        {
+          id: `feedback-${response.eventId}`,
+          userMessage: text,
+          assistantMessage: applied.message,
+        },
+      ])
+
+      if (response.shouldRecommend || response.excludeSeen) {
+        const refreshRetry: FeedbackRefreshRetry = {
+          location,
+          query: nextQuery,
+          excludeSeen: response.excludeSeen,
+        }
+        setFeedbackRefreshRetry(null)
+        void run(location, nextQuery, {
+          message: null,
+          excludeSeen: response.excludeSeen,
+          isStillRelevant: () => seq === feedbackSeq.current,
+          onSuccess: () => setFeedbackRefreshRetry(null),
+          onFailure: () => setFeedbackRefreshRetry(refreshRetry),
+        })
+        return
+      }
+
+      setPendingMessage(null)
+    } catch (e: unknown) {
+      if (seq !== feedbackSeq.current) return
+      setFeedbackState({
+        kind: 'error',
+        message: e instanceof ApiError && e.status === 400
+          ? '这句话暂时无法用于这张卡片，请调整后重试。'
+          : '反馈服务暂时不可用，请稍后重试。',
+      })
+      // 保留 nlText 与 replyTarget，用户可以直接修正或重试原话。
+      setPendingMessage(null)
+    }
+  }, [location, nlText, query, replyTarget, sessionId, sessionToken, run, acceptReactionState])
+
+  const retryFeedbackRecommendation = useCallback(() => {
+    const retry = feedbackRefreshRetry
+    if (!retry) return
+    const seq = feedbackSeq.current
+    setFeedbackRefreshRetry(null)
+    void run(retry.location, retry.query, {
+      excludeSeen: retry.excludeSeen,
+      message: null,
+      isStillRelevant: () => seq === feedbackSeq.current,
+      onSuccess: () => setFeedbackRefreshRetry(null),
+      onFailure: () => setFeedbackRefreshRetry(retry),
+    })
+  }, [feedbackRefreshRetry, run])
 
   /**
    * 访客刚填完自己的 key —— 立刻替他重试一次。
@@ -511,7 +789,13 @@ export function TravelResultScreen({
    * 用户拒接、超时都会走到这里，三种情况都该让人能手动填。
    */
   const startAuto = useCallback(async () => {
+    invalidateFeedbackRequest()
     const attempt = ++locationSequence.current
+    const centerRevision=diningCenterRevision.current
+    if (window.isSecureContext === false) {
+      setNotice('手机浏览器只允许网页在 HTTPS 环境读取 GPS。请使用 HTTPS 地址，或打开位置设置改用杭州西湖测试位置或手动坐标。')
+      return
+    }
     if (!('geolocation' in navigator)) {
       setNotice('这个浏览器不支持定位。可以手动填坐标，或直接用杭州西湖的坐标。')
       return
@@ -520,24 +804,28 @@ export function TravelResultScreen({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         if (attempt !== locationSequence.current) return
-        const nextLocation = {
-          latitude: pos.coords.latitude.toFixed(4),
-          longitude: pos.coords.longitude.toFixed(4),
-        }
+        const nextLocation = fromBrowserPosition(pos.coords)
+        // 较早的 GPS 仍可更新设备位置，但不能清掉后来确认的餐饮搜索中心。
+        if(centerRevision===diningCenterRevision.current) setDiningCenter(null)
         setLocation(nextLocation)
-        void run(nextLocation, queryRef.current, { auto: true })
+        setLocationDisplayName(`当前位置 · ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`)
+        setNotice(null)
+        // 餐饮位置变化由独立搜索状态处理，不创建景点推荐批次。
+        if (!diningMode.current) void run(nextLocation, queryRef.current, { auto: true })
       },
       (err) => {
         if (attempt !== locationSequence.current) return
-        setNotice(
-          err.code === err.PERMISSION_DENIED
-            ? '你拒绝了定位。手动填一下，或者直接用杭州西湖的坐标——演示景点都在杭州。'
-            : `没拿到定位（${err.message}）。手动填一下，或者用杭州西湖的坐标。`,
-        )
+        if (err.code === err.PERMISSION_DENIED) {
+          setNotice('没有获得定位权限。请在浏览器设置中允许定位，或打开位置设置使用测试位置。')
+        } else if (err.code === err.TIMEOUT) {
+          setNotice('定位请求超时。可以重新定位，或改用杭州西湖测试位置。')
+        } else {
+          setNotice(`暂时无法获取当前位置（${err.message || '定位不可用'}）。可以打开位置设置使用测试位置或手动坐标。`)
+        }
       },
-      { timeout: 8000 },
+      { enableHighAccuracy: true, maximumAge: 60_000, timeout: 10_000 },
     )
-  }, [run])
+  }, [invalidateFeedbackRequest, run])
 
   // 进页面就跑一次自动模式
   useEffect(() => {
@@ -548,50 +836,108 @@ export function TravelResultScreen({
 
   const applyScenario = useCallback(
     (scenario: Scenario) => {
+      invalidateFeedbackRequest()
       const nextQuery = reduceTravelQueryOperations(query, scenario.operations)
       setQuery(nextQuery)
       void run(location, nextQuery, { message: scenario.label })
     },
-    [location, query, run],
+    [invalidateFeedbackRequest, location, query, run],
   )
 
   const useDemoLocation = useCallback(() => {
+    invalidateFeedbackRequest()
     locationSequence.current++
-    const nextLocation = { latitude: DEMO_LAT, longitude: DEMO_LNG }
+    const nextLocation = fromUnconfirmedPosition(DEMO_LAT, DEMO_LNG)
+    setDiningCenter(null)
     setLocation(nextLocation)
+    setLocationDisplayName('杭州西湖')
+    setShowPreferences(false)
     setNotice(null)
-    void run(nextLocation, query, { message: '先按杭州西湖附近帮我找' })
-  }, [query, run])
+    if (!diningMode.current) void run(nextLocation, query, { message: '先按杭州西湖附近帮我找' })
+  }, [invalidateFeedbackRequest, query, run])
 
-  const giveFeedback = useCallback(
-    async (recommendationId: number, reaction: Reaction) => {
-      setMyFeedback((f) => ({ ...f, [recommendationId]: reaction }))
+  const usePingdingshanDemoLocation = useCallback(() => {
+    invalidateFeedbackRequest()
+    locationSequence.current++
+    const nextLocation = fromUnconfirmedPosition('33.7350', '113.3077')
+    setDiningCenter(null)
+    setLocation(nextLocation)
+    setLocationDisplayName('平顶山市中心')
+    setShowPreferences(false)
+    setNotice(null)
+    if (!diningMode.current) void run(nextLocation, query, { message: '先按平顶山市中心附近帮我找' })
+  }, [invalidateFeedbackRequest, query, run])
+
+  const saveReactionCommand = useCallback(async (recommendationId: number, command: ReactionCommand) => {
+      const generation = behaviorGeneration.current
+      command.failed = false; setReactionErrors(current=>{ const next={...current}; delete next[recommendationId]; return next })
       try {
-        const res = await api.giveFeedback(sessionId, recommendationId, reaction, sessionToken)
-        setLastAdjustments(res.adjustments)
-      } catch {
-        setMyFeedback((f) => {
-          const next = { ...f }
-          delete next[recommendationId]
-          return next
-        })
+        if (command.cancelling) {
+          const state=await api.removeFeedback(sessionId, recommendationId, sessionToken, command.metadata)
+          if(generation !== behaviorGeneration.current) return
+          if(acceptReactionState(recommendationId,state || undefined,null,command.metadata.expectedFeedbackVersion ?? 0)) setLastAdjustments(null)
+        } else {
+          const res = await api.giveFeedback(sessionId, recommendationId, command.reaction, sessionToken, command.metadata)
+          if(generation !== behaviorGeneration.current) return
+          if(acceptReactionState(recommendationId,res.feedbackState,res.reaction,command.metadata.expectedFeedbackVersion ?? 0)) setLastAdjustments(res.adjustments)
+        }
+        reactionCommands.current.delete(recommendationId)
+        setReactionPending(current=>({...current,[recommendationId]:false}))
+      } catch(error) {
+        if(generation !== behaviorGeneration.current) return
+        command.failed = true
+        const temporary = isTemporaryBehaviorError(error)
+        if(!temporary) { reactionCommands.current.delete(recommendationId); setReactionPending(current=>({...current,[recommendationId]:false})) }
+        setReactionErrors(current=>({...current,[recommendationId]: temporary ? '反馈保存尚未确认，请重试；确认前暂不接受该地点的新反馈。' : '反馈未保存，请检查登录或重新获取推荐。'}))
+        acceptReactionState(recommendationId,undefined,command.previous ?? null,command.metadata.expectedFeedbackVersion ?? 0)
       }
-    },
-    [sessionId, sessionToken],
-  )
+  },[sessionId,sessionToken,acceptReactionState])
+
+  const giveFeedback = useCallback((recommendationId: number, reaction: Reaction) => {
+      if(reactionCommands.current.has(recommendationId)) return
+      const previousReaction = myFeedback[recommendationId], cancelling = previousReaction === reaction
+      const command: ReactionCommand = { metadata:{...createBehaviorMetadata(),expectedFeedbackVersion:reactionVersions.current[recommendationId] ?? 0},previous:previousReaction,reaction,cancelling,failed:false }
+      reactionCommands.current.set(recommendationId,command)
+      setReactionPending(current=>({...current,[recommendationId]:true}))
+      setMyFeedback((current) => {
+        const next = { ...current }
+        if (cancelling) delete next[recommendationId]
+        else next[recommendationId] = reaction
+        return next
+      })
+      void saveReactionCommand(recommendationId,command)
+    }, [myFeedback,saveReactionCommand])
+
+  const restaurantDraft = (r: RestaurantCandidate, action: 'NAVIGATION_REQUESTED'|'EXCLUDE'): BehaviorDraft => ({
+    targetType:'RESTAURANT',provider:'AMAP',targetId:r.poiId,action,searchSessionId:r.source.searchSessionId,resultSetId:r.source.resultSetId,
+  })
+  const dismissRestaurant = (id: string) => {
+    const r=restaurants.getSnapshot().visible.find(item=>item.poiId===id)
+    if(!r || restaurants.getSnapshot().excluded.includes(id)) return
+    restaurants.dismiss(id); recordBehavior(restaurantDraft(r,'EXCLUDE'))
+  }
+  const refreshScenic = (data: RecommendationResponse) => {
+    if(recommendationFlight.current.isRunning() || diningMode.current) return
+    recordBehavior({targetType:'PLACE',provider:'LOCAL',targetId:null,action:'NEXT_BATCH_REQUESTED',
+      ...(data.places.length?{recommendationBatchNo:data.batchNo}:{}),
+      visibleSources:data.places.map(p=>({recommendationId:p.recommendationId,targetId:String(p.placeId)}))})
+    void run(location,query,{excludeSeen:true,message:'再换一批看看'})
+  }
 
   const setConstraint = useCallback((
     key: 'durationMinutes' | 'budgetMax',
     rawValue: string,
   ) => {
+    invalidateFeedbackRequest()
     const parsed = rawValue.trim() === '' ? null : Number(rawValue)
     if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) return
     setQuery((current) => reduceTravelQueryOperations(current, [
       { op: 'SET_CONSTRAINT', key, value: parsed },
     ]))
-  }, [])
+  }, [invalidateFeedbackRequest])
 
   const setDistanceConstraint = useCallback((rawValue: string) => {
+    invalidateFeedbackRequest()
     const kilometers = rawValue.trim() === '' ? null : Number(rawValue)
     if (kilometers !== null && (!Number.isFinite(kilometers) || kilometers < 0)) return
     setQuery((current) => reduceTravelQueryOperations(current, [
@@ -601,22 +947,42 @@ export function TravelResultScreen({
         value: kilometers === null ? null : kilometers * 1000,
       },
     ]))
-  }, [])
+  }, [invalidateFeedbackRequest])
 
   const manualMode = query.constraints.maxDistanceMeters !== null || query.constraints.budgetMax !== null
   const activeChips = createTravelQueryChips(query)
+  const interactionBusy = busy || nlState.kind === 'loading' || feedbackState.kind === 'loading'
+  const appliedContext = rec.kind === 'done' ? rec.data.appliedContext : null
+  const welcomeContext = {
+    locationLabel: rec.kind === 'done'
+      ? rec.data.locationLabel ?? locationDisplayName
+      : locationDisplayName,
+    durationMinutes: query.constraints.durationMinutes ?? appliedContext?.remainingMinutes ?? null,
+    maxDistanceKm: query.constraints.maxDistanceMeters === null
+      ? appliedContext?.maxDistanceKm ?? null
+      : query.constraints.maxDistanceMeters / 1000,
+    budgetMax: query.constraints.budgetMax ?? appliedContext?.maxTicketPrice ?? null,
+  }
+  const quickNeeds = SCENARIOS.map((scenario) => ({
+    id: scenario.label,
+    icon: scenario.icon,
+    label: scenario.shortLabel,
+    active: isScenarioActive(scenario, query),
+  }))
 
   const removeChip = useCallback((chip: TravelQueryChip) => {
+    invalidateFeedbackRequest()
     const nextQuery = reduceTravelQueryOperations(query, [chip.removeOperation])
     setQuery(nextQuery)
     void run(location, nextQuery, { message: `去掉“${chip.label}”这个条件` })
-  }, [location, query, run])
+  }, [invalidateFeedbackRequest, location, query, run])
 
   const clearTravelIntent = useCallback(() => {
+    invalidateFeedbackRequest()
     const nextQuery = reduceTravelQueryOperations(query, [{ op: 'CLEAR_TRAVEL_INTENT' }])
     setQuery(nextQuery)
     void run(location, nextQuery, { message: '重新来，清空我这次的想法' })
-  }, [location, query, run])
+  }, [invalidateFeedbackRequest, location, query, run])
 
   useEffect(() => {
     if (turns.length === 0 && !busy) return
@@ -628,26 +994,33 @@ export function TravelResultScreen({
 
   return (
     <div className="travel-shell">
-      <header className="travel-product-header">
-        <div className="travel-product-brand">
-          <span className="travel-logo" aria-hidden="true">T</span>
-          <span><b>TravelMind</b><small>你的即时旅行助手</small></span>
-        </div>
-        <button className="preference-trigger" type="button" onClick={() => setShowPreferences(true)}>
-          ⚙ 偏好设置
-        </button>
-      </header>
-
       <main className="travel-stream" aria-label="与 TravelMind 的对话">
-        <div className="chat-turn assistant">
-          <span className="chat-avatar" aria-hidden="true">T</span>
-          <div className="chat-bubble welcome-bubble">
-            <b>今天想去哪儿？</b>
-            <span>告诉我你此刻的状态，我会结合位置和旅行偏好替你筛选。</span>
-            {profile.reused && <small>我还记得你上次的旅行偏好，不用重新答题。</small>}
-          </div>
-        </div>
+        <TravelConversationWelcome
+          context={diningActive ? { ...welcomeContext, locationLabel: confirmedCenter?.name ?? locationDisplayName, maxDistanceKm: (query.constraints.maxDistanceMeters ?? 3000) / 1000 } : welcomeContext}
+          quickNeeds={quickNeeds}
+          reusedProfile={profile.reused}
+          busy={diningActive ? false : interactionBusy}
+          onSelectNeed={(id) => {
+            if (id === '我想吃饭') {
+              nlSeq.current++
+              switchExperience(true)
+              if (diningActive) nextRestaurants()
+              return
+            }
+            switchExperience(false)
+            const scenario = SCENARIOS.find((candidate) => candidate.label === id)
+            if (scenario) applyScenario(scenario)
+          }}
+          onOpenPreferences={() => setShowPreferences(true)}
+        />
 
+        {diningActive && <p className="dining-center-summary">{confirmedCenter
+          ? `餐饮搜索中心：${confirmedCenter.name} · ${[confirmedCenter.city,confirmedCenter.district,confirmedCenter.address].filter(Boolean).join(' · ')}（非设备当前位置，仅用于餐饮）`
+          : location.coordinateSystem==='WGS84' ? '餐饮搜索中心：设备 GPS 位置'
+          : '餐饮搜索中心：原有测试或手动位置（坐标系待确认，请重新定位或搜索地名）'}</p>}
+        {diningActive && <RestaurantResults state={restaurantState} onNext={nextRestaurants} onDismiss={dismissRestaurant}
+          onNavigate={r=>recordBehavior(restaurantDraft(r,'NAVIGATION_REQUESTED'))} onLocation={() => setShowPreferences(true)} />}
+        <div hidden={diningActive}>
         {notice && (
           <div className="chat-turn assistant">
             <span className="chat-avatar" aria-hidden="true">T</span>
@@ -655,7 +1028,8 @@ export function TravelResultScreen({
               <span>{notice}</span>
               <div className="chat-actions">
                 <button className="link-btn" type="button" onClick={() => void startAuto()}>重新定位</button>
-                <button className="link-btn" type="button" onClick={useDemoLocation}>先看西湖附近</button>
+                <button className="link-btn" type="button" onClick={() => setShowPreferences(true)}>打开位置设置</button>
+                <button className="link-btn" type="button" onClick={useDemoLocation}>杭州西湖测试位置</button>
               </div>
             </div>
           </div>
@@ -672,21 +1046,44 @@ export function TravelResultScreen({
               <span className="chat-avatar" aria-hidden="true">T</span>
               <div className="assistant-result">
                 <p className="assistant-lead">{turn.assistantMessage}</p>
-                <RecommendationList
-                  data={turn.data}
-                  myFeedback={myFeedback}
-                  lastAdjustments={lastAdjustments}
-                  loading={busy}
-                  manualMode={manualMode}
-                  reasonTexts={reasonTexts}
-                  onFeedback={giveFeedback}
-                  onRefresh={() => void run(location, query, { excludeSeen: true, message: '再换一批看看' })}
-                />
+                {turn.data && (
+                  <RecommendationList
+                    data={turn.data}
+                    myFeedback={myFeedback}
+                    lastAdjustments={lastAdjustments}
+                    loading={busy || feedbackState.kind === 'loading'}
+                    manualMode={manualMode}
+                    reasonTexts={reasonTexts}
+                    onFeedback={giveFeedback}
+                    reactionPending={reactionPending}
+                    onNavigate={place=>recordBehavior({targetType:'PLACE',provider:'LOCAL',targetId:String(place.placeId),recommendationId:place.recommendationId,action:'NAVIGATION_REQUESTED'})}
+                    onReply={chooseReplyTarget}
+                    onRefresh={() => refreshScenic(turn.data!)}
+                  />
+                )}
               </div>
             </div>
           </Fragment>
         ))}
 
+        {!diningActive && rec.kind === 'done' && rec.data.places.length > 0 && (
+          <section aria-label="AI 推荐解释">
+            <button className="fb-btn" type="button" disabled={busy || reasonBusy}
+              onClick={() => { if (rec.kind === 'done') void loadReasons(rec.data.batchNo) }}>
+              {reasonBusy ? '正在生成 AI 解释…' : '生成 AI 解释'}
+            </button>
+            <small>按需生成；AI 不改变推荐排序。解释不可用时仍可使用原推荐。</small>
+            {reasonError && <p role="alert">{reasonError}</p>}
+            {aiKeyRejected && <div role="alert">
+              <p>当前 AI Key 无法使用，请检查 AI 配置。原推荐仍可正常使用。</p>
+              <button className="fb-btn" type="button" onClick={() => setShowPreferences(true)}>检查 AI 配置</button>
+            </div>}
+            {aiUnavailable && <p role="status">AI 暂未配置，原有推荐和餐饮功能仍可使用。</p>}
+          </section>
+        )}
+        {Object.entries(reactionErrors).map(([id,message])=><div role="alert" key={id} className="restaurant-error"><p>{message}</p>
+          {reactionCommands.current.get(Number(id))?.failed && <button type="button" onClick={()=>{ const command=reactionCommands.current.get(Number(id)); if(command?.failed) void saveReactionCommand(Number(id),command) }}>重试保存反馈</button>}
+        </div>)}
         {pendingMessage && (
           <div className="chat-turn user">
             <div className="chat-bubble">{pendingMessage}</div>
@@ -703,7 +1100,26 @@ export function TravelResultScreen({
         {rec.kind === 'error' && !busy && (
           <div className="chat-turn assistant">
             <span className="chat-avatar" aria-hidden="true">T</span>
-            <div className="chat-bubble chat-warning">{rec.message}</div>
+            <div className="chat-bubble chat-warning">
+              <span>{rec.message}</span>
+              {feedbackRefreshRetry && (
+                <button className="link-btn" type="button" onClick={retryFeedbackRecommendation}>
+                  仅重试推荐
+                </button>
+              )}
+              {!feedbackRefreshRetry && recommendationRetry.current && (
+                <button
+                  className="link-btn"
+                  type="button"
+                  onClick={() => {
+                    const retry = recommendationRetry.current
+                    if (retry) void run(retry.location, retry.query, retry.options)
+                  }}
+                >
+                  重试推荐
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -728,18 +1144,31 @@ export function TravelResultScreen({
             </div>
           </div>
         )}
+        {feedbackState.kind === 'error' && (
+          <div className="chat-turn assistant">
+            <span className="chat-avatar" aria-hidden="true">T</span>
+            <div className="chat-bubble chat-warning">
+              <span>这条反馈暂时没有记下，原话和回复地点都还在，可以重试：{feedbackState.message}</span>
+              <button className="link-btn" type="button" onClick={() => void submitFeedback()}>
+                重试这条反馈
+              </button>
+            </div>
+          </div>
+        )}
+        </div>
         <div ref={streamEndRef} className="travel-stream-end" aria-hidden="true" />
       </main>
 
       <BottomActionBar
         activeChips={activeChips}
-        query={query}
-        busy={busy || nlState.kind === 'loading'}
+        busy={diningActive ? false : interactionBusy}
         text={nlText}
+        replyTarget={diningActive ? null : replyTarget}
+        inputRef={composerInputRef}
         onTextChange={setNlText}
-        onSend={() => void submitNaturalLanguage()}
+        onSend={() => void (!diningActive && replyTarget ? submitFeedback() : submitNaturalLanguage())}
+        onClearReply={cancelReply}
         onRemoveChip={removeChip}
-        onScenario={applyScenario}
         onClear={clearTravelIntent}
         onOpenPreferences={() => setShowPreferences(true)}
       />
@@ -752,8 +1181,29 @@ export function TravelResultScreen({
               <button className="drawer-close" type="button" aria-label="关闭偏好设置" onClick={() => setShowPreferences(false)}>×</button>
             </header>
 
+            <DiningLocationPicker key={locationOwner} scope={{sessionId,sessionToken}} onConfirm={candidate=>{
+              // 只升级餐饮中心版本；不能取消景点侧仍在等待的设备定位。
+              diningCenterRevision.current++
+              setDiningCenter({owner:locationOwner,candidate})
+              switchExperience(true)
+              setShowPreferences(false)
+            }}/>
+            {confirmedCenter && <section>
+              <p>已选餐饮中心：{confirmedCenter.name}；设备位置与景点位置未改变。</p>
+              <p className="drawer-note">原有位置可能是设备 GPS、测试点或手动坐标；坐标系未确认时不能用于餐饮搜索。</p>
+              <button className="btn" type="button" onClick={()=>setDiningCenter(null)}>恢复原有位置搜索餐饮</button>
+            </section>}
             <section>
               <h3>位置与限制</h3>
+              <div className="location-test-actions">
+                <button type="button" disabled={interactionBusy} onClick={() => {
+                  setShowPreferences(false)
+                  void startAuto()
+                }}>使用我的当前位置</button>
+                <button type="button" disabled={interactionBusy} onClick={useDemoLocation}>杭州西湖测试位置</button>
+                <button type="button" disabled={interactionBusy} onClick={usePingdingshanDemoLocation}>平顶山市中心测试位置</button>
+              </div>
+              <p className="drawer-note">真机 GPS 需要 HTTPS；无法授权时可用测试位置或手动坐标。</p>
               <div className="field-row">
                 {numberField('travel-lat', '纬度', location.latitude, (value) => patchLocation({ latitude: value }), '30.2420', 'decimal')}
                 {numberField('travel-lng', '经度', location.longitude, (value) => patchLocation({ longitude: value }), '120.1400', 'decimal')}
@@ -763,10 +1213,15 @@ export function TravelResultScreen({
                 {numberField('travel-distance', '最远公里', query.constraints.maxDistanceMeters === null ? '' : formatKm(query.constraints.maxDistanceMeters), (value) => setDistanceConstraint(value), '不限', 'decimal')}
                 {numberField('travel-budget', '预算上限', nullableNumber(query.constraints.budgetMax), (value) => setConstraint('budgetMax', value), '不限', 'numeric')}
               </div>
-              <button className="btn btn-primary" type="button" disabled={busy} onClick={() => {
+              <button className="btn btn-primary" type="button" disabled={interactionBusy} onClick={() => {
+                const latitude = Number(location.latitude)
+                const longitude = Number(location.longitude)
+                if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+                  setLocationDisplayName(`手动位置 · ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
+                }
                 setShowPreferences(false)
-                void run(location, query, { message: '更新了位置与筛选条件' })
-              }}>应用设置</button>
+                if (!diningMode.current) void run(location, query, { message: '更新了位置与筛选条件' })
+              }}>应用位置与限制</button>
             </section>
 
             <section>
@@ -790,32 +1245,6 @@ export function TravelResultScreen({
       )}
     </div>
   )
-}
-
-/** 新后端直接返回 operations；过渡期内也兼容正在运行的旧后端。 */
-function interpretOperations(result: InterpretResponse): TravelQueryOperation[] {
-  if (result.operations?.length) {
-    return result.operations
-  }
-
-  const operations: TravelQueryOperation[] = result.states.map(({ key }) => (
-    key === 'HUNGRY' || key === 'WANT_WALK'
-      ? { op: 'ADD_INTENT' as const, value: key }
-      : { op: 'ADD_PREFERENCE' as const, value: key }
-  ))
-  if (Object.keys(result.biases).length > 0) {
-    operations.push({ op: 'MERGE_BIASES', values: result.biases })
-  }
-  if (result.remainingMinutes !== null) {
-    operations.push({ op: 'SET_CONSTRAINT', key: 'durationMinutes', value: result.remainingMinutes })
-  }
-  if (result.maxDistanceKm !== null) {
-    operations.push({ op: 'SET_CONSTRAINT', key: 'maxDistanceMeters', value: result.maxDistanceKm * 1000 })
-  }
-  if (result.maxTicketPrice !== null) {
-    operations.push({ op: 'SET_CONSTRAINT', key: 'budgetMax', value: result.maxTicketPrice })
-  }
-  return operations
 }
 
 function formatKm(meters: number): string {
@@ -844,41 +1273,36 @@ function recommendationLead(data: RecommendationResponse, query: TravelQueryStat
 
 function BottomActionBar({
   activeChips,
-  query,
   busy,
   text,
+  replyTarget,
+  inputRef,
   onTextChange,
   onSend,
+  onClearReply,
   onRemoveChip,
-  onScenario,
   onClear,
   onOpenPreferences,
 }: {
   activeChips: TravelQueryChip[]
-  query: TravelQueryState
   busy: boolean
   text: string
+  replyTarget: RecommendationReplyTarget | null
+  inputRef: RefObject<HTMLTextAreaElement | null>
   onTextChange: (value: string) => void
   onSend: () => void
+  onClearReply: () => void
   onRemoveChip: (chip: TravelQueryChip) => void
-  onScenario: (scenario: Scenario) => void
   onClear: () => void
   onOpenPreferences: () => void
 }) {
-  const suggestions = SCENARIOS.filter((scenario) => !isScenarioActive(scenario, query))
-
   return (
     <div className="bottom-action-wrap">
       <div className="bottom-action-bar">
-        <div className="action-chip-scroll" aria-label="当前条件与快捷条件">
+        <div className="action-chip-scroll" aria-label="当前旅行条件">
           {activeChips.map((chip) => (
             <button className="active-action-chip" type="button" key={chip.id} onClick={() => onRemoveChip(chip)} disabled={busy}>
               {chip.label}<span aria-hidden="true">×</span>
-            </button>
-          ))}
-          {suggestions.map((scenario) => (
-            <button className="suggestion-chip" type="button" key={scenario.label} onClick={() => onScenario(scenario)} disabled={busy}>
-              + {scenario.label}
             </button>
           ))}
           {activeChips.length > 0 && (
@@ -889,8 +1313,15 @@ function BottomActionBar({
         </div>
 
         <div className="action-composer">
+          {replyTarget && (
+            <div className="reply-context" role="status">
+              <span>正在回复：<b>{replyTarget.placeName}</b></span>
+              <button type="button" aria-label="取消回复地点" onClick={onClearReply}>×</button>
+            </div>
+          )}
           <button className="composer-settings" type="button" aria-label="打开偏好设置" onClick={onOpenPreferences}>⚙</button>
           <textarea
+            ref={inputRef}
             rows={1}
             maxLength={200}
             aria-label="继续告诉 TravelMind 你的要求"
@@ -957,8 +1388,11 @@ function RecommendationList({
   loading,
   manualMode,
   onFeedback,
+  onReply,
   onRefresh,
   reasonTexts,
+  reactionPending,
+  onNavigate,
 }: {
   data: RecommendationResponse
   myFeedback: Record<number, Reaction>
@@ -966,37 +1400,49 @@ function RecommendationList({
   loading: boolean
   manualMode: boolean
   onFeedback: (recommendationId: number, reaction: Reaction) => void
+  onReply: (target: RecommendationReplyTarget) => void
   onRefresh: () => void
   reasonTexts: Record<number, string>
+  reactionPending: Record<number,boolean>
+  onNavigate: (place: RecommendedPlace) => void
 }) {
   return (
     <div className="recommendation-result">
       {data.places.length === 0 ? (
         <div className="empty-recommendation">
           <p>
-            这不是出错了。演示数据的 59 个地点<b>全部在杭州</b>；如果你现在不在杭州，
-            默认 10 公里的距离限制会把它们全部过滤掉。
+            这不是出错了。当前地点库覆盖杭州和平顶山，但附近没有同时满足条件的地点；
+            TravelMind 不会为了凑满 Top 3 而突破你设置的距离限制。
           </p>
           <p>
             {manualMode ? (
               <>可以在底部取消条件，或到偏好设置放宽距离和预算。</>
             ) : (
-              <>可以在偏好设置中调整位置，或直接告诉我换到杭州西湖附近。</>
+              <>可以在偏好设置中调整位置，或使用杭州西湖、平顶山市中心测试位置。</>
             )}
           </p>
         </div>
       ) : (
-        <div className="result-card-list">
-          {data.places.map((place) => (
-            <PlaceCard
-              key={place.recommendationId}
-              place={place}
-              reaction={myFeedback[place.recommendationId]}
-              onFeedback={onFeedback}
-              reason={reasonTexts[place.recommendationId]}
-            />
-          ))}
-        </div>
+        <>
+          <header className="recommendation-heading">
+            <div><span>为你精选</span><h2>Top {data.places.length} 推荐</h2></div>
+            {data.locationLabel && <small>📍 {data.locationLabel}</small>}
+          </header>
+          <div className="result-card-list">
+            {data.places.map((place) => (
+              <PlaceCard
+                key={place.recommendationId}
+                place={place}
+                reaction={myFeedback[place.recommendationId]}
+                onFeedback={onFeedback}
+                onReply={onReply}
+                onNavigate={()=>onNavigate(place)}
+                disabled={loading || !!reactionPending[place.recommendationId]}
+                reason={reasonTexts[place.recommendationId]}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {lastAdjustments && lastAdjustments.length > 0 && (
@@ -1012,9 +1458,10 @@ function RecommendationList({
         </p>
       )}
 
-      <div className="nav-row">
+      <div className="recommendation-refresh-row">
+        <span>没有心动的？我会避开已经看过的地点。</span>
         <button className="result-refresh" type="button" onClick={onRefresh} disabled={loading}>
-          {loading ? '正在寻找…' : '这批不合适，换一批'}
+          {loading ? '正在寻找…' : '换一批'}
         </button>
       </div>
     </div>
@@ -1059,16 +1506,26 @@ function PlaceCard({
   place,
   reaction,
   onFeedback,
+  onReply,
+  disabled,
   reason,
+  onNavigate,
 }: {
   place: RecommendedPlace
   reaction: Reaction | undefined
   onFeedback: (recommendationId: number, reaction: Reaction) => void
+  onReply: (target: RecommendationReplyTarget) => void
+  disabled: boolean
   /** AI 写的那句人话，可能还没有 */
   reason?: string
+  onNavigate: () => void
 }) {
-  const openHours =
-    place.openFrom && place.openTo ? `${place.openFrom} – ${place.openTo}` : '全天开放'
+  const openHours = place.openFrom === null && place.openTo === null
+    ? '全天开放'
+    : place.openFrom && place.openTo
+      ? `${place.openFrom} – ${place.openTo}`
+      : '营业时间未知'
+  const category = placeCategoryPresentation(place.category)
   const fallbackReason = place.reasons[0]
     ? `很符合你对“${place.reasons[0].dimensionLabel}”的偏好。`
     : place.description
@@ -1077,13 +1534,13 @@ function PlaceCard({
     <article className="place-card">
       <div className={`place-thumb category-${place.category.toLowerCase()}`} aria-hidden="true">
         <span>{place.rank}</span>
-        <b>{place.category.slice(0, 1)}</b>
+        <b>{category.icon}</b>
       </div>
 
       <div className="place-content">
         <header className="place-head">
           <h3 className="place-name">{place.name}</h3>
-          <span className="place-category">{place.category}</span>
+          <span className="place-category">{category.label}</span>
         </header>
 
         <div className="place-meta">
@@ -1093,7 +1550,7 @@ function PlaceCard({
           <span>{openHours}</span>
         </div>
 
-        <p className="place-recommendation">{reason ?? fallbackReason}</p>
+        <p className="place-recommendation"><span>推荐理由</span>{reason ?? fallbackReason}</p>
 
         <div className="feedback-row">
         {/*
@@ -1107,6 +1564,7 @@ function PlaceCard({
           href={amapMarkerUrl(place)}
           target="_blank"
           rel="noreferrer"
+          onClick={onNavigate}
         >
           🧭 导航过去
         </a>
@@ -1114,6 +1572,7 @@ function PlaceCard({
           className={reaction === 'LIKE' ? 'fb-btn chosen' : 'fb-btn'}
           type="button"
           aria-pressed={reaction === 'LIKE'}
+          disabled={disabled}
           onClick={() => onFeedback(place.recommendationId, 'LIKE')}
         >
           👍 想去
@@ -1122,12 +1581,34 @@ function PlaceCard({
           className={reaction === 'DISLIKE' ? 'fb-btn chosen' : 'fb-btn'}
           type="button"
           aria-pressed={reaction === 'DISLIKE'}
+          disabled={disabled}
           onClick={() => onFeedback(place.recommendationId, 'DISLIKE')}
         >
           👎 不感兴趣
+        </button>
+        <button
+          className="fb-btn reply-btn"
+          type="button"
+          disabled={disabled}
+          onClick={() => onReply({ recommendationId: place.recommendationId, placeName: place.name })}
+        >
+          针对这里说一句
         </button>
         </div>
       </div>
     </article>
   )
+}
+
+function placeCategoryPresentation(category: string): { label: string; icon: string } {
+  const presentations: Record<string, { label: string; icon: string }> = {
+    NATURE: { label: '自然风光', icon: '⛰' },
+    CULTURE: { label: '人文历史', icon: '🏛' },
+    FOOD: { label: '美食探索', icon: '🍜' },
+    PHOTO: { label: '摄影打卡', icon: '📷' },
+    DISTRICT: { label: '城市街区', icon: '🏘' },
+    MUSEUM: { label: '博物馆', icon: '🏛' },
+    MARKET: { label: '市集', icon: '🛍' },
+  }
+  return presentations[category] ?? { label: category, icon: '📍' }
 }

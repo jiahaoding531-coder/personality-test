@@ -1,0 +1,7 @@
+# 仅本地验收：显式替换公开端口，不在 aviatote.com 上申请证书。
+name: travelmind-deploycheck-20261012
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:18080:80"
+      - "127.0.0.1:18443:443"

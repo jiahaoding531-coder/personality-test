@@ -9,6 +9,8 @@ interface Props {
   answers: Record<number, number>
   onAnswer: (questionId: number, score: number) => void
   onFinish: () => void
+  submitting?: boolean
+  submitError?: string | null
 }
 
 /**
@@ -17,7 +19,15 @@ interface Props {
  * 这里有一个**必须用 useRef 而不是 useState 保存的定时器句柄**——
  * 原因见 chose() 里的注释。这是从静态版移植过来时最容易改错的地方。
  */
-export function TestScreen({ questions, options, answers, onAnswer, onFinish }: Props) {
+export function TestScreen({
+  questions,
+  options,
+  answers,
+  onAnswer,
+  onFinish,
+  submitting = false,
+  submitError = null,
+}: Props) {
   const [index, setIndex] = useState(0)
 
   /**
@@ -82,6 +92,7 @@ export function TestScreen({ questions, options, answers, onAnswer, onFinish }: 
   // ---------- 键盘快捷键 ----------
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if (submitting) return
       const tag = (e.target as HTMLElement | null)?.tagName ?? ''
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return
 
@@ -108,7 +119,7 @@ export function TestScreen({ questions, options, answers, onAnswer, onFinish }: 
     // 少了这行，每次 index 变化都会叠加一个监听器，
     // 按一次键会触发 N 次选择。
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [choose, goTo, index, options, questions])
+  }, [choose, goTo, index, options, questions, submitting])
 
   // ---------- 派生状态 ----------
   // 这些都能从 props 和 state 算出来，所以**不要**再用 useState 存一份。
@@ -158,6 +169,7 @@ export function TestScreen({ questions, options, answers, onAnswer, onFinish }: 
               key={opt.value}
               type="button"
               className={chosen ? 'opt chosen' : 'opt'}
+              disabled={submitting}
               onClick={() => choose(current.id, opt.value)}
             >
               <span className="mark" />
@@ -179,13 +191,23 @@ export function TestScreen({ questions, options, answers, onAnswer, onFinish }: 
         answers={answers}
         currentIndex={index}
         onJump={goTo}
+        disabled={submitting}
       />
+
+      {submitError && (
+        <div className="form-error" role="alert">
+          <div>{submitError}</div>
+          <button className="btn btn-primary" type="button" onClick={onFinish}>
+            重新提交
+          </button>
+        </div>
+      )}
 
       <div className="nav-row">
         <button
           className="btn btn-ghost"
           type="button"
-          disabled={index === 0}
+          disabled={submitting || index === 0}
           onClick={() => goTo(index - 1)}
         >
           上一题
@@ -193,14 +215,19 @@ export function TestScreen({ questions, options, answers, onAnswer, onFinish }: 
         <button
           className="btn btn-ghost"
           type="button"
-          disabled={index === total - 1}
+          disabled={submitting || index === total - 1}
           onClick={() => goTo(index + 1)}
         >
           下一题
         </button>
         <span className="spacer" />
-        <button className="btn btn-primary" type="button" onClick={handleResultClick}>
-          {missing === 0 ? '查看结果' : `还差 ${missing} 题`}
+        <button
+          className="btn btn-primary"
+          type="button"
+          disabled={submitting}
+          onClick={handleResultClick}
+        >
+          {submitting ? '正在保存…' : missing === 0 ? '查看结果' : `还差 ${missing} 题`}
         </button>
       </div>
 
@@ -218,11 +245,13 @@ function AnswerSheet({
   answers,
   currentIndex,
   onJump,
+  disabled,
 }: {
   questions: Question[]
   answers: Record<number, number>
   currentIndex: number
   onJump: (index: number) => void
+  disabled: boolean
 }) {
   return (
     <div className="dots">
@@ -236,6 +265,7 @@ function AnswerSheet({
           <button
             key={q.id}
             type="button"
+            disabled={disabled}
             className={classes.join(' ')}
             title={`第 ${i + 1} 题${answered ? '（已答）' : '（未答）'}`}
             onClick={() => onJump(i)}

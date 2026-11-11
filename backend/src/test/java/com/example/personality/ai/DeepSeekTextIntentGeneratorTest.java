@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 文本解析的容错测试。
@@ -24,6 +25,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 用户说了五件事，能听懂三件就先给三件，而不是整批作废。
  */
 class DeepSeekTextIntentGeneratorTest {
+
+    @Test
+    void parsesRemoveBiasAndNullableConstraint() {
+        TextIntentResult result = DeepSeekTextIntentGenerator.parse("""
+                {"operations":[
+                  {"op":"REMOVE_BIAS","key":"WALKING"},
+                  {"op":"SET_CONSTRAINT","key":"budgetMax","value":null}
+                ],"unrecognized":[],"summary":"取消步行偏向和预算限制"}
+                """);
+
+        assertThat(result.operations()).containsExactly(
+                TravelIntentOperation.removeBias(TravelDimension.WALKING),
+                TravelIntentOperation.clearConstraint(
+                        TravelIntentOperation.ConstraintKey.BUDGET_MAX));
+    }
 
     @Test
     @DisplayName("新协议：一句话可以解析出混合的意图操作")
@@ -74,11 +90,7 @@ class DeepSeekTextIntentGeneratorTest {
 
         TextIntentResult result = DeepSeekTextIntentGenerator.parse(json);
 
-        assertEquals(1, result.operations().size());
-        TravelIntentOperation budget = result.operations().get(0);
-        assertEquals(TravelIntentOperation.Type.SET_CONSTRAINT, budget.op());
-        assertEquals(TravelIntentOperation.ConstraintKey.BUDGET_MAX, budget.constraintKey());
-        assertEquals(1000.0, budget.numberValue(), 1e-9, "预算要夹到推荐接口上限");
+        assertTrue(result.operations().isEmpty(), "非法操作和越界预算均拒绝，不能夹取后执行");
     }
 
     @Test
@@ -201,8 +213,8 @@ class DeepSeekTextIntentGeneratorTest {
     }
 
     @Test
-    @DisplayName("越界的数值被夹进合法区间，而不是原样返回")
-    void outOfRangeNumbersAreClamped() {
+    @DisplayName("越界数值被拒绝，不改变用户要求的限制")
+    void outOfRangeNumbersAreRejected() {
         String json = """
                 {"remainingMinutes": 99999, "maxDistanceKm": 5000, "maxTicketPrice": -20}
                 """;
@@ -211,22 +223,21 @@ class DeepSeekTextIntentGeneratorTest {
 
         // 不夹的话，前端原样发出去会被推荐接口的 @Min/@Max 挡下变成 400，
         // 而用户看到的只是"推荐失败了"，完全想不到是 AI 多说了半句
-        assertEquals(1440, result.remainingMinutes(), "分钟数要夹到上限");
-        assertEquals(50.0, result.maxDistanceKm(), 1e-9, "距离要夹到上限");
-        assertEquals(0, result.maxTicketPrice(), "负数要夹到下限");
+        assertNull(result.remainingMinutes());
+        assertNull(result.maxDistanceKm());
+        assertNull(result.maxTicketPrice());
     }
 
     @Test
-    @DisplayName("单条倾向越界时被夹到 [-1, 1]——这是防负分的第一道")
-    void outOfRangeBiasesAreClamped() {
+    @DisplayName("单条倾向越界时拒绝，不把猜测修正成有效操作")
+    void outOfRangeBiasesAreRejected() {
         String json = """
                 {"biases": {"CROWD_TOLERANCE": -9.5, "PHOTOGRAPHY": 3.0}}
                 """;
 
         TextIntentResult result = DeepSeekTextIntentGenerator.parse(json);
 
-        assertEquals(-1.0, result.biases().get(TravelDimension.CROWD_TOLERANCE), 1e-9);
-        assertEquals(1.0, result.biases().get(TravelDimension.PHOTOGRAPHY), 1e-9);
+        assertTrue(result.biases().isEmpty());
     }
 
     @Test

@@ -1,0 +1,127 @@
+# 独立生产配置：不能与根目录开发 Compose 合并，否则可能继承公开端口。
+name: ${COMPOSE_PROJECT_NAME:-travelmind-prod}
+
+x-logging: &bounded-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:17@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?必须配置独立生产数据库名}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?必须配置独立数据库管理员密码}
+      DB_APP_USER: ${DB_USER:?必须配置专用应用数据库用户}
+      DB_APP_PASSWORD: ${DB_PASSWORD:?必须配置独立应用数据库密码}
+      TZ: Asia/Shanghai
+    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "max_connections=40", "-c", "log_statement=none", "-c", "log_min_error_statement=panic", "-c", "log_parameter_max_length_on_error=0", "-c", "log_error_verbosity=terse"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/10-app-user.sh:/docker-entrypoint-initdb.d/10-app-user.sh:ro
+      - ./scripts:/maintenance:ro
+      - ${BACKUP_DIR:?必须配置受限备份目录}:/backups
+    networks: [data]
+    mem_limit: 1g
+    cpus: 0.75
+    shm_size: 128m
+    restart: unless-stopped
+    logging: *bounded-logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    image: travelmind-backend:${RELEASE_TAG:?必须指定已验证发布标签}
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?必须配置独立生产数据库名}
+      DB_USER: ${DB_USER:?必须配置专用应用数据库用户}
+      DB_PASSWORD: ${DB_PASSWORD:?必须配置独立应用数据库密码}
+      AMAP_ENABLED: ${AMAP_ENABLED:-false}
+      AMAP_KEY: ${AMAP_KEY:-}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_ALLOW_USER_KEYS: ${AI_ALLOW_USER_KEYS:-false}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-deepseek-flash}
+      AI_PER_USER_PER_MINUTE: ${AI_PER_USER_PER_MINUTE:-6}
+      AI_MAX_CONCURRENT: ${AI_MAX_CONCURRENT:-2}
+      AI_MAX_DAILY_REQUESTS: ${AI_MAX_DAILY_REQUESTS:-100}
+      AI_MAX_TOTAL_REQUESTS: ${AI_MAX_TOTAL_REQUESTS:-300}
+      AI_MAX_DAILY_RESERVED_TOKENS: ${AI_MAX_DAILY_RESERVED_TOKENS:-200000}
+      AI_MAX_TOTAL_RESERVED_TOKENS: ${AI_MAX_TOTAL_RESERVED_TOKENS:-1000000}
+      AI_MAX_PROMPT_CHARACTERS: ${AI_MAX_PROMPT_CHARACTERS:-20000}
+      AI_MAX_TRACKED_USERS: ${AI_MAX_TRACKED_USERS:-1024}
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx768m -XX:MaxMetaspaceSize=256m -XX:+ExitOnOutOfMemoryError -Duser.timezone=Asia/Shanghai"
+    networks: [app, data]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1536m
+    cpus: 1.0
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=128m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    stop_grace_period: 40s
+    restart: unless-stopped
+    logging: *bounded-logging
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "4", "http://127.0.0.1:8080/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+
+  frontend:
+    image: travelmind-frontend:${RELEASE_TAG:?必须指定已验证发布标签}
+    networks: [app]
+    mem_limit: 128m
+    cpus: 0.25
+    read_only: true
+    tmpfs: ["/var/cache/nginx:rw,noexec,nosuid,size=32m", "/var/run:rw,noexec,nosuid,size=4m", "/tmp:rw,noexec,nosuid,size=8m"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    logging: *bounded-logging
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 20s
+      timeout: 4s
+      retries: 3
+
+  caddy:
+    image: ${CADDY_IMAGE:?必须指定验证过的官方 Caddy 镜像}
+    environment:
+      DEPLOY_DOMAIN: ${DEPLOY_DOMAIN:?必须指定已获准使用的域名}
+      ACME_EMAIL: ${ACME_EMAIL:?必须填写证书通知邮箱}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [app]
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    logging: *bounded-logging
+
+networks:
+  app:
+  data:
+    internal: true
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

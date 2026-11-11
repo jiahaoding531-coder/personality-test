@@ -36,6 +36,7 @@ export function createLatestRequestGate(): LatestRequestGate {
 }
 
 export interface SingleFlightGate<T> {
+  isRunning: () => boolean
   tryStart: (task: T) => boolean
   takeLatest: () => T | null
   finish: () => void
@@ -46,6 +47,7 @@ export function createSingleFlightGate<T>(): SingleFlightGate<T> {
   let running = false
   let latest: T | null = null
   return {
+    isRunning: () => running,
     tryStart: (task) => {
       if (running) {
         latest = task

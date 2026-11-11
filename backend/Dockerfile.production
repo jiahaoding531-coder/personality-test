@@ -1,0 +1,8 @@
+# 只打包本机已测试的 JAR，生产服务器不运行 Maven。
+FROM eclipse-temurin:17-jre@sha256:c6f2875c05ea10f16398bdc5f73405c384991506f2f1ead8bcc6582ae8adea79
+WORKDIR /app
+RUN useradd --system --uid 1001 spring
+COPY --chown=spring:spring target/personality-test-0.0.1-SNAPSHOT.jar /app/app.jar
+USER spring
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

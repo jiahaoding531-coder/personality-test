@@ -29,6 +29,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
+import tools.jackson.databind.JsonNode;
+
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThan;
@@ -50,13 +52,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class TravelFlowIntegrationTest extends IntegrationTestBase {
 
-    /** 杭州西湖附近的坐标。V7 灌的 59 个 POI 全在杭州，用它才有候选。 */
+    /** 杭州西湖附近的坐标，用来守住 V7 已有地点的推荐行为。 */
     private static final double WEST_LAKE_LAT = 30.2420;
     private static final double WEST_LAKE_LNG = 120.1400;
 
-    /** 河南平顶山，离杭州所有演示 POI 都远超默认的 10 公里半径。 */
+    /** 河南平顶山市中心，V14 增加本地地点后应该能给出附近推荐。 */
     private static final double PINGDINGSHAN_LAT = 33.7350;
     private static final double PINGDINGSHAN_LNG = 113.3077;
+
+    /** 北京市中心，离杭州和平顶山地点都远超默认的 10 公里半径。 */
+    private static final double FAR_AWAY_LAT = 39.9042;
+    private static final double FAR_AWAY_LNG = 116.4074;
 
     @Autowired
     private RecommendationBatchRepository batchRepository;
@@ -257,7 +263,7 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("定位远离杭州时连续请求两次 → 都返回空结果，不写孤儿批次也不再 500")
+    @DisplayName("定位远离所有已覆盖城市时连续请求两次 → 都返回空结果，不写孤儿批次也不再 500")
     void emptyRecommendationsDoNotCreateOrphanBatch() throws Exception {
         TestSessionRef ref = createTravelSession(null);
         answerAllTravelQuestions(ref, 4, null);
@@ -265,8 +271,8 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
                 .andExpect(status().isOk());
 
         String body = json(Map.of(
-                "latitude", PINGDINGSHAN_LAT,
-                "longitude", PINGDINGSHAN_LNG));
+                "latitude", FAR_AWAY_LAT,
+                "longitude", FAR_AWAY_LNG));
 
         for (int i = 0; i < 2; i++) {
             mockMvc.perform(withToken(post("/api/travel/sessions/{id}/recommendations", ref.id()).with(csrf())
@@ -279,6 +285,50 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
         // 空结果不是一批可解释、可反馈的推荐，因此不能留下批次上下文。
         org.junit.jupiter.api.Assertions.assertTrue(
                 batchRepository.findFirstBySessionIdOrderByBatchNoDesc(ref.id()).isEmpty());
+    }
+
+    @Test
+    @DisplayName("平顶山市中心按 5 公里搜索 → 只返回距离限制内的真实地点")
+    void pingdingshanCenterRespectsStrictDistanceLimit() throws Exception {
+        assertNearbyRecommendations(PINGDINGSHAN_LAT, PINGDINGSHAN_LNG, 5.0);
+    }
+
+    @Test
+    @DisplayName("尧山附近按 15 公里搜索 → 能命中尧山片区且不突破距离限制")
+    void yaoshanAreaProvidesNearbyRecommendations() throws Exception {
+        assertNearbyRecommendations(33.722896, 112.270149, 15.0);
+    }
+
+    @Test
+    @DisplayName("鲁山县城附近按 15 公里搜索 → 能命中鲁山片区且不突破距离限制")
+    void lushanAreaProvidesNearbyRecommendations() throws Exception {
+        assertNearbyRecommendations(33.7386, 112.9080, 15.0);
+    }
+
+    private void assertNearbyRecommendations(double latitude, double longitude,
+                                             double maxDistanceKm) throws Exception {
+        TestSessionRef ref = createTravelSession(null);
+        answerAllTravelQuestions(ref, 4, null);
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref))
+                .andExpect(status().isOk());
+
+        MvcResult result = mockMvc.perform(withToken(
+                        post("/api/travel/sessions/{id}/recommendations", ref.id()).with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(json(Map.of(
+                                        "latitude", latitude,
+                                        "longitude", longitude,
+                                        "maxDistanceKm", maxDistanceKm))), ref))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.places.length()").value(greaterThanOrEqualTo(1)))
+                .andReturn();
+
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsByteArray());
+        for (JsonNode place : response.get("places")) {
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    place.get("distanceKm").asDouble() <= maxDistanceKm,
+                    () -> place.get("name").asText() + " 超出 " + maxDistanceKm + " 公里限制");
+        }
     }
 
     @Test
@@ -385,17 +435,21 @@ class TravelFlowIntegrationTest extends IntegrationTestBase {
         // 只是没有 AI 那段话——而不是看到一个坏掉的功能或者一堆报错。
         //
         // （带假生成器的那些用例在 TravelReasonIntegrationTest 里。）
-        TestSessionRef ref = createTravelSession(null);
-        answerAllTravelQuestions(ref, 4, null);
-        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id()).with(csrf()), ref))
+        var login = registerAndLogin(uniqueUsername("disabled_reason_owner"), "password123");
+        TestSessionRef ref = createTravelSession(login);
+        answerAllTravelQuestions(ref, 4, login);
+        mockMvc.perform(withToken(post("/api/travel/sessions/{id}/submit", ref.id())
+                        .with(csrf()).session(login), ref))
                 .andExpect(status().isOk());
         mockMvc.perform(withToken(post("/api/travel/sessions/{id}/recommendations", ref.id()).with(csrf())
+                        .session(login)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("latitude", WEST_LAKE_LAT, "longitude", WEST_LAKE_LNG))), ref))
                 .andExpect(status().isOk());
 
         mockMvc.perform(withToken(
-                        post("/api/travel/sessions/{id}/recommendations/reasons", ref.id()).with(csrf()),
+                        post("/api/travel/sessions/{id}/recommendations/reasons", ref.id())
+                                .with(csrf()).session(login),
                         ref))
                 // 501 而不是 404：接口存在，只是功能没启用。前端能据此区分
                 // "地址写错了"和"AI 没配"，并给出不同的提示

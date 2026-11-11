@@ -1106,6 +1106,84 @@ curl -X POST "http://localhost:8080/api/test-sessions/$SID/answers" \
 
 ---
 
+## `POST /api/travel/sessions/{id}/feedback-events`
+
+针对当前推荐（或当前会话）说一句自然语言。服务端会先校验会话令牌，
+再校验 `recommendationId` 必须属于这个会话，最后在事务外调用模型解析。
+因此推荐归属错误、权限错误和非法令牌都统一返回 `404`，不会泄露资源是否存在。
+
+成功解析后，服务端会在同一个短写事务中保存 V13 反馈事件，并同步可选的 👍/👎；
+任何解析、鉴权或上游失败都不会留下半条事件。事件只保存原话和经过白名单校验的结构化结果，
+不保存 API key、Prompt 或模型原始响应。
+
+请求需要会话令牌和 CSRF 令牌。只有当服务端没有配置可用的 AI 凭据时，才需要额外提供访客自己的 AI 凭据请求头；服务端已配置凭据时可省略这两个请求头：
+
+```http
+X-Session-Token: <创建会话时返回的 accessToken>
+X-AI-Provider: DEEPSEEK
+X-AI-Key: <访客自己的 key>
+```
+
+`X-AI-Key` 只在本次请求中使用，不会落库、缓存或写入日志；`X-AI-Provider` 只能是
+服务端白名单中的厂商名，不能传 `base-url`。未配置服务端 AI 且未提供可用 key 时返回 `501`。
+
+**请求体**
+
+```json
+{
+  "text": "这家太远了，想找安静一点的",
+  "recommendationId": 37,
+  "query": {
+    "intents": ["HUNGRY"],
+    "preferences": ["QUIET"],
+    "durationMinutes": 60,
+    "maxDistanceMeters": 5000,
+    "budgetMax": 100,
+    "biases": {}
+  },
+  "latitude": 30.25,
+  "longitude": 120.16
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `text` | string | ✅ | 1~200 个字符的原话 |
+| `recommendationId` | long | | 针对某条推荐；省略表示只调整会话条件 |
+| `query` | object | ✅ | 当前前端查询快照，不会被服务端直接替换 |
+| `latitude` / `longitude` | number | ✅ | 当前定位，分别限制在 -90~90 / -180~180 |
+
+**200 OK**
+
+```json
+{
+  "eventId": 55,
+  "kind": "MIXED",
+  "reaction": "LIKE",
+  "operations": [
+    { "op": "SET_CONSTRAINT", "key": "maxDistanceMeters", "value": 3000 }
+  ],
+  "unrecognized": [],
+  "summary": "我把范围收近一些",
+  "shouldRecommend": true,
+  "excludeSeen": false
+}
+```
+
+`operations` 是受控协议，不是可直接执行的命令。前端必须把它交给现有 travel query
+reducer 做运行时校验和合并，不能自行替换整份 `query`。`excludeSeen=true` 表示用户要求
+“换一批”，即使没有其它 operation 也应追加推荐。
+
+| 状态码 | 场景 |
+|---|---|
+| `400` | 文本为空/超过 200 字、请求体超过 8192 字节、查询快照或坐标不合法、AI 厂商名不在白名单 |
+| `415` | 请求体不是 `application/json`（兼容 `application/*+json`） |
+| `404` | 会话不存在、未带/非法/越权令牌、推荐记录不属于该会话 |
+| `501` | 没有可用的服务端或访客 AI 凭据 |
+| `502` | 上游调用失败、返回坏 JSON 或无法解析的反馈；此时不会落反馈事件 |
+
+---
+
 ## 完整调用示例
 
 ```bash
@@ -1137,3 +1215,122 @@ curl http://localhost:8080/api/test-sessions/1/result
 
 **上线前必须改掉** `config/CorsConfig.java` 里的 `allowedOriginPatterns`，
 换成真实域名。配置成 `"*"` 且允许携带凭证等于开放 CSRF 攻击面。
+
+---
+
+## 阶段 5 第一批：明确行为与餐饮来源
+
+所有新增写入继续要求 CSRF。匿名旅行会话携带 `X-Session-Token`；有归属的会话必须由其用户登录访问。客户端不能传入 `userId`。失败的身份及伪造来源统一返回 404。
+
+### 记录明确行为
+
+`POST /api/travel/sessions/{sessionId}/behavior-events`
+
+餐饮导航示例（ID 为说明用占位，不代表实际可用来源）：
+
+```json
+{
+  "eventId": "11111111-1111-4111-8111-111111111111",
+  "schemaVersion": 1,
+  "targetType": "RESTAURANT",
+  "provider": "AMAP",
+  "targetId": "实际返回的poiId",
+  "action": "NAVIGATION_REQUESTED",
+  "occurredAt": "2026-10-09T04:00:00Z",
+  "searchSessionId": "22222222-2222-4222-8222-222222222222",
+  "resultSetId": "33333333-3333-4333-8333-333333333333"
+}
+```
+
+- 首次 201：`{"eventId":"…","duplicate":false}`；相同内容重试 200、`duplicate:true`；同 ID 不同内容 409。
+- 单请求最多 16 KiB，未知字段拒绝。首次发生时间允许过去 7 天至未来 5 分钟；接收时间由服务端 Clock 决定。
+- `PLACE/LOCAL` 的单目标必须关联该会话的 `recommendationId` 和本地 `targetId`；`RESTAURANT/AMAP` 必须关联该会话真实结果的搜索 ID、结果页 ID 和 POI ID。
+- `NEXT_BATCH_REQUESTED` 是列表动作，`targetId=null`；可含最多三项 `visibleSources`。空景点列表只关联授权会话，不捏造推荐批次。
+- `EXCLUDE` 仅用于餐饮本次搜索排除。`HOTEL/ACTIVITY` 只预留枚举，当前请求拒绝。
+- `REACTION_SET/CLEAR` 不允许通过通用端点上报，只能由景点反馈业务事务写入。
+- 导航请求不表示到达；换批不表示不喜欢全部地点；排除不表示长期不喜欢。没有曝光、停留、到访记忆或自动画像学习。
+
+### 餐饮分页来源
+
+原餐饮搜索接口路径和参数保留，请求追加可选 UUID `searchSessionId`。新客户端首次从 `page=1` 开始；同位置、坐标系、半径和用户/会话的分页共用 ID。响应追加 UUID `resultSetId`，每次真实返回页独立，空页也有来源。
+
+每张卡片保留自己的 `{searchSessionId,resultSetId,page}`。混合消费两页候选时不得统一改为最后页来源。
+
+相同搜索 ID 改条件返回 409 `RESTAURANT_CONTEXT_CHANGED`；30 分钟过期、后端重启或 256 个上下文容量淘汰后，旧分页返回 410 `RESTAURANT_CONTEXT_EXPIRED`，用户可重新搜索。未满 7 天的历史来源仍可验证动作。旧客户端不传 ID 仍可搜索，但不保证跨页稳定。
+
+### 景点反馈渐进升级
+
+原 POST/DELETE 反馈接口追加两个可选头：`X-Behavior-Event-Id`、`X-Behavior-Occurred-At`，必须一起提供。事件与反馈业务同事务提交或回滚；已有事件重试不重放反馈，所以 SET→CLEAR→重试旧 SET 不会恢复点赞。
+
+旧客户端无头时由服务端生成身份，不保证客户端重试幂等。无头且匿名的旧接口保留原令牌兼容规则；新头和登录请求严格检查归属。推荐评分与原偏好调整算法不变。
+
+### 留存、隐私及失败边界
+
+- 行为默认保留 90 天，结果快照 7 天。页删除仅级联其条目，不删除行为；事件保留必要 ID，来源清理后旧事件仍可幂等重试，新事件拒绝。90 天事件本身到期清理后不再承诺原 ID 幂等。
+- 每日北京时间 03:20 分块清理，默认每块 500、最多十块；停机或大量积压可能延迟物理清理，并非精确到秒的删除 SLA。
+- 配置前缀 `app.behavior-retention`：`event-days`（默认 90）、`snapshot-days`（默认 7，至少 7）、`batch-size`（默认 500，1–1000）、`cleanup-enabled`、`cleanup-cron`。
+- 内部 `BehaviorRetentionService.deleteNewBehaviorDataForUser(userId)` 要求可信 `ROLE_INTERNAL_DATA_MAINTAINER`；只删除本人新增三表数据，不删除旧反馈/画像。没有公共删除 API/UI。正式上线前必须补齐用户自助删除及全账户删除政策。
+- 新表不保存用户搜索中心、GPS 轨迹、Key、Token、模型原文；快照仅保留必要 POI 信息及目的地坐标。旧业务数据的留存范围不因此自动改变。
+- 普通行为发送为内存单飞队列：含在途最多 100 条，额外重试 3 次（1/2/4 秒），单次 10 秒超时，动作 120 秒过期。网络/5xx 重试复用事件身份，4xx 停止。切账号/会话销毁队列；刷新或关闭页面可丢失未确认事件，不支持离线可靠投递。
+- 普通记录失败不阻断导航、换批、排除。反馈请求十秒超时后提供同身份手动重试，确认前阻止该目标新按钮反馈，其他操作不受阻断。新自然语言反馈由下节服务端版本控制，不能复用旧按钮动作身份。
+
+## 2026-10-11：反馈并发版本兼容升级
+
+本节仅补充反馈并发控制，不改变景点评分、餐饮搜索或现有反馈含义。
+
+- 按钮反馈仍使用原 POST/DELETE 路径及事件身份头。新增可选 `X-Feedback-Version`（非负服务端版本）。同一动作重试必须复用全部身份与版本；过期新操作返回 409 / `STALE_FEEDBACK_VERSION`；同事件不同内容返回 409 / `BEHAVIOR_EVENT_CONFLICT`。
+- POST 响应新增 `feedbackState: { reaction: "LIKE" | "DISLIKE" | null, version: number }`，返回当前已确认状态，不把旧重试的意图当成当前反应。
+- DELETE 无新协商头时保持 204；请求 `X-Feedback-State: 1` 时返回 200 及上述状态对象。撤销重试不得再次删除后续新反应。
+- 自然语言反馈请求可传 `expectedFeedbackVersion`。未传时，服务端在模型调用前读取版本；模型结束后的写事务校验是否仍是该版本。响应新增 `feedbackState`，无推荐目标时为 null。
+- 客户端仅采用不低于已确认版本的反应快照。版本不是客户端时间戳，不参与推荐计算。旧客户端无版本请求保持兼容，但不提供未确认旧操作的版本约束。
+
+## 2026-10-18：地名搜索（仅用于餐饮搜索中心）
+
+`POST /api/travel/sessions/{sessionId}/locations/search`
+
+通过现有 Cookie / `X-Session-Token` 校验旅行会话归属；已归属其他账号的会话不能凭旧令牌访问。POST 仍需 `X-XSRF-TOKEN`。不需要 AI Key，AI 关闭时可用。
+
+请求：`{"keyword":"杭州西湖"}`。关键词必填、最多 80 字。服务端调用固定的高德 `/v5/place/text`，仅取第一页、最多 10 个候选，不使用逆地理编码替代关键词搜索。
+
+响应示意（不是运行时填充的默认数据）：
+
+```json
+{
+  "candidates": [{
+    "poiId": "由高德返回的真实POI标识",
+    "name": "由高德返回的地点名称",
+    "address": "由高德返回的地址或null",
+    "province": "省份或null",
+    "city": "城市或null",
+    "district": "行政区或null",
+    "latitude": 30.24,
+    "longitude": 120.14,
+    "coordinateSystem": "GCJ02",
+    "source": "AMAP_POI"
+  }]
+}
+```
+
+- 缺少名称、无效/缺失坐标的 POI 不成为候选；可选文本和 POI ID 缺失时为 null。有效空结果返回 `candidates: []`。
+- 权限、额度、网络和格式故障保留现有 `AMAP_PERMISSION_DENIED` / `AMAP_QUOTA_EXCEEDED` / `AMAP_NETWORK_ERROR` / `AMAP_SEARCH_FAILED` 分类；未配置服务为 503 `AMAP_NOT_CONFIGURED`。这些错误不能伪装成空候选。
+- Key 仅由后端配置读取，不放在响应、前端或上游错误消息里。新增链路不记录关键词或用户坐标。
+- 用户确认前仅保存选择草稿；确认后在当前页面内存保留候选的名称、地址、行政区、完整精度坐标、来源和坐标系。刷新后需要重新选择，不持久化搜索中心。
+- 选中 GCJ02 中心直接交给现有餐饮接口，禁止重复转换；设备 GPS 仍为 WGS84，由既有后端转换。原测试/手动 UNKNOWN 坐标仍不得直接用于餐饮。
+- 新中心与设备位置独立，不能传入历史景点推荐或自然语言景点反馈的距离计算。进入景点时仍使用原位置，历史数据覆盖范围不因此扩大。
+- 中心变化沿用现有餐饮上下文失效机制：清空候选、已展示、排除和页码，重新生成搜索 ID；旧请求不能回填。账号/会话切换或取消选择使未确认搜索作废。
+- 本接口不新增表、不写入 places、不修改 Flyway 迁移，不生成曝光或到访事件。
+
+## 2026-10-20：可信推荐解释（本地修复，尚未部署）
+
+`POST /api/travel/sessions/{sessionId}/recommendations/reasons?regenerate=false&batchNo=1`
+
+- 新增可选 `batchNo`：必须为正整数，仅查询当前已认证用户会话的指定批次；不存在返回404。省略时兼容旧客户端，取该会话最新批次。前端现在明确发送当前展示的批次号。
+- 保留原认证、会话归属、CSRF、凭据开关、限频、并发和持久化预算保护。AI/BYOK均关闭或无可用凭据时仍保持原501契约。
+- 对外响应字段不变：`sessionId / batchNo / provider / cached / reasons`，每个理由仍包含 `recommendationId / rank / reason`。
+- 模型仅返回内部 `selections: [{rank, evidenceIds}]`，不能返回自由文本；每项最多三个ID，且必须属于该会话、批次、推荐行及当前依据内容指纹。非法ID、未知字段、异常格式、超时或上游失败只使用本批次确定性解释，不自动再调用模型。
+- 理由由服务端依据目录渲染；类型为当前静态地点标注、本批次临时偏好、本批次条件、已保存评分。实时客流/排队/营业/价格/天气舒适程度/导航路线等没有可靠依据，不建立可选ID。
+- 当前数据没有历史有效画像与细分匹配快照，因此不读取最新反馈重算旧批次，也不声称恢复了当时细分偏好。静态属性明确写“当前地点资料”，热闹标签明确不代表实时人流。
+- 原 `recommendations.reason` 文本列存储内部v1缓存封套：版本、批次内容指纹、名次、依据ID及是否由模型选择。对外永远重新校验并渲染，不透传封套；不新增迁移。
+- 旧自由文本、错误版本、跨批次或损坏缓存会在请求时本地替换为受控缓存，不因修复缓存追加付费调用。合法受控缓存继续复用。
+- 全部采用本地降级时，`provider` 为 `local:evidence-v1`；存在模型有效选择时保持原模型来源格式。`cached=true` 仅表示本次复用已校验缓存，不表示本次调用了模型或模型学会了偏好。
+- 模型漏选的地点使用本地依据补齐。前端原有账号版本、会话和批次响应校验继续保留。

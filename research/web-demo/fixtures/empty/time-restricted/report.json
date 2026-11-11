@@ -1,0 +1,148 @@
+{
+  "version" : "offline-three-baselines-v1",
+  "measurement" : "SIMULATED_SELECTIONS_EQUAL_POSITION_WEIGHT",
+  "datasetId" : "SYNTHETIC-VALIDATION-ONLY",
+  "datasetKind" : "SYNTHETIC_TEST_ONLY",
+  "seed" : 42,
+  "fairnessWeight" : 0.3,
+  "queryOrder" : [ "TEST-Q1" ],
+  "variants" : [ {
+    "strategy" : "DISTANCE",
+    "aggregate" : {
+      "queries" : 1,
+      "emptyQueries" : 1,
+      "selections" : { },
+      "opportunities" : { },
+      "metrics" : {
+        "eligibleNodes" : 0,
+        "selections" : 0,
+        "gini" : null,
+        "longTailShare" : null,
+        "coverage" : null,
+        "zeroExposureShare" : null,
+        "opportunityAdjustedGini" : null
+      },
+      "meanBaseScore" : null,
+      "relevanceRetention" : null,
+      "meanDistanceKm" : null
+    },
+    "strata" : {
+      "合成文化场景" : {
+        "queries" : 1,
+        "emptyQueries" : 1,
+        "selections" : { },
+        "opportunities" : { },
+        "metrics" : {
+          "eligibleNodes" : 0,
+          "selections" : 0,
+          "gini" : null,
+          "longTailShare" : null,
+          "coverage" : null,
+          "zeroExposureShare" : null,
+          "opportunityAdjustedGini" : null
+        },
+        "meanBaseScore" : null,
+        "relevanceRetention" : null,
+        "meanDistanceKm" : null
+      }
+    },
+    "decisions" : [ {
+      "queryId" : "TEST-Q1",
+      "stratum" : "合成文化场景",
+      "eligible" : [ ],
+      "selected" : [ ]
+    } ]
+  }, {
+    "strategy" : "RELEVANCE",
+    "aggregate" : {
+      "queries" : 1,
+      "emptyQueries" : 1,
+      "selections" : { },
+      "opportunities" : { },
+      "metrics" : {
+        "eligibleNodes" : 0,
+        "selections" : 0,
+        "gini" : null,
+        "longTailShare" : null,
+        "coverage" : null,
+        "zeroExposureShare" : null,
+        "opportunityAdjustedGini" : null
+      },
+      "meanBaseScore" : null,
+      "relevanceRetention" : null,
+      "meanDistanceKm" : null
+    },
+    "strata" : {
+      "合成文化场景" : {
+        "queries" : 1,
+        "emptyQueries" : 1,
+        "selections" : { },
+        "opportunities" : { },
+        "metrics" : {
+          "eligibleNodes" : 0,
+          "selections" : 0,
+          "gini" : null,
+          "longTailShare" : null,
+          "coverage" : null,
+          "zeroExposureShare" : null,
+          "opportunityAdjustedGini" : null
+        },
+        "meanBaseScore" : null,
+        "relevanceRetention" : null,
+        "meanDistanceKm" : null
+      }
+    },
+    "decisions" : [ {
+      "queryId" : "TEST-Q1",
+      "stratum" : "合成文化场景",
+      "eligible" : [ ],
+      "selected" : [ ]
+    } ]
+  }, {
+    "strategy" : "FAIR_EXPOSURE",
+    "aggregate" : {
+      "queries" : 1,
+      "emptyQueries" : 1,
+      "selections" : { },
+      "opportunities" : { },
+      "metrics" : {
+        "eligibleNodes" : 0,
+        "selections" : 0,
+        "gini" : null,
+        "longTailShare" : null,
+        "coverage" : null,
+        "zeroExposureShare" : null,
+        "opportunityAdjustedGini" : null
+      },
+      "meanBaseScore" : null,
+      "relevanceRetention" : null,
+      "meanDistanceKm" : null
+    },
+    "strata" : {
+      "合成文化场景" : {
+        "queries" : 1,
+        "emptyQueries" : 1,
+        "selections" : { },
+        "opportunities" : { },
+        "metrics" : {
+          "eligibleNodes" : 0,
+          "selections" : 0,
+          "gini" : null,
+          "longTailShare" : null,
+          "coverage" : null,
+          "zeroExposureShare" : null,
+          "opportunityAdjustedGini" : null
+        },
+        "meanBaseScore" : null,
+        "relevanceRetention" : null,
+        "meanDistanceKm" : null
+      }
+    },
+    "decisions" : [ {
+      "queryId" : "TEST-Q1",
+      "stratum" : "合成文化场景",
+      "eligible" : [ ],
+      "selected" : [ ]
+    } ]
+  } ]
+}

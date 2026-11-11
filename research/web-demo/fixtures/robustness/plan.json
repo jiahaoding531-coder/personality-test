@@ -1,0 +1,6 @@
+{
+  "planId": "synthetic-order-sensitivity-v1",
+  "datasetId": "synthetic-cultural-nodes-v1",
+  "seeds": [2026102601, 2026102602, 2026102603, 2026102604, 2026102605, 2026102606, 2026102607, 2026102608, 2026102609, 2026102610],
+  "fairnessWeights": [0.0, 0.15, 0.35, 0.6, 1.0]
+}

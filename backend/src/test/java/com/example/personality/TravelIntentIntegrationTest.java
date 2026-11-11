@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 
 import java.util.List;
 import java.util.Map;
@@ -43,8 +44,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 class TravelIntentIntegrationTest extends IntegrationTestBase {
 
+    private MockHttpSession login;
+
     @BeforeEach
-    void resetFake() {
+    void resetFake() throws Exception {
+        login = registerAndLogin(uniqueUsername("intent_owner"), "password123");
         FakeIntentGenerator.calls.set(0);
         FakeIntentGenerator.lastCredentials = null;
         FakeIntentGenerator.next = new TextIntentResult(
@@ -71,7 +75,7 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
     @Test
     @DisplayName("【核心】一句话 → 结构化的状态、倾向、数值，全都带中文名")
     void interpretsTextIntoStructuredConditions() throws Exception {
-        TestSessionRef ref = createTravelSession(null);
+        TestSessionRef ref = createTravelSession(login);
 
         mockMvc.perform(interpretRequest(ref, "我有点累了，想找个安静的地方坐坐，还有一个小时"))
                 .andExpect(status().isOk())
@@ -99,7 +103,7 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
     @Test
     @DisplayName("⚠️ 听懂了但用不上的部分要如实带回来")
     void unrecognizedPartsAreReturnedHonestly() throws Exception {
-        TestSessionRef ref = createTravelSession(null);
+        TestSessionRef ref = createTravelSession(login);
 
         // 这一条是这个功能的诚实所在：说不出来就说"这句我没用上"，
         // 比假装听懂强——用户据此才知道系统的边界在哪
@@ -112,7 +116,7 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
     @Test
     @DisplayName("什么都没解析出来时 usable=false，前端据此提示换个说法")
     void nothingParsedMeansNotUsable() throws Exception {
-        TestSessionRef ref = createTravelSession(null);
+        TestSessionRef ref = createTravelSession(login);
         FakeIntentGenerator.next = TextIntentResult.empty();
 
         mockMvc.perform(interpretRequest(ref, "今天天气不错"))
@@ -125,10 +129,11 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
     @Test
     @DisplayName("空文本被校验挡下（400），且不调用模型")
     void blankTextIsRejected() throws Exception {
-        TestSessionRef ref = createTravelSession(null);
+        TestSessionRef ref = createTravelSession(login);
 
         mockMvc.perform(withToken(post("/api/travel/sessions/{id}/interpret", ref.id())
                         .with(csrf())
+                        .session(login)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("text", "   "))), ref))
                 .andExpect(status().isBadRequest());
@@ -139,12 +144,13 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
     @Test
     @DisplayName("超长文本被挡下——它会原样进提示词")
     void overlongTextIsRejected() throws Exception {
-        TestSessionRef ref = createTravelSession(null);
+        TestSessionRef ref = createTravelSession(login);
 
         // 不限长的话，一个人可以贴几万字进来：token 账单、延迟、
         // 以及模型被大段无关文本带跑偏，都跟着来
         mockMvc.perform(withToken(post("/api/travel/sessions/{id}/interpret", ref.id())
                         .with(csrf())
+                        .session(login)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("text", "累".repeat(500)))), ref))
                 .andExpect(status().isBadRequest());
@@ -157,27 +163,53 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
     // ==========================================================
 
     @Test
-    @DisplayName("【安全】别人的会话解析不了")
+    @DisplayName("【安全】登录用户不能解析别人的会话，即使拿到正确令牌")
     void cannotInterpretForSomeoneElsesSession() throws Exception {
-        TestSessionRef victim = createTravelSession(null);
-        TestSessionRef attacker = createTravelSession(null);
+        TestSessionRef victim = createTravelSession(login);
+        MockHttpSession attackerLogin = registerAndLogin(uniqueUsername("intent_attacker"), "password123");
+        TestSessionRef attacker = createTravelSession(attackerLogin);
 
-        mockMvc.perform(post("/api/travel/sessions/{id}/interpret", victim.id())
-                        .with(csrf())
-                        .header(SESSION_TOKEN_HEADER, attacker.token())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(Map.of("text", "我累了"))))
-                // 404 而不是 403：403 会泄露"这个会话存在"
-                .andExpect(status().isNotFound());
+        for (String token : List.of(attacker.token(), victim.token(), "not-a-uuid")) {
+            mockMvc.perform(post("/api/travel/sessions/{id}/interpret", victim.id())
+                            .with(csrf())
+                            .session(attackerLogin)
+                            .header(SESSION_TOKEN_HEADER, token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json(Map.of("text", "我累了"))))
+                    // 404 而不是 403：403 会泄露"这个会话存在"
+                    .andExpect(status().isNotFound());
+        }
 
         assertEquals(0, FakeIntentGenerator.calls.get(),
                 "被拦下的请求绝不该走到调模型那一步——那一步是要花钱的");
     }
 
     @Test
-    @DisplayName("【BYOK】访客带自己的 key → 用的是他的")
+    @DisplayName("【安全】匿名请求即使持有正确令牌也必须先登录")
+    void anonymousRequestCannotInterpretEvenWithCorrectToken() throws Exception {
+        TestSessionRef ref = createTravelSession(login);
+
+        mockMvc.perform(post("/api/travel/sessions/{id}/interpret", ref.id())
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("text", "我累了"))))
+                .andExpect(status().isUnauthorized());
+        for (String token : List.of(ref.token(), "not-a-uuid")) {
+            mockMvc.perform(post("/api/travel/sessions/{id}/interpret", ref.id())
+                            .with(csrf())
+                            .header(SESSION_TOKEN_HEADER, token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json(Map.of("text", "我累了"))))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        assertEquals(0, FakeIntentGenerator.calls.get(), "匿名请求不能消耗 AI 调用");
+    }
+
+    @Test
+    @DisplayName("【BYOK】登录用户带自己的 key → 用的是他的")
     void visitorKeyIsUsed() throws Exception {
-        TestSessionRef ref = createTravelSession(null);
+        TestSessionRef ref = createTravelSession(login);
 
         mockMvc.perform(interpretRequest(ref, "我累了")
                         .header(AiCredentialsResolver.PROVIDER_HEADER, "MOONSHOT")
@@ -191,7 +223,7 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
     @Test
     @DisplayName("【安全】把内网地址塞进厂商头 → 400")
     void ssrfAttemptIsRejected() throws Exception {
-        TestSessionRef ref = createTravelSession(null);
+        TestSessionRef ref = createTravelSession(login);
 
         mockMvc.perform(interpretRequest(ref, "我累了")
                         .header(AiCredentialsResolver.PROVIDER_HEADER, "http://169.254.169.254/")
@@ -205,12 +237,14 @@ class TravelIntentIntegrationTest extends IntegrationTestBase {
     // 辅助与替身
     // ==========================================================
 
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
     interpretRequest(TestSessionRef ref, String text) {
-        return withToken(post("/api/travel/sessions/{id}/interpret", ref.id())
+        // AI 按登录身份和会话归属放行，本人不需要令牌。
+        return post("/api/travel/sessions/{id}/interpret", ref.id())
                 .with(csrf())
+                .session(login)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"text\":\"" + text + "\"}"), ref);
+                .content("{\"text\":\"" + text + "\"}");
     }
 
     @TestConfiguration

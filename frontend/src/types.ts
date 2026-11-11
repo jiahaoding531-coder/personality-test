@@ -231,10 +231,14 @@ export type TravelState =
  */
 export interface FeedbackResponse {
   recommendationId: number
-  reaction: Reaction
+  reaction: Reaction | null
+  feedbackState?: FeedbackReactionState
   /** 被反馈影响到的维度。没被影响的不出现 */
   adjustments: DimensionAdjustment[]
 }
+
+/** 服务端在推荐行锁内递增的版本，不能用客户端时间代替。 */
+export interface FeedbackReactionState { reaction: Reaction | null; version: number }
 
 export interface DimensionAdjustment {
   key: string
@@ -399,6 +403,35 @@ export interface InterpretResponse {
   usable: boolean
 }
 
+/** 反馈响应里和普通 interpret 共用的受控状态操作协议。 */
+export type InterpretOperation = TravelQueryOperation
+
+export interface RecommendationReplyTarget {
+  recommendationId: number
+  placeName: string
+}
+
+export interface FeedbackEventResponse {
+  feedbackState?: FeedbackReactionState | null
+  eventId: number
+  kind: 'PLACE_OPINION' | 'SESSION_ADJUSTMENT' | 'MIXED'
+  reaction: Reaction | null
+  operations: InterpretOperation[]
+  unrecognized: string[]
+  summary: string
+  shouldRecommend: boolean
+  excludeSeen: boolean
+}
+
+export interface FeedbackEventRequest {
+  expectedFeedbackVersion?: number
+  text: string
+  recommendationId?: number
+  query: import('./travel/travelQueryState').TravelQueryState
+  latitude: number
+  longitude: number
+}
+
 export interface WeatherLabel {
   /** 原始天气描述，比如「多云」「小雨」。比类别更具体，直接显示给用户看 */
   condition: string
@@ -484,6 +517,7 @@ export interface ApiErrorBody {
   timestamp: string
   status: number
   error: string
+  code: string | null
   message: string
   path: string
   fieldErrors: FieldError[]

@@ -14,12 +14,14 @@ import java.util.List;
  * Spring 默认的报错格式五花八门：参数校验失败是一种、404 是另一种、
  * 未捕获异常又是另一种（还带一大坨堆栈信息，既泄露内部结构又不美观）。
  *
+ * @param code 稳定的机器业务码；仅需要客户端精确分支时填写，普通错误为 {@code null}
  * @param fieldErrors 仅在参数校验失败时非空，逐字段列出哪里不合法
  */
 public record ApiErrorResponse(
         Instant timestamp,
         int status,
         String error,
+        String code,
         String message,
         String path,
         List<FieldError> fieldErrors
@@ -30,11 +32,16 @@ public record ApiErrorResponse(
     }
 
     public static ApiErrorResponse of(int status, String error, String message, String path) {
-        return new ApiErrorResponse(Instant.now(), status, error, message, path, List.of());
+        return new ApiErrorResponse(Instant.now(), status, error, null, message, path, List.of());
+    }
+
+    public static ApiErrorResponse withCode(int status, String error, String code,
+                                            String message, String path) {
+        return new ApiErrorResponse(Instant.now(), status, error, code, message, path, List.of());
     }
 
     public static ApiErrorResponse withFieldErrors(int status, String error, String message,
                                                    String path, List<FieldError> fieldErrors) {
-        return new ApiErrorResponse(Instant.now(), status, error, message, path, fieldErrors);
+        return new ApiErrorResponse(Instant.now(), status, error, null, message, path, fieldErrors);
     }
 }

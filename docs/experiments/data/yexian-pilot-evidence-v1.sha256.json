@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "EVIDENCE_FILE_CHECKSUMS",
+  "createdOn": "2026-10-27",
+  "algorithm": "SHA-256",
+  "root": "repository",
+  "files": [
+    {
+      "path": "docs/experiments/data/yexian-pilot-evidence-v1.json",
+      "sha256": "7663cf760ef12388a4375521dfad45a11eee1bcd56f4b6f964d18641dfc9c226"
+    },
+    {
+      "path": "docs/experiments/yexian-pilot-field-checklist.md",
+      "sha256": "f9fb40857b4f4bec70d30725ce4106e6ce337f5df06e88487b07fe7988aea383"
+    }
+  ],
+  "notice": "校验和仅用于核对文件完整性，不证明来源事实、时效性、坐标准确性或数据再使用许可；不包含自身校验和。"
+}

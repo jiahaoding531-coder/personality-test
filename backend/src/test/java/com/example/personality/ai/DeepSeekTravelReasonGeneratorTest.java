@@ -1,143 +1,84 @@
 package com.example.personality.ai;
 
 import com.example.personality.exception.AiServiceException;
-import org.junit.jupiter.api.DisplayName;
+import com.example.personality.domain.TravelState;
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import static org.junit.jupiter.api.Assertions.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-/**
- * 大模型返回内容的解析测试。
- *
- * <p><b>不联网、不需要 Key、不花钱</b>——{@code parse} 是纯函数。
- *
- * <p>它拦的是哪类问题：<b>模型没按约定格式返回</b>。这类事一定会发生
- * （模型是不受控的），所以解析代码必须对"格式不对"有准备。
- * 而这些分支如果只靠真实调用去撞，一是慢、二是费钱、三是撞不全。
- */
+/** 受控选择协议测试，模型不再拥有自由文本输出权限。 */
 class DeepSeekTravelReasonGeneratorTest {
-
-    @Test
-    @DisplayName("正常返回：解析出名次和理由")
-    void parsesOrdinaryResponse() {
-        String content = """
-                {"reasons":[{"rank":1,"reason":"就在你旁边，走两步就到。"},\
-                {"rank":2,"reason":"菜是本地口味，离得也不算远。"}]}
-                """;
-
-        List<TravelReasonGenerator.RankedReason> reasons =
-                DeepSeekTravelReasonGenerator.parse(content, 2);
-
-        assertEquals(2, reasons.size());
-        assertEquals(1, reasons.get(0).rank());
-        assertEquals("就在你旁边，走两步就到。", reasons.get(0).reason());
-        assertEquals(2, reasons.get(1).rank());
+    @Test void 模型选满三项优势仍显示必显体力提示而不增加选择ID() {
+        var catalog=TravelReasonEvidence.from(TravelReasonEvidenceTest.walkingInput(88,Set.of(TravelState.TIRED),Set.of(),.4));
+        var ids=List.of(TravelReasonEvidenceTest.id(catalog,1,"PREFERENCE_NATURE"),
+                TravelReasonEvidenceTest.id(catalog,1,"STATIC_NATURE"),TravelReasonEvidenceTest.id(catalog,1,"SCORE_INTEREST"));
+        String body="{\"selections\":[{\"rank\":1,\"evidenceIds\":[\""+String.join("\",\"",ids)+"\"]}]}";
+        var selected=DeepSeekTravelReasonGenerator.parseSelections(body,catalog).get(0);
+        assertTrue(selected.modelSelected());
+        assertEquals(ids,selected.evidenceIds());
+        assertTrue(selected.reason().contains("88/100"));
+        assertTrue(selected.reason().contains("入选不代表省力路线"));
     }
 
-    @Test
-    @DisplayName("⚠️ 裹了 ```json 代码块的也能剥开")
-    void stripsCodeFence() {
-        // 开了 response_format=json_object 理论上不该出现，但"理论上"
-        // 这三个字在大模型身上一向不太可靠。剥一层壳的成本是几行代码，
-        // 收益是这类失败从"整批作废"变成"照常可用"。
-        String content = """
-                ```json
-                {"reasons":[{"rank":1,"reason":"很近。"}]}
-                ```
-                """;
-
-        List<TravelReasonGenerator.RankedReason> reasons =
-                DeepSeekTravelReasonGenerator.parse(content, 1);
-
-        assertEquals(1, reasons.size());
-        assertEquals("很近。", reasons.get(0).reason());
+    @Test void 确定性降级保留自然偏好并补充体力取舍() {
+        var catalog=TravelReasonEvidence.from(TravelReasonEvidenceTest.walkingInput(88,Set.of(TravelState.TIRED),Set.of(),.4));
+        var fallback=DeepSeekTravelReasonGenerator.fallback(catalog).get(0);
+        assertFalse(fallback.modelSelected());
+        assertTrue(fallback.evidenceIds().size()<=3);
+        assertTrue(fallback.reason().contains("增加自然风光"));
+        assertTrue(fallback.reason().contains("步行强度静态标注为88/100"));
+        assertTrue(fallback.reason().contains("入选不代表省力路线"));
     }
 
-    @Test
-    @DisplayName("rank 给成字符串 \"1\" 也能认")
-    void acceptsRankAsString() {
-        String content = """
-                {"reasons":[{"rank":"1","reason":"很近。"}]}
-                """;
+    private final TravelReasonEvidence catalog=TravelReasonEvidence.from(
+            TravelReasonEvidenceTest.input("owner1:batch1",Map.of(),Set.of()));
+    private String selection(String fields) {return "{\"selections\":[{"+fields+"}]}";}
+    private String valid() {return selection("\"rank\":1,\"evidenceIds\":[\""+catalog.forRank(1).get(0).id()+"\"]");}
 
-        List<TravelReasonGenerator.RankedReason> reasons =
-                DeepSeekTravelReasonGenerator.parse(content, 1);
-
-        assertEquals(1, reasons.get(0).rank());
+    @Test void 正常选择只渲染已有依据不采纳模型句子() {
+        var result=DeepSeekTravelReasonGenerator.parseSelections(valid(),catalog);
+        assertEquals(1,result.size());
+        assertTrue(result.get(0).modelSelected());
+        assertEquals(catalog.render(1,result.get(0).evidenceIds()),result.get(0).reason());
     }
-
-    @Test
-    @DisplayName("名次对不上时只记日志，不丢整批")
-    void partialResultIsKept() {
-        // 模型偶尔会漏掉某个名次。那种情况下宁可少给一条，
-        // 也不该让整批作废——用户至少还能看到另外两条。
-        String content = """
-                {"reasons":[{"rank":1,"reason":"很近。"}]}
-                """;
-
-        List<TravelReasonGenerator.RankedReason> reasons =
-                DeepSeekTravelReasonGenerator.parse(content, 3);
-
-        assertEquals(1, reasons.size(), "少给的不该让已给的那条也作废");
+    @ParameterizedTest
+    @ValueSource(strings={"null","[]","{} {}","{broken","{\"selections\":[]}","{\"data\":[]}",
+            "{\"reasons\":[{\"rank\":1,\"reason\":\"现场没人\"}]}",
+            "{\"selections\":[{\"rank\":\"1\",\"evidenceIds\":[]}]}",
+            "{\"selections\":[{\"rank\":1.5,\"evidenceIds\":[]}]}",
+            "{\"selections\":[{\"rank\":4,\"evidenceIds\":[\"forged\"]}]}",
+            "{\"selections\":[{\"rank\":1,\"evidenceIds\":null}]}",
+            "{\"selections\":[{\"rank\":1,\"evidenceIds\":[1]}]}"})
+    void 非法结构空选择越界及自由文本均拒绝(String raw) {
+        assertThrows(AiServiceException.class,()->DeepSeekTravelReasonGenerator.parseSelections(raw,catalog));
     }
-
-    @Test
-    @DisplayName("名次非法或理由为空的那一条被丢掉，其余保留")
-    void skipsInvalidEntries() {
-        String content = """
-                {"reasons":[
-                  {"rank":1,"reason":"很近。"},
-                  {"rank":0,"reason":"名次从 1 开始，0 是错的"},
-                  {"rank":2,"reason":"   "},
-                  {"rank":3,"reason":"这条是好的。"}
-                ]}
-                """;
-
-        List<TravelReasonGenerator.RankedReason> reasons =
-                DeepSeekTravelReasonGenerator.parse(content, 3);
-
-        assertEquals(2, reasons.size());
-        assertEquals(1, reasons.get(0).rank());
-        assertEquals(3, reasons.get(1).rank());
+    @Test void 重复名次和重复依据不静默接受() {
+        var one=valid().substring("{\"selections\":[".length(),valid().length()-2);
+        assertThrows(AiServiceException.class,()->DeepSeekTravelReasonGenerator.parseSelections(
+                "{\"selections\":["+one+","+one+"]}",catalog));
+        String id=catalog.forRank(1).get(0).id();
+        assertThrows(AiServiceException.class,()->DeepSeekTravelReasonGenerator.parseSelections(
+                selection("\"rank\":1,\"evidenceIds\":[\""+id+"\",\""+id+"\"]"),catalog));
     }
-
-    // ==========================================================
-    // 失败路径：必须抛，不能静默返回空
-    // ==========================================================
-
-    @Test
-    @DisplayName("【关键】一条都没解析出来时必须报错，而不是返回空列表")
-    void emptyResultThrows() {
-        // ⚠️ 这条是刻意的。返回空列表的话，上层会以为"生成成功了，只是没内容"，
-        // 于是把空结果当成正常结果**缓存起来**——之后每次都命中这个空缓存，
-        // 用户永远看不到理由，而且没有任何地方报错。
-        String content = """
-                {"reasons":[]}
-                """;
-
-        AiServiceException e = assertThrows(AiServiceException.class,
-                () -> DeepSeekTravelReasonGenerator.parse(content, 3));
-        assertTrue(e.getMessage().contains("没有返回任何可用的推荐理由"),
-                "报错信息要说清是什么问题，实际是：" + e.getMessage());
+    @Test void 超过三项依据拒绝() {
+        var ids=catalog.forRank(1).stream().limit(4).map(e->"\""+e.id()+"\"").toList();
+        assertThrows(AiServiceException.class,()->DeepSeekTravelReasonGenerator.parseSelections(
+                selection("\"rank\":1,\"evidenceIds\":["+String.join(",",ids)+"]"),catalog));
     }
-
-    @Test
-    @DisplayName("不是合法 JSON 时报错")
-    void invalidJsonThrows() {
-        assertThrows(AiServiceException.class,
-                () -> DeepSeekTravelReasonGenerator.parse("我觉得吧，西湖挺不错的。", 3));
-    }
-
-    @Test
-    @DisplayName("JSON 合法但没有 reasons 字段时报错")
-    void missingReasonsFieldThrows() {
-        // 模型有时候会自作主张换个键名（"推荐理由"、"result"...），
-        // 那种情况必须报错，而不是当成"没有理由"
-        assertThrows(AiServiceException.class,
-                () -> DeepSeekTravelReasonGenerator.parse("{\"data\":[]}", 3));
+    @Test void 缺少地点的选择用本地依据补齐不再请求模型() {
+        var base=TravelReasonTrustRegressionTest.input();var p=base.places().get(0);
+        var other=new TravelReasonInput.ExplainedPlace(2,"另一个公开公园","CULTURE","资料",50,
+                p.factors(),0,30,null,null,List.of());
+        var input=new TravelReasonInput(null,null,120,3,null,Set.of(),Set.of(),Map.of(),null,List.of(p,other));
+        var multi=TravelReasonEvidence.from(input);
+        var id=multi.forRank(1).get(0).id();
+        var result=DeepSeekTravelReasonGenerator.parseSelections(
+                selection("\"rank\":1,\"evidenceIds\":[\""+id+"\"]"),multi);
+        assertEquals(2,result.size());
+        assertTrue(result.stream().anyMatch(r->r.rank()==2 && !r.modelSelected()));
     }
 }

@@ -30,6 +30,8 @@ application-local.properties
 application-secret.yml
 .env
 .env.local
+.env.*
+!.env.example
 *.key
 *.pem
 
@@ -90,3 +92,20 @@ $RECYCLE.BIN/
 HELP.md
 *.tmp
 *.bak
+
+# Superpowers 的隔离工作区和执行账本只服务本机开发，不进入仓库。
+.worktrees/
+.superpowers/
+
+# 云部署实际配置、备份和镜像包不进入版本库。
+/deploy/.env*
+!/deploy/.env.example
+/deploy/backups/
+/deploy/artifacts/
+
+# 独立文化实验网页的运行缓存，不提交运行数据和编译产物。
+research/web-demo/lab-cache/
+research/web-demo/lab-runs/
+research/web-demo/local-checks/
+__pycache__/
+*.pyc

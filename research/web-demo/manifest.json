@@ -1,0 +1,23 @@
+{
+  "createdOn": "2026-11-11",
+  "purpose": "报告回放、可核对的推荐依据与公平取舍、离线答辩、本地Java实验",
+  "inputSha256": "ad7f9022217e6e806e580d2e52415991a6be8304e3b6110e15de2cb5d4d5dc11",
+  "reportSha256": "dddf1a665b5e6b1dd2c1dfb8ee6d3549452f66cb4d1c1e79871850e8e35712d6",
+  "robustnessReportSha256": "841ebc0f010cb6304ad2c72d69254ca4ed1c09b714c4afeed37d84f1dac71468",
+  "robustnessPlanSha256": "2afcc571f105d9b43cf5f8d535ef6a8fd595a6facb8d89ab2f10782f18231325",
+  "webSourceSha256": {
+    "page.html": "7ca544248c988d33e08c5bce843967935ae766f7dc80b829627bbfe748af2172",
+    "demo-model.mjs": "e7dc7534dd4b56c3624427f14dcbb23b977150baf0413d069a864a515e47d5a0",
+    "robustness-ui.js": "42e99e84ec33b20eed7046e58254dd210ab493adec4340f4603d6c499abf4887",
+    "fieldwork-model.mjs": "5b0e26a93b818f92a837fa351efcfaa143dda84dc748a27005658324903a40b1",
+    "fieldwork-ui.js": "a2afe4a49fca8206c39f8d0c665635119370503d092b8b24be093cba3ba5d6df",
+    "lab-ui.js": "4fbac5a067f4e8b856409c0bff4bfc84eefe533e10ac6784b3b92d9c4f5ea468",
+    "result-view-model.mjs": "80412c9574ff4f5ffea9ef4afec17da6d202fe3aa35ec6a6a53a67a721ef1d98",
+    "result-view-ui.js": "b7a3e0e7d9841a7787f8fd24e78321700d8d4e2dfedf17bccba4673eac1b8c4d",
+    "ranking-evidence.mjs": "b244b6e4ef99e0500dabd92135fc8e017b6d85c8cdc7d22527af6114a1538071",
+    "ranking-evidence-ui.js": "7ecbbf8c6c403e4cc68955e3264f6b9c19df28c52d54a9a7504595c4e3507d7c"
+  },
+  "htmlSha256": "eb5efd4655a2450727f8972016f80c5f86ff1d441222a59756752622d7c7958a",
+  "paidApiCalls": 0,
+  "databaseWrites": 0
+}

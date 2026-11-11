@@ -43,6 +43,8 @@ public interface TravelReasonGenerator {
      * @param rank   对应第几名（1 = 最推荐）
      * @param reason 那句人话
      */
-    record RankedReason(int rank, String reason) {
+    record RankedReason(int rank, String reason, List<String> evidenceIds, boolean modelSelected) {
+        /** 兼容旧生成器；没有可验证ID的自由文本会在编排层降级，不直接展示。 */
+        public RankedReason(int rank, String reason) {this(rank,reason,List.of(),false);}
     }
 }

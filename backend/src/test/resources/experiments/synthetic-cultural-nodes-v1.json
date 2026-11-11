@@ -1,0 +1,582 @@
+{
+  "datasetId": "synthetic-cultural-nodes-v1",
+  "datasetKind": "SYNTHETIC_TEST_ONLY",
+  "provenance": "项目内自行构造的单元测试样例；不来源于高德，不对应实际地点、用户或客流。",
+  "coordinateSystem": "SYNTHETIC",
+  "longTailDefinition": "运行前固定指定节点4、5、6，仅用于检查份额计算，不代表现实长尾。",
+  "seed": 20261026,
+  "fairnessWeight": 0.35,
+  "longTailPlaceIds": [
+    4,
+    5,
+    6
+  ],
+  "nodes": [
+    {
+      "id": 1,
+      "name": "合成文化节点1（非真实地点）",
+      "category": "CULTURE",
+      "coordinateSystem": "SYNTHETIC",
+      "latitude": 0.001,
+      "longitude": 0,
+      "traits": {
+        "nature": 30,
+        "culture": 90,
+        "food": 20,
+        "photography": 40,
+        "hiddenGems": 20,
+        "lively": 80,
+        "walking": 20
+      },
+      "indoor": 70,
+      "quality": 80,
+      "ticketPrice": 0,
+      "suggestedMinutes": 30,
+      "openFrom": null,
+      "openTo": null
+    },
+    {
+      "id": 2,
+      "name": "合成文化节点2（非真实地点）",
+      "category": "CULTURE",
+      "coordinateSystem": "SYNTHETIC",
+      "latitude": 0.003,
+      "longitude": 0,
+      "traits": {
+        "nature": 50,
+        "culture": 85,
+        "food": 20,
+        "photography": 50,
+        "hiddenGems": 30,
+        "lively": 70,
+        "walking": 30
+      },
+      "indoor": 70,
+      "quality": 80,
+      "ticketPrice": 0,
+      "suggestedMinutes": 30,
+      "openFrom": null,
+      "openTo": null
+    },
+    {
+      "id": 3,
+      "name": "合成文化节点3（非真实地点）",
+      "category": "CULTURE",
+      "coordinateSystem": "SYNTHETIC",
+      "latitude": 0.004,
+      "longitude": 0,
+      "traits": {
+        "nature": 40,
+        "culture": 80,
+        "food": 20,
+        "photography": 60,
+        "hiddenGems": 40,
+        "lively": 60,
+        "walking": 40
+      },
+      "indoor": 70,
+      "quality": 80,
+      "ticketPrice": 0,
+      "suggestedMinutes": 30,
+      "openFrom": null,
+      "openTo": null
+    },
+    {
+      "id": 4,
+      "name": "合成文化节点4（非真实地点）",
+      "category": "CULTURE",
+      "coordinateSystem": "SYNTHETIC",
+      "latitude": 0.006,
+      "longitude": 0,
+      "traits": {
+        "nature": 70,
+        "culture": 75,
+        "food": 20,
+        "photography": 65,
+        "hiddenGems": 60,
+        "lively": 40,
+        "walking": 40
+      },
+      "indoor": 70,
+      "quality": 80,
+      "ticketPrice": 0,
+      "suggestedMinutes": 30,
+      "openFrom": null,
+      "openTo": null
+    },
+    {
+      "id": 5,
+      "name": "合成文化节点5（非真实地点）",
+      "category": "CULTURE",
+      "coordinateSystem": "SYNTHETIC",
+      "latitude": 0.008,
+      "longitude": 0,
+      "traits": {
+        "nature": 60,
+        "culture": 65,
+        "food": 20,
+        "photography": 60,
+        "hiddenGems": 70,
+        "lively": 30,
+        "walking": 60
+      },
+      "indoor": 70,
+      "quality": 80,
+      "ticketPrice": 10,
+      "suggestedMinutes": 30,
+      "openFrom": null,
+      "openTo": null
+    },
+    {
+      "id": 6,
+      "name": "合成文化节点6（非真实地点）",
+      "category": "CULTURE",
+      "coordinateSystem": "SYNTHETIC",
+      "latitude": 0.011,
+      "longitude": 0,
+      "traits": {
+        "nature": 80,
+        "culture": 60,
+        "food": 20,
+        "photography": 70,
+        "hiddenGems": 80,
+        "lively": 20,
+        "walking": 70
+      },
+      "indoor": 70,
+      "quality": 80,
+      "ticketPrice": 0,
+      "suggestedMinutes": 60,
+      "openFrom": null,
+      "openTo": null
+    }
+  ],
+  "queries": [
+    {
+      "id": "synthetic-q01",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 50,
+        "CULTURE": 80,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 40,
+        "PLANNING": 50
+      },
+      "states": [
+        "TIRED"
+      ],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q02",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 80,
+        "CULTURE": 50,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 30,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q03",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 50,
+        "CULTURE": 80,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 40,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q04",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 80,
+        "CULTURE": 50,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 30,
+        "PLANNING": 50
+      },
+      "states": [
+        "TIRED"
+      ],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q05",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 50,
+        "CULTURE": 80,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 40,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q06",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 80,
+        "CULTURE": 50,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 30,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q07",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 50,
+        "CULTURE": 80,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 40,
+        "PLANNING": 50
+      },
+      "states": [
+        "TIRED"
+      ],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q08",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 80,
+        "CULTURE": 50,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 30,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q09",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 50,
+        "CULTURE": 80,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 40,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q10",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 80,
+        "CULTURE": 50,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 30,
+        "PLANNING": 50
+      },
+      "states": [
+        "TIRED"
+      ],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q11",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 50,
+        "CULTURE": 80,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 40,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q12",
+      "stratum": "合成宽松场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 2,
+      "remainingMinutes": 120,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 80,
+        "CULTURE": 50,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 30,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q13",
+      "stratum": "合成近距离场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 0.5,
+      "remainingMinutes": 45,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 50,
+        "CULTURE": 80,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 40,
+        "PLANNING": 50
+      },
+      "states": [
+        "TIRED"
+      ],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q14",
+      "stratum": "合成近距离场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 0.5,
+      "remainingMinutes": 45,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 80,
+        "CULTURE": 50,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 30,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q15",
+      "stratum": "合成近距离场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 0.5,
+      "remainingMinutes": 45,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 50,
+        "CULTURE": 80,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 40,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q16",
+      "stratum": "合成近距离场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 0.5,
+      "remainingMinutes": 45,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 80,
+        "CULTURE": 50,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 30,
+        "PLANNING": 50
+      },
+      "states": [
+        "TIRED"
+      ],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q17",
+      "stratum": "合成近距离场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 0.5,
+      "remainingMinutes": 45,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 50,
+        "CULTURE": 80,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 40,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    },
+    {
+      "id": "synthetic-q18",
+      "stratum": "合成近距离场景",
+      "coordinateSystem": "SYNTHETIC",
+      "localTime": "10:00",
+      "latitude": 0,
+      "longitude": 0,
+      "maxDistanceKm": 0.5,
+      "remainingMinutes": 45,
+      "maxTicketPrice": 20,
+      "preference": {
+        "NATURE": 80,
+        "CULTURE": 50,
+        "FOOD": 20,
+        "PHOTOGRAPHY": 50,
+        "HIDDEN_GEMS": 60,
+        "CROWD_TOLERANCE": 30,
+        "WALKING": 30,
+        "PLANNING": 50
+      },
+      "states": [],
+      "extraBias": {}
+    }
+  ]
+}

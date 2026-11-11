@@ -1,0 +1,55 @@
+name: 源码快照验证
+on:
+  push:
+    branches: [publish/travelmind-mvp-20261111]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: travelmind_ci
+          POSTGRES_PASSWORD: ci-only-test-password
+          POSTGRES_DB: personality_mvp_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U travelmind_ci -d personality_mvp_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DB_USER: travelmind_ci
+      DB_PASSWORD: ci-only-test-password
+      TEST_DB_URL: jdbc:postgresql://localhost:5432/personality_mvp_test
+      AI_ENABLED: 'false'
+      AI_ALLOW_USER_KEYS: 'false'
+      AMAP_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 后端全量测试及离线Java依赖
+        working-directory: backend
+        run: ./mvnw -B -ntp test org.apache.maven.plugins:maven-dependency-plugin:3.10.0:build-classpath -Dmdep.includeScope=test -Dmdep.outputFile=target/offline-fairness-classpath.txt
+      - name: 前端测试与生产构建
+        working-directory: frontend
+        run: npm ci && npm test && npm run build
+      - name: 独立网页构建及全量测试
+        working-directory: research/web-demo
+        run: node lab-build.mjs && node build.mjs && node --test --test-concurrency=1 *.test.mjs
+      - name: 保留失败报告
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-validation-failure
+          path: backend/target/surefire-reports/
+          retention-days: 7

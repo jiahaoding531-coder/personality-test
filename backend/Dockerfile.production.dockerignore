@@ -1,0 +1,5 @@
+# 白名单：Docker 不接收本地环境文件和源码。
+**
+!Dockerfile.production
+!target/
+!target/personality-test-0.0.1-SNAPSHOT.jar

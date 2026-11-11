@@ -73,7 +73,7 @@ public class AiReportController {
         // （接入"访客自带 key"之后，"花谁的钱"变了——花的是调用者自己的；
         //   但这条校验仍然要留：它守的是**别人的会话内容**，与会话的归属有关，
         //   和谁付费无关。）
-        accessGuard.requireAccess(sessionId, SessionAccessGuard.parseToken(sessionToken), principal);
+        accessGuard.requireAiAccess(sessionId, principal);
 
         // 都没有凭据时这里就抛 501，不会白读一遍库
         AiCredentials credentials = aiCredentialsResolver.require(aiProvider, aiKey);

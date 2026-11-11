@@ -1,0 +1,3265 @@
+{
+  "version" : "offline-three-baselines-v1",
+  "measurement" : "SIMULATED_SELECTIONS_EQUAL_POSITION_WEIGHT",
+  "datasetId" : "synthetic-cultural-nodes-v1",
+  "datasetKind" : "SYNTHETIC_TEST_ONLY",
+  "seed" : 20261026,
+  "fairnessWeight" : 0.35,
+  "queryOrder" : [ "synthetic-q08", "synthetic-q16", "synthetic-q10", "synthetic-q13", "synthetic-q15", "synthetic-q11", "synthetic-q03", "synthetic-q12", "synthetic-q14", "synthetic-q01", "synthetic-q07", "synthetic-q18", "synthetic-q04", "synthetic-q09", "synthetic-q05", "synthetic-q17", "synthetic-q06", "synthetic-q02" ],
+  "variants" : [ {
+    "strategy" : "DISTANCE",
+    "aggregate" : {
+      "queries" : 18,
+      "emptyQueries" : 0,
+      "selections" : {
+        "1" : 18,
+        "2" : 18,
+        "3" : 18,
+        "4" : 0,
+        "5" : 0,
+        "6" : 0
+      },
+      "opportunities" : {
+        "1" : 18,
+        "2" : 18,
+        "3" : 18,
+        "4" : 12,
+        "5" : 12,
+        "6" : 12
+      },
+      "metrics" : {
+        "eligibleNodes" : 6,
+        "selections" : 54,
+        "gini" : 0.5,
+        "longTailShare" : 0.0,
+        "coverage" : 0.5,
+        "zeroExposureShare" : 0.5,
+        "opportunityAdjustedGini" : 0.5
+      },
+      "meanBaseScore" : 0.40746006437680266,
+      "relevanceRetention" : 0.9593085038475069,
+      "meanDistanceKm" : 0.29651980438549014
+    },
+    "strata" : {
+      "合成宽松场景" : {
+        "queries" : 12,
+        "emptyQueries" : 0,
+        "selections" : {
+          "1" : 12,
+          "2" : 12,
+          "3" : 12,
+          "4" : 0,
+          "5" : 0,
+          "6" : 0
+        },
+        "opportunities" : {
+          "1" : 12,
+          "2" : 12,
+          "3" : 12,
+          "4" : 12,
+          "5" : 12,
+          "6" : 12
+        },
+        "metrics" : {
+          "eligibleNodes" : 6,
+          "selections" : 36,
+          "gini" : 0.5,
+          "longTailShare" : 0.0,
+          "coverage" : 0.5,
+          "zeroExposureShare" : 0.5,
+          "opportunityAdjustedGini" : 0.5
+        },
+        "meanBaseScore" : 0.40746006437680266,
+        "relevanceRetention" : 0.9401798416430718,
+        "meanDistanceKm" : 0.29651980438548997
+      },
+      "合成近距离场景" : {
+        "queries" : 6,
+        "emptyQueries" : 0,
+        "selections" : {
+          "1" : 6,
+          "2" : 6,
+          "3" : 6
+        },
+        "opportunities" : {
+          "1" : 6,
+          "2" : 6,
+          "3" : 6
+        },
+        "metrics" : {
+          "eligibleNodes" : 3,
+          "selections" : 18,
+          "gini" : 0.0,
+          "longTailShare" : 0.0,
+          "coverage" : 1.0,
+          "zeroExposureShare" : 0.0,
+          "opportunityAdjustedGini" : 0.0
+        },
+        "meanBaseScore" : 0.4074600643768027,
+        "relevanceRetention" : 1.0,
+        "meanDistanceKm" : 0.29651980438548997
+      }
+    },
+    "decisions" : [ {
+      "queryId" : "synthetic-q08",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q16",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.3391632042843049,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.33444655982834065,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.29679761137488897,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q10",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.3391632042843049,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3356531147851683,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.33444655982834065,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.29679761137488897,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.236619990113407,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.21245440657526346,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q13",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 1,
+        "baseScore" : 0.37235801049350614,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.3567222378489432,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.3165841187998815,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q15",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q11",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q03",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q12",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q14",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q01",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 1,
+        "baseScore" : 0.37235801049350614,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.3567222378489432,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3349036500950578,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.3165841187998815,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.23882774000051907,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.2070068576887182,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q07",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 1,
+        "baseScore" : 0.37235801049350614,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.3567222378489432,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3349036500950578,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.3165841187998815,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.23882774000051907,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.2070068576887182,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q18",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q04",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.3391632042843049,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3356531147851683,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.33444655982834065,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.29679761137488897,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.236619990113407,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.21245440657526346,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q09",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q05",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q17",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q06",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q02",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : -0.6671695598673525,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : -1.2231441930901463,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : -0.8895594131564699,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : -0.33358477993367625,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : -0.44477970657823496,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : -0.11119492664455874,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    } ]
+  }, {
+    "strategy" : "RELEVANCE",
+    "aggregate" : {
+      "queries" : 18,
+      "emptyQueries" : 0,
+      "selections" : {
+        "1" : 10,
+        "2" : 14,
+        "3" : 6,
+        "4" : 12,
+        "5" : 4,
+        "6" : 8
+      },
+      "opportunities" : {
+        "1" : 18,
+        "2" : 18,
+        "3" : 18,
+        "4" : 12,
+        "5" : 12,
+        "6" : 12
+      },
+      "metrics" : {
+        "eligibleNodes" : 6,
+        "selections" : 54,
+        "gini" : 0.21604938271604937,
+        "longTailShare" : 0.4444444444444444,
+        "coverage" : 1.0,
+        "zeroExposureShare" : 0.0,
+        "opportunityAdjustedGini" : 0.21717171717171715
+      },
+      "meanBaseScore" : 0.4247435134188836,
+      "relevanceRetention" : 1.0,
+      "meanDistanceKm" : 0.5518563026063288
+    },
+    "strata" : {
+      "合成宽松场景" : {
+        "queries" : 12,
+        "emptyQueries" : 0,
+        "selections" : {
+          "1" : 4,
+          "2" : 8,
+          "3" : 0,
+          "4" : 12,
+          "5" : 4,
+          "6" : 8
+        },
+        "opportunities" : {
+          "1" : 12,
+          "2" : 12,
+          "3" : 12,
+          "4" : 12,
+          "5" : 12,
+          "6" : 12
+        },
+        "metrics" : {
+          "eligibleNodes" : 6,
+          "selections" : 36,
+          "gini" : 0.35185185185185186,
+          "longTailShare" : 0.6666666666666666,
+          "coverage" : 0.8333333333333334,
+          "zeroExposureShare" : 0.16666666666666666,
+          "opportunityAdjustedGini" : 0.35185185185185186
+        },
+        "meanBaseScore" : 0.4333852379399239,
+        "relevanceRetention" : 0.9999999999999999,
+        "meanDistanceKm" : 0.6795245517167481
+      },
+      "合成近距离场景" : {
+        "queries" : 6,
+        "emptyQueries" : 0,
+        "selections" : {
+          "1" : 6,
+          "2" : 6,
+          "3" : 6
+        },
+        "opportunities" : {
+          "1" : 6,
+          "2" : 6,
+          "3" : 6
+        },
+        "metrics" : {
+          "eligibleNodes" : 3,
+          "selections" : 18,
+          "gini" : 0.0,
+          "longTailShare" : 0.0,
+          "coverage" : 1.0,
+          "zeroExposureShare" : 0.0,
+          "opportunityAdjustedGini" : 0.0
+        },
+        "meanBaseScore" : 0.4074600643768027,
+        "relevanceRetention" : 1.0,
+        "meanDistanceKm" : 0.29651980438548997
+      }
+    },
+    "decisions" : [ {
+      "queryId" : "synthetic-q08",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.4936075217428946,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.4828509240346896,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.4550384425257827,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4462673740582959,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4364670755513073,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.3981506664623103,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 5 ]
+    }, {
+      "queryId" : "synthetic-q16",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.3391632042843049,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3391632042843049,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.33444655982834065,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.33444655982834065,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.29679761137488897,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.29679761137488897,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 1, 3 ]
+    }, {
+      "queryId" : "synthetic-q10",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.3391632042843049,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3391632042843049,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3356531147851683,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3356531147851683,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.33444655982834065,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.33444655982834065,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.29679761137488897,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.29679761137488897,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.236619990113407,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.236619990113407,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.21245440657526346,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.21245440657526346,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 4, 1 ]
+    }, {
+      "queryId" : "synthetic-q13",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 1,
+        "baseScore" : 0.37235801049350614,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.37235801049350614,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.3567222378489432,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3567222378489432,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.3165841187998815,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.3165841187998815,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q15",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4693713655907147,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4655648805880611,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.4432833458256026,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 3, 1 ]
+    }, {
+      "queryId" : "synthetic-q11",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.4925053677868498,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.47047013111072317,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4693713655907147,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4655648805880611,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.4592841153856136,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.4432833458256026,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 2 ]
+    }, {
+      "queryId" : "synthetic-q03",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.4925053677868498,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.47047013111072317,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4693713655907147,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4655648805880611,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.4592841153856136,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.4432833458256026,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 2 ]
+    }, {
+      "queryId" : "synthetic-q12",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.4936075217428946,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.4828509240346896,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.4550384425257827,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4462673740582959,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4364670755513073,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.3981506664623103,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 5 ]
+    }, {
+      "queryId" : "synthetic-q14",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4462673740582959,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4364670755513073,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.3981506664623103,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 3, 1 ]
+    }, {
+      "queryId" : "synthetic-q01",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 1,
+        "baseScore" : 0.37235801049350614,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.37235801049350614,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.3567222378489432,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3567222378489432,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3349036500950578,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3349036500950578,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.3165841187998815,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.3165841187998815,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.23882774000051907,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.23882774000051907,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.2070068576887182,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.2070068576887182,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 4 ]
+    }, {
+      "queryId" : "synthetic-q07",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 1,
+        "baseScore" : 0.37235801049350614,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.37235801049350614,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.3567222378489432,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3567222378489432,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3349036500950578,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3349036500950578,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.3165841187998815,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.3165841187998815,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.23882774000051907,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.23882774000051907,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.2070068576887182,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.2070068576887182,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 4 ]
+    }, {
+      "queryId" : "synthetic-q18",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4462673740582959,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4364670755513073,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.3981506664623103,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 3, 1 ]
+    }, {
+      "queryId" : "synthetic-q04",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.3391632042843049,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3391632042843049,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3356531147851683,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3356531147851683,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.33444655982834065,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.33444655982834065,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.29679761137488897,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.29679761137488897,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.236619990113407,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.236619990113407,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.21245440657526346,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.21245440657526346,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 4, 1 ]
+    }, {
+      "queryId" : "synthetic-q09",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.4925053677868498,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.47047013111072317,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4693713655907147,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4655648805880611,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.4592841153856136,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.4432833458256026,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 2 ]
+    }, {
+      "queryId" : "synthetic-q05",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.4925053677868498,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.47047013111072317,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4693713655907147,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4655648805880611,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.4592841153856136,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.4432833458256026,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 2 ]
+    }, {
+      "queryId" : "synthetic-q17",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4693713655907147,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4655648805880611,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.4432833458256026,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 3, 1 ]
+    }, {
+      "queryId" : "synthetic-q06",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.4936075217428946,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.4828509240346896,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.4550384425257827,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4462673740582959,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4364670755513073,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.3981506664623103,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 5 ]
+    }, {
+      "queryId" : "synthetic-q02",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.4936075217428946,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.4828509240346896,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.4550384425257827,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4462673740582959,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4364670755513073,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.3981506664623103,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 5 ]
+    } ]
+  }, {
+    "strategy" : "FAIR_EXPOSURE",
+    "aggregate" : {
+      "queries" : 18,
+      "emptyQueries" : 0,
+      "selections" : {
+        "1" : 11,
+        "2" : 11,
+        "3" : 11,
+        "4" : 8,
+        "5" : 6,
+        "6" : 7
+      },
+      "opportunities" : {
+        "1" : 18,
+        "2" : 18,
+        "3" : 18,
+        "4" : 12,
+        "5" : 12,
+        "6" : 12
+      },
+      "metrics" : {
+        "eligibleNodes" : 6,
+        "selections" : 54,
+        "gini" : 0.12345679012345678,
+        "longTailShare" : 0.3888888888888889,
+        "coverage" : 1.0,
+        "zeroExposureShare" : 0.0,
+        "opportunityAdjustedGini" : 0.042635658914728675
+      },
+      "meanBaseScore" : 0.4217393693484946,
+      "relevanceRetention" : 0.9929271572714371,
+      "meanDistanceKm" : 0.5374421454487006
+    },
+    "strata" : {
+      "合成宽松场景" : {
+        "queries" : 12,
+        "emptyQueries" : 0,
+        "selections" : {
+          "1" : 5,
+          "2" : 5,
+          "3" : 5,
+          "4" : 8,
+          "5" : 6,
+          "6" : 7
+        },
+        "opportunities" : {
+          "1" : 12,
+          "2" : 12,
+          "3" : 12,
+          "4" : 12,
+          "5" : 12,
+          "6" : 12
+        },
+        "metrics" : {
+          "eligibleNodes" : 6,
+          "selections" : 36,
+          "gini" : 0.10185185185185185,
+          "longTailShare" : 0.5833333333333334,
+          "coverage" : 1.0,
+          "zeroExposureShare" : 0.0,
+          "opportunityAdjustedGini" : 0.10185185185185183
+        },
+        "meanBaseScore" : 0.42887902183434035,
+        "relevanceRetention" : 0.9896022851931836,
+        "meanDistanceKm" : 0.6579033159803059
+      },
+      "合成近距离场景" : {
+        "queries" : 6,
+        "emptyQueries" : 0,
+        "selections" : {
+          "1" : 6,
+          "2" : 6,
+          "3" : 6
+        },
+        "opportunities" : {
+          "1" : 6,
+          "2" : 6,
+          "3" : 6
+        },
+        "metrics" : {
+          "eligibleNodes" : 3,
+          "selections" : 18,
+          "gini" : 0.0,
+          "longTailShare" : 0.0,
+          "coverage" : 1.0,
+          "zeroExposureShare" : 0.0,
+          "opportunityAdjustedGini" : 0.0
+        },
+        "meanBaseScore" : 0.4074600643768027,
+        "relevanceRetention" : 1.0,
+        "meanDistanceKm" : 0.29651980438548997
+      }
+    },
+    "decisions" : [ {
+      "queryId" : "synthetic-q08",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.6708448891328815,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.6638531006225482,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.6457749876417587,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.6400737931378924,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.6337035991083497,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.6087979332005017,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 5 ]
+    }, {
+      "queryId" : "synthetic-q16",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.3391632042843049,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.5704560827847982,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.33444655982834065,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.5673902638884214,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.29679761137488897,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.5429184473936778,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 1, 3 ]
+    }, {
+      "queryId" : "synthetic-q10",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.3391632042843049,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.5704560827847982,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3356531147851683,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3931745246103594,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.33444655982834065,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.5673902638884214,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.29679761137488897,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.5429184473936778,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.236619990113407,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.32880299357371456,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.21245440657526346,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.31309536427392126,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 1, 3 ]
+    }, {
+      "queryId" : "synthetic-q13",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 1,
+        "baseScore" : 0.37235801049350614,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.417032706820779,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.3567222378489432,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.40686945460181306,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.3165841187998815,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.380779677219923,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q15",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4217580543006312,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.41928383904890637,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.4048008414533083,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 3, 1 ]
+    }, {
+      "queryId" : "synthetic-q11",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.49512848906145235,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.48080558522197003,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.48009138763396453,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4776171723822397,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.47353467500064883,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.46313417478664165,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 2 ]
+    }, {
+      "queryId" : "synthetic-q03",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.436795155728119,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.4224722518886367,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.4217580543006312,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4776171723822397,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.47353467500064883,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.46313417478664165,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 3, 5, 1 ]
+    }, {
+      "queryId" : "synthetic-q12",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.43751155579954815,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.43051976728921487,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.4124416543084254,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.406740459804559,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.4003702657750164,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.37546459986716835,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 5 ]
+    }, {
+      "queryId" : "synthetic-q14",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3775737931378923,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.37120359910834977,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.34629793320050173,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 3, 1 ]
+    }, {
+      "queryId" : "synthetic-q01",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 1,
+        "baseScore" : 0.37235801049350614,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.3586993734874456,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.3567222378489432,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3485361212684797,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3349036500950578,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3051873725617876,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.3165841187998815,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.32244634388658966,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.23882774000051907,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.2427380310003374,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.2070068576887182,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.22205445749766684,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 3 ]
+    }, {
+      "queryId" : "synthetic-q07",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 1,
+        "baseScore" : 0.37235801049350614,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.32953270682077895,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.3567222378489432,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3193694546018131,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3349036500950578,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3051873725617876,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.3165841187998815,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.293279677219923,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.23882774000051907,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.2427380310003374,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.2070068576887182,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.22205445749766684,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 1, 2, 4 ]
+    }, {
+      "queryId" : "synthetic-q18",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.36007379313789234,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.35370359910834975,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.3287979332005017,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 3, 1 ]
+    }, {
+      "queryId" : "synthetic-q04",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.3391632042843049,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.2904560827847982,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.76,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 4,
+        "baseScore" : 0.3356531147851683,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.2881745246103594,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.33444655982834065,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.2873902638884214,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.84,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.29679761137488897,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.2804184473936778,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.6799999999999999,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.236619990113407,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.24130299357371454,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.52,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.21245440657526346,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.22559536427392124,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 0.44000000000000006,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 4, 1 ]
+    }, {
+      "queryId" : "synthetic-q09",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3784618223947857,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.39330558522197,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3634247209672979,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.39011717238223975,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.3860346750006488,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.346467508119975,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 6, 3, 5 ]
+    }, {
+      "queryId" : "synthetic-q05",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4925053677868498,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3784618223947857,
+        "interest" : 0.5924242424242424,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.47047013111072317,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.37580558522197005,
+        "interest" : 0.6333333333333333,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3634247209672979,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.37261717238223974,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4592841153856136,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.36853467500064885,
+        "interest" : 0.5787878787878787,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.346467508119975,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 3 ]
+    }, {
+      "queryId" : "synthetic-q17",
+      "stratum" : "合成近距离场景",
+      "eligible" : [ {
+        "id" : 2,
+        "baseScore" : 0.4693713655907147,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3634247209672979,
+        "interest" : 0.5242424242424243,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4655648805880611,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.3609505057155731,
+        "interest" : 0.5333333333333333,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.4432833458256026,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.346467508119975,
+        "interest" : 0.4696969696969697,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 2, 3, 1 ]
+    }, {
+      "queryId" : "synthetic-q06",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3708448891328815,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.3721864339558816,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.36577498764175875,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3484071264712257,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.3420369324416831,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.31713126653383505,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 6, 4, 5 ]
+    }, {
+      "queryId" : "synthetic-q02",
+      "stratum" : "合成宽松场景",
+      "eligible" : [ {
+        "id" : 4,
+        "baseScore" : 0.4936075217428946,
+        "distanceKm" : 0.6671695598673525,
+        "priority" : 0.3645948891328815,
+        "interest" : 0.59375,
+        "distanceFactor" : 0.857050498956735,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 6,
+        "baseScore" : 0.4828509240346896,
+        "distanceKm" : 1.2231441930901463,
+        "priority" : 0.3638531006225482,
+        "interest" : 0.65,
+        "distanceFactor" : 0.7658222427195711,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 5,
+        "baseScore" : 0.4550384425257827,
+        "distanceKm" : 0.8895594131564699,
+        "priority" : 0.3541083209750921,
+        "interest" : 0.5734375,
+        "distanceFactor" : 0.8180696177322422,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 2,
+        "baseScore" : 0.4462673740582959,
+        "distanceKm" : 0.33358477993367625,
+        "priority" : 0.3484071264712257,
+        "interest" : 0.4984375,
+        "distanceFactor" : 0.9230233635953509,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 3,
+        "baseScore" : 0.4364670755513073,
+        "distanceKm" : 0.44477970657823496,
+        "priority" : 0.3420369324416831,
+        "interest" : 0.5,
+        "distanceFactor" : 0.899932114538778,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      }, {
+        "id" : 1,
+        "baseScore" : 0.3981506664623103,
+        "distanceKm" : 0.11119492664455874,
+        "priority" : 0.31713126653383505,
+        "interest" : 0.421875,
+        "distanceFactor" : 0.972953136830388,
+        "qualityFactor" : 0.97,
+        "stateFactor" : 1.0,
+        "weatherFactor" : 1.0
+      } ],
+      "selected" : [ 4, 6, 5 ]
+    } ]
+  } ]
+}

@@ -8,6 +8,7 @@ import com.example.personality.domain.ScoredPlace;
 import com.example.personality.domain.TravelDimension;
 import com.example.personality.domain.TravelState;
 import com.example.personality.domain.Weather;
+import com.example.personality.domain.BehaviorMetadata;
 import com.example.personality.dto.AppliedContext;
 import com.example.personality.dto.FeedbackResponse;
 import com.example.personality.dto.MatchReason;
@@ -98,6 +99,8 @@ public class RecommendationService {
     private final RecommendationRepository recommendationRepository;
     private final RecommendationBatchRepository batchRepository;
     private final RecommendationFeedbackRepository feedbackRepository;
+    private final TravelFeedbackPersistence travelFeedbackPersistence;
+    private final RecommendationReactionService reactions;
     private final TestSessionRepository sessionRepository;
     private final Clock clock;
     private final ContextInferrer inferrer;
@@ -109,21 +112,24 @@ public class RecommendationService {
                                  RecommendationRepository recommendationRepository,
                                  RecommendationBatchRepository batchRepository,
                                  RecommendationFeedbackRepository feedbackRepository,
+                                 TravelFeedbackPersistence travelFeedbackPersistence,
                                  TestSessionRepository sessionRepository,
                                  Clock clock,
                                  ContextInferrer inferrer,
                                  RecommendationEngine engine,
-                                 TravelPreferenceAdjuster adjuster) {
+                                 TravelPreferenceAdjuster adjuster, RecommendationReactionService reactions) {
         this.travelProfileService = travelProfileService;
         this.placeRepository = placeRepository;
         this.recommendationRepository = recommendationRepository;
         this.batchRepository = batchRepository;
         this.feedbackRepository = feedbackRepository;
+        this.travelFeedbackPersistence = travelFeedbackPersistence;
         this.sessionRepository = sessionRepository;
         this.clock = clock;
         this.inferrer = inferrer;
         this.engine = engine;
         this.adjuster = adjuster;
+        this.reactions = reactions;
     }
 
     /**
@@ -166,7 +172,7 @@ public class RecommendationService {
         // ② 有什么可去：取候选地点
         //
         // ⚠️ 这里是模拟数据阶段的简化——直接取全表。
-        // 59 个 POI 全在杭州，量也小，取回来让引擎按半径过滤完全够用。
+        // 当前杭州 + 平顶山的数据量仍很小，取回来让引擎按半径硬过滤完全够用。
         // 真实产品应该按定位做「边界框查询」（WHERE latitude BETWEEN ? AND ? AND
         // longitude BETWEEN ? AND ?），让数据库先把候选缩到几十条，
         // 否则真接了高德的数据以后，全国几万个 POI 全量捞进内存是要出事的。
@@ -342,6 +348,12 @@ public class RecommendationService {
     @Transactional
     public FeedbackResponse submitFeedback(Long sessionId, Long recommendationId,
                                            RecommendationFeedback.Reaction reaction) {
+        return submitFeedback(sessionId,recommendationId,reaction,null);
+    }
+
+    @Transactional
+    public FeedbackResponse submitFeedback(Long sessionId, Long recommendationId,
+                                           RecommendationFeedback.Reaction reaction, BehaviorMetadata metadata) {
 
         Recommendation recommendation = recommendationRepository.findById(recommendationId)
                 .orElseThrow(() -> notFoundRecommendation(recommendationId));
@@ -354,13 +366,27 @@ public class RecommendationService {
             throw notFoundRecommendation(recommendationId);
         }
 
-        RecommendationFeedback feedback = feedbackRepository.findByRecommendationId(recommendationId)
-                .orElseGet(() -> RecommendationFeedback.of(recommendationId, reaction));
-        feedback.changeReaction(reaction);
-        feedbackRepository.save(feedback);
+        var state=reactions.apply(sessionId,recommendationId,reaction,metadata);
 
         // 把"这次反馈让画像变了多少"算出来返回，让用户当场看得见影响
-        return buildFeedbackResponse(sessionId, recommendationId, reaction);
+        var response=buildFeedbackResponse(sessionId, recommendationId, reaction);
+        return new FeedbackResponse(recommendationId,state.reaction(),response.adjustments(),state);
+    }
+
+    /** 删除用户对这条推荐的反应，让反馈修正不再参与后续推荐。 */
+    @Transactional
+    public void cancelFeedback(Long sessionId, Long recommendationId) {
+        cancelFeedback(sessionId,recommendationId,null);
+    }
+
+    @Transactional
+    public com.example.personality.dto.FeedbackState cancelFeedback(Long sessionId, Long recommendationId, BehaviorMetadata metadata) {
+        Recommendation recommendation = recommendationRepository.findById(recommendationId)
+                .orElseThrow(() -> notFoundRecommendation(recommendationId));
+        if (!sessionId.equals(recommendation.getSessionId())) {
+            throw notFoundRecommendation(recommendationId);
+        }
+        return reactions.apply(sessionId,recommendationId,null,metadata);
     }
 
     private static ResourceNotFoundException notFoundRecommendation(Long recommendationId) {
@@ -417,10 +443,17 @@ public class RecommendationService {
      */
     @Transactional(readOnly = true)
     public ReasonContext buildReasonContext(Long sessionId) {
-        RecommendationBatch batch = batchRepository
-                .findFirstBySessionIdOrderByBatchNoDesc(sessionId)
+        return buildReasonContext(sessionId,null);
+    }
+
+    /** 指定批次只在当前会话内查询；不退回其他批次，避免跨标签页串批。 */
+    @Transactional(readOnly = true)
+    public ReasonContext buildReasonContext(Long sessionId, Integer expectedBatchNo) {
+        RecommendationBatch batch = (expectedBatchNo == null
+                ? batchRepository.findFirstBySessionIdOrderByBatchNoDesc(sessionId)
+                : batchRepository.findBySessionIdAndBatchNo(sessionId,expectedBatchNo))
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "会话 " + sessionId + " 还没有推荐记录，无法生成推荐理由"));
+                        "对应推荐批次不存在，无法生成推荐理由"));
 
         List<Recommendation> rows = recommendationRepository
                 .findBySessionIdAndBatchNoOrderByRankNoAsc(sessionId, batch.getBatchNo());
@@ -430,15 +463,8 @@ public class RecommendationService {
             placesById.put(place.getId(), place);
         }
 
-        // "为什么合你的口味"要用**有效偏好**来算——也就是叠加过反馈修正的那份。
-        // 用问卷原始画像的话，用户点过 👎 之后 AI 的解释就会和面板上显示的
-        // 对不上（面板用的也是有效偏好）。保持一致比"用哪一份"更重要。
-        TravelProfile profile = travelProfileService.loadProfile(sessionId);
-        Map<TravelDimension, Integer> questionnaire = profile.toPreferenceMap();
-        SessionHistory history = loadHistory(sessionId,
-                resolveScopeSessionIds(sessionId, userIdOf(sessionId)), placesById, questionnaire);
-        Map<TravelDimension, Integer> effective =
-                adjuster.effectivePreference(questionnaire, history.signals());
+        // 未保存当时的细分有效画像，不能用后来反馈重算旧批次。
+        // 仅保留推荐行五因子、批次处境，以及明确标为“当前地点资料”的静态属性。
 
         List<TravelReasonInput.ExplainedPlace> explained = new ArrayList<>(rows.size());
         Map<Integer, String> existingReasons = new LinkedHashMap<>();
@@ -450,15 +476,19 @@ public class RecommendationService {
             if (place == null) {
                 continue;   // 地点被删了之类的极端情况，跳过这一条
             }
-            explained.add(toExplained(row, place, effective));
+            explained.add(toExplained(row, place));
         }
 
-        return new ReasonContext(batch.getBatchNo(), buildReasonInput(batch, explained), existingReasons);
+        String scope=sessionId+":"+batch.getBatchNo()+":"+rows.stream().map(Recommendation::getId).toList();
+        return new ReasonContext(batch.getBatchNo(), buildReasonInput(batch, explained,scope), existingReasons);
     }
 
-    private TravelReasonInput.ExplainedPlace toExplained(Recommendation row, Place place,
-                                                         Map<TravelDimension, Integer> effective) {
+    private TravelReasonInput.ExplainedPlace toExplained(Recommendation row, Place place) {
         Recommendation.Factors f = row.getFactors();
+        Map<TravelDimension,Integer> staticTraits=new java.util.EnumMap<>(TravelDimension.class);
+        for(TravelDimension dimension:TravelDimension.values()) {
+            if(dimension.affectsPlaceChoice()) staticTraits.put(dimension,place.toCandidate().traits().valueOf(dimension));
+        }
         return new TravelReasonInput.ExplainedPlace(
                 row.getRankNo(),
                 place.getName(),
@@ -472,8 +502,7 @@ public class RecommendationService {
                 place.getSuggestedMinutes(),
                 formatTime(place.getOpenFrom()),
                 formatTime(place.getOpenTo()),
-                // 和前端「为什么是它」面板走的是同一个算法，所以两处必然一致
-                engine.matchDimensions(effective, place.toCandidate().traits()));
+                List.of(),staticTraits);
     }
 
     /**
@@ -485,7 +514,7 @@ public class RecommendationService {
      * 就会走到的正常分支，不该炸。
      */
     private static TravelReasonInput buildReasonInput(RecommendationBatch batch,
-                                                      List<TravelReasonInput.ExplainedPlace> places) {
+                                                      List<TravelReasonInput.ExplainedPlace> places,String scope) {
         Weather weather = null;
         if (batch.getWeatherCondition() != null && batch.getWeatherTemperature() != null) {
             weather = Weather.of(batch.getWeatherCondition(),
@@ -502,12 +531,12 @@ public class RecommendationService {
                 batch.inferredStateSet(),
                 batch.customBiasMap(),
                 weather,
-                places);
+                places,scope);
     }
 
-    /** {@code BigDecimal} 转回比例，调用方保证非 null（都是刚存下去的）。 */
+    /** 未记录的历史因子保留未知语义；NaN只在内部使用，绝不直接发给模型或前端。 */
     private static double ratio(BigDecimal value) {
-        return value == null ? 1.0 : value.doubleValue();
+        return value == null ? Double.NaN : value.doubleValue();
     }
 
     /**

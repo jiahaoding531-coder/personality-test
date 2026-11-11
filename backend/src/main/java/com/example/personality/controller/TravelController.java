@@ -3,9 +3,13 @@ package com.example.personality.controller;
 import com.example.personality.ai.AiCredentials;
 import com.example.personality.ai.AiCredentialsResolver;
 import com.example.personality.domain.AmbientContext;
+import com.example.personality.domain.BehaviorMetadata;
+import com.example.personality.exception.BehaviorRequestException;
 import com.example.personality.dto.AnswersSavedResponse;
 import com.example.personality.dto.FeedbackRequest;
 import com.example.personality.dto.FeedbackResponse;
+import com.example.personality.dto.FeedbackEventRequest;
+import com.example.personality.dto.FeedbackEventResponse;
 import com.example.personality.dto.InterpretRequest;
 import com.example.personality.dto.InterpretResponse;
 import com.example.personality.dto.RecommendationRequest;
@@ -15,6 +19,8 @@ import com.example.personality.dto.SubmitAnswersRequest;
 import com.example.personality.dto.TravelProfileResponse;
 import com.example.personality.dto.TravelReasonResponse;
 import com.example.personality.entity.TestSession;
+import com.example.personality.exception.InvalidFeedbackRequestException;
+import com.example.personality.exception.UnsupportedFeedbackMediaTypeException;
 import com.example.personality.security.AppUserPrincipal;
 import com.example.personality.security.SessionAccessGuard;
 import com.example.personality.service.AmbientService;
@@ -22,11 +28,19 @@ import com.example.personality.service.RecommendationService;
 import com.example.personality.service.TestSessionService;
 import com.example.personality.service.TravelProfileService;
 import com.example.personality.service.TravelIntentService;
+import com.example.personality.service.TravelFeedbackEventService;
+import com.example.personality.service.SavedFeedbackEvent;
 import com.example.personality.service.TravelReasonService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,6 +49,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 /**
  * 旅行偏好测试接口 —— TravelMind V0 的主干链路。
@@ -62,14 +81,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/travel")
 public class TravelController {
 
+    private static final int MAX_FEEDBACK_BODY_BYTES = 8 * 1024;
+
     private final TestSessionService testSessionService;
     private final TravelProfileService travelProfileService;
     private final RecommendationService recommendationService;
     private final AmbientService ambientService;
     private final TravelReasonService travelReasonService;
     private final TravelIntentService travelIntentService;
+    private final TravelFeedbackEventService travelFeedbackEventService;
     private final AiCredentialsResolver aiCredentialsResolver;
     private final SessionAccessGuard accessGuard;
+    private final ObjectMapper objectMapper;
+    private final Validator validator;
 
     public TravelController(TestSessionService testSessionService,
                             TravelProfileService travelProfileService,
@@ -77,16 +101,22 @@ public class TravelController {
                             AmbientService ambientService,
                             TravelReasonService travelReasonService,
                             TravelIntentService travelIntentService,
+                            TravelFeedbackEventService travelFeedbackEventService,
                             AiCredentialsResolver aiCredentialsResolver,
-                            SessionAccessGuard accessGuard) {
+                            SessionAccessGuard accessGuard,
+                            ObjectMapper objectMapper,
+                            Validator validator) {
         this.testSessionService = testSessionService;
         this.travelProfileService = travelProfileService;
         this.recommendationService = recommendationService;
         this.ambientService = ambientService;
         this.travelReasonService = travelReasonService;
         this.travelIntentService = travelIntentService;
+        this.travelFeedbackEventService = travelFeedbackEventService;
         this.aiCredentialsResolver = aiCredentialsResolver;
         this.accessGuard = accessGuard;
+        this.objectMapper = objectMapper;
+        this.validator = validator;
     }
 
     /** 见类注释：会话相关的端点都要先调它。 */
@@ -216,11 +246,138 @@ public class TravelController {
             @PathVariable Long sessionId,
             @PathVariable Long recommendationId,
             @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @RequestHeader(value = "X-Behavior-Event-Id", required = false) String eventId,
+            @RequestHeader(value = "X-Behavior-Occurred-At", required = false) String occurredAt,
+            @RequestHeader(value = "X-Feedback-Version", required = false) String feedbackVersion,
             @AuthenticationPrincipal AppUserPrincipal principal,
             @Valid @RequestBody FeedbackRequest request) {
 
         checkAccess(sessionId, sessionToken, principal);
-        return recommendationService.submitFeedback(sessionId, recommendationId, request.reaction());
+        if(eventId!=null || occurredAt!=null || principal!=null) checkBehaviorOwner(sessionId,sessionToken,principal);
+        return recommendationService.submitFeedback(sessionId, recommendationId, request.reaction(),BehaviorMetadata.parse(eventId,occurredAt,feedbackVersion));
+    }
+
+    /** 再次点击已选中的反馈时，撤销这条反馈及其对后续推荐的影响。 */
+    @DeleteMapping("/sessions/{sessionId}/recommendations/{recommendationId}/feedback")
+    public org.springframework.http.ResponseEntity<?> cancelFeedback(
+            @PathVariable Long sessionId,
+            @PathVariable Long recommendationId,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @RequestHeader(value = "X-Behavior-Event-Id", required = false) String eventId,
+            @RequestHeader(value = "X-Behavior-Occurred-At", required = false) String occurredAt,
+            @RequestHeader(value = "X-Feedback-Version", required = false) String feedbackVersion,
+            @RequestHeader(value = "X-Feedback-State", required = false) String includeState,
+            @AuthenticationPrincipal AppUserPrincipal principal) {
+
+        checkAccess(sessionId, sessionToken, principal);
+        if(eventId!=null || occurredAt!=null || principal!=null) checkBehaviorOwner(sessionId,sessionToken,principal);
+        var state=recommendationService.cancelFeedback(sessionId, recommendationId,BehaviorMetadata.parse(eventId,occurredAt,feedbackVersion));
+        // 旧客户端继续得到 204；新客户端明确请求带服务端版本的确认。
+        return "1".equals(includeState)?org.springframework.http.ResponseEntity.ok(state)
+                :org.springframework.http.ResponseEntity.noContent().build();
+    }
+
+    private void checkBehaviorOwner(Long sessionId,String token,AppUserPrincipal principal) {
+        var session=accessGuard.requireAccess(sessionId,SessionAccessGuard.parseToken(token),principal);
+        if(session.getUserId()!=null && (principal==null || !session.getUserId().equals(principal.getId())))
+            throw BehaviorRequestException.missing();
+    }
+
+    /**
+     * {@code POST /api/travel/sessions/{id}/feedback-events} —— 记录一条自然语言反馈。
+     *
+     * <p>顺序固定为：会话访问校验 → 凭据解析 → 无事务编排服务。
+     * 服务内部再做推荐归属校验，并把模型调用放在两个短事务之间；失败时不会写入事件。
+     */
+    @PostMapping("/sessions/{sessionId}/feedback-events")
+    public FeedbackEventResponse createFeedbackEvent(
+            @PathVariable Long sessionId,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
+            @AuthenticationPrincipal AppUserPrincipal principal,
+            HttpServletRequest httpRequest,
+            @RequestHeader(value = AiCredentialsResolver.PROVIDER_HEADER, required = false)
+            String aiProvider,
+            @RequestHeader(value = AiCredentialsResolver.KEY_HEADER, required = false)
+            String aiKey) {
+
+        accessGuard.requireAiAccess(sessionId, principal);
+        FeedbackEventRequest request = parseFeedbackRequest(httpRequest);
+        AiCredentials credentials = aiCredentialsResolver.require(aiProvider, aiKey);
+        SavedFeedbackEvent saved = travelFeedbackEventService.create(
+                sessionId,
+                request.recommendationId(),
+                request.text(),
+                request.query(),
+                request.latitude(),
+                request.longitude(),
+                credentials,request.expectedFeedbackVersion());
+        return FeedbackEventResponse.from(saved);
+    }
+
+    /**
+     * 反馈端点不能声明 {@code @RequestBody}：Spring 会在进入 Controller 方法前解析并校验 body，
+     * 这样非法令牌会因为坏 JSON 先得到 400，违反“访问校验优先”的安全契约。
+     * 这里先由方法开头完成 guard，再手动执行同一个 ObjectMapper + Bean Validation 流程。
+     */
+    private FeedbackEventRequest parseFeedbackRequest(HttpServletRequest httpRequest) {
+        requireJsonContentType(httpRequest.getContentType());
+
+        final byte[] body;
+        try {
+            body = httpRequest.getInputStream().readNBytes(MAX_FEEDBACK_BODY_BYTES + 1);
+        } catch (IOException ex) {
+            throw new InvalidFeedbackRequestException("无法读取反馈请求体", ex);
+        }
+        if (body.length > MAX_FEEDBACK_BODY_BYTES) {
+            throw new InvalidFeedbackRequestException("反馈请求体不能超过 8192 字节");
+        }
+
+        final String rawBody;
+        rawBody = new String(body, StandardCharsets.UTF_8);
+
+        final FeedbackEventRequest request;
+        try {
+            request = objectMapper.readValue(rawBody, FeedbackEventRequest.class);
+        } catch (RuntimeException ex) {
+            throw new InvalidFeedbackRequestException(
+                    "请求体不是合法的 JSON，或字段类型不匹配", ex);
+        }
+
+        // JSON 字面量 null 能被 Jackson 解析成功，但它不是一个请求对象；
+        // 先转成统一的 400，避免后面的 record 访问触发 500。
+        if (request == null) {
+            throw new InvalidFeedbackRequestException("请求体必须是 JSON 对象");
+        }
+
+        Set<ConstraintViolation<FeedbackEventRequest>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            throw new InvalidFeedbackRequestException("请求参数不合法");
+        }
+        return request;
+    }
+
+    /** 只接受 JSON；检查位于访问校验之后，避免无效令牌暴露请求格式差异。 */
+    private static void requireJsonContentType(String rawContentType) {
+        if (rawContentType == null) {
+            throw new UnsupportedFeedbackMediaTypeException("反馈请求必须使用 application/json");
+        }
+
+        final MediaType contentType;
+        try {
+            contentType = MediaType.parseMediaType(rawContentType);
+        } catch (InvalidMediaTypeException ex) {
+            throw new UnsupportedFeedbackMediaTypeException("反馈请求必须使用 application/json");
+        }
+
+        String type = contentType.getType();
+        String subtype = contentType.getSubtype().toLowerCase(java.util.Locale.ROOT);
+        boolean json = "application".equalsIgnoreCase(type)
+                && !type.contains("*")
+                && !subtype.contains("*")
+                && ("json".equals(subtype) || subtype.endsWith("+json"));
+        if (!json) {
+            throw new UnsupportedFeedbackMediaTypeException("反馈请求必须使用 application/json");
+        }
     }
 
     /**
@@ -251,13 +408,14 @@ public class TravelController {
             @RequestHeader(value = "X-Session-Token", required = false) String sessionToken,
             @AuthenticationPrincipal AppUserPrincipal principal,
             @RequestParam(defaultValue = "false") boolean regenerate,
+            @RequestParam(required = false) Integer batchNo,
             // 访客自带的大模型凭据。两个都不传就是走服务端配置的那把。
             @RequestHeader(value = AiCredentialsResolver.PROVIDER_HEADER, required = false)
             String aiProvider,
             @RequestHeader(value = AiCredentialsResolver.KEY_HEADER, required = false)
             String aiKey) {
 
-        checkAccess(sessionId, sessionToken, principal);
+        accessGuard.requireAiAccess(sessionId, principal);
 
         // ⚠️ 解析放在**进服务层之前**，有两个原因：
         //   ① 都没有凭据时在这里就抛 501，后面一行都不会执行——不会白读一遍库
@@ -266,7 +424,10 @@ public class TravelController {
 
         // 服务层拿到的是**已经解析好的凭据**，不用关心它从哪来，
         // 也因此不会把 HTTP 请求头这个概念漏进业务逻辑里。
-        return travelReasonService.generate(sessionId, regenerate, credentials);
+        if (batchNo != null && batchNo < 1) {
+            throw new com.example.personality.exception.InvalidFeedbackRequestException("推荐批次号必须大于零");
+        }
+        return travelReasonService.generate(sessionId, regenerate, credentials, batchNo);
     }
 
     /**
@@ -298,7 +459,7 @@ public class TravelController {
             @RequestHeader(value = AiCredentialsResolver.KEY_HEADER, required = false)
             String aiKey) {
 
-        checkAccess(sessionId, sessionToken, principal);
+        accessGuard.requireAiAccess(sessionId, principal);
         AiCredentials credentials = aiCredentialsResolver.require(aiProvider, aiKey);
 
         return travelIntentService.interpret(credentials, request.text());

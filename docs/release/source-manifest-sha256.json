@@ -1,0 +1,2880 @@
+{
+  "schemaVersion": 1,
+  "scope": "当前源码快照，排除此清单自身；SHA256按实际Git索引字节计算",
+  "records": [
+    {
+      "path": ".env.example",
+      "gitBlob": "2cbd9f289745615f5dafee331af13daa507cbc00",
+      "bytes": 350,
+      "sha256": "b46fa5131673f0df8dd3038eb3e70dc71606b14425ec6b9fb8e8a9f90d9352cc"
+    },
+    {
+      "path": ".gitattributes",
+      "gitBlob": "de048f02d8eea845f74eb29a6403453de47e9d11",
+      "bytes": 1408,
+      "sha256": "fbe92b4874d8b944fe4cd24cfea2e2717c0130cbd80656796ba59b4947186c4a"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "gitBlob": "435bfe1f4b8f6cbf9404e1b5cc5c60f12b732d5c",
+      "bytes": 4854,
+      "sha256": "f7bc998b987a6e066790c782a6646c2e805f5dd3037b15b233f4fc3ef31b7d89"
+    },
+    {
+      "path": ".github/workflows/publish-validation.yml",
+      "gitBlob": "0e6d2db1b6ef3da34524ed91e0bc8876aa245530",
+      "bytes": 1957,
+      "sha256": "3bea296b68b4b24efc6ac3a813f4fda6a894a04aae59736504f8dca5f35ce6b9"
+    },
+    {
+      "path": ".gitignore",
+      "gitBlob": "d2a62e86a9b56724720a220f7c61fd53ba1bede1",
+      "bytes": 2772,
+      "sha256": "a73ed264fcbde8063f6666c8bc654d9bf6d4dcf25917eb19ac0918d8bd1b8965"
+    },
+    {
+      "path": "AGENTS.md",
+      "gitBlob": "b52a414ff3ef0140035f76af92d3160c3b565680",
+      "bytes": 851,
+      "sha256": "a5b7994ed33bba5d16152772d838341c9e10da669b3bd01dc0fd27e91ea4adab"
+    },
+    {
+      "path": "CODE_OF_CONDUCT.md",
+      "gitBlob": "0c9fd913c9e5cf0e86524f3f94de4d0b93beaa9b",
+      "bytes": 2179,
+      "sha256": "0e6f5ef87ae81f95b2f83d09f7953c2c9e785af637b36097c4463e9d22d58523"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "gitBlob": "78790f0debec2fb488864672e843237313d00b05",
+      "bytes": 5091,
+      "sha256": "37653c8294b89f552a763320e43b686bd5b80a70c8481a517ce2f7daa74d52ac"
+    },
+    {
+      "path": "LICENSE",
+      "gitBlob": "2cc65e1bdc44ca8dc5177a1edee8e113bdf454f4",
+      "bytes": 1086,
+      "sha256": "bd50356f459d534a9c5354d910966bcf586b3f78ddf118cfbb91aad3899bfc23"
+    },
+    {
+      "path": "README.md",
+      "gitBlob": "583fecb7daae702e684aaf23a81462fcd87bfca1",
+      "bytes": 5323,
+      "sha256": "f3dbcc57a4e087db5b82cecf18b1a501a6a43f97378f70367682f48b9b84dc30"
+    },
+    {
+      "path": "backend/.dockerignore",
+      "gitBlob": "48e4fc25b7fbfaf8016994690e877667d1964333",
+      "bytes": 382,
+      "sha256": "d7535fe779014d3b9c737e1afc16e77b384a48f75b187cbdb460e215c964deaf"
+    },
+    {
+      "path": "backend/.mvn/wrapper/maven-wrapper.properties",
+      "gitBlob": "0a3e6b91319bf39d2d779ad28d32b95cdb7c9322",
+      "bytes": 1086,
+      "sha256": "25f0782de200b48f249527821b5575a9de6d681bd7bf6121e9c82b06c810982b"
+    },
+    {
+      "path": "backend/Dockerfile",
+      "gitBlob": "7225d7f50df850c6e4871ec2ca704fe656f1d5c5",
+      "bytes": 2235,
+      "sha256": "3ff45f97355da1e9e28a738fea6178a00994bb563a17472eae7de791ecd3652e"
+    },
+    {
+      "path": "backend/Dockerfile.production",
+      "gitBlob": "25bad42d8e240879418046720450b27899cb8fca",
+      "bytes": 373,
+      "sha256": "091f4720e78fc3f2255aa8ea077593a1cd59f57a68625dc17e3de65b569de0d9"
+    },
+    {
+      "path": "backend/Dockerfile.production.dockerignore",
+      "gitBlob": "beb8614be30da3ddd223d4e1a01902e49e7ccc2c",
+      "bytes": 140,
+      "sha256": "a8b2cfc436b7a7b2beb142f95ecaa9f21189f6c28d7d75e74857b3e9368d9de4"
+    },
+    {
+      "path": "backend/api.http",
+      "gitBlob": "fbe4b7e97bbce46af7db2ee83010fe69a8b0055f",
+      "bytes": 8648,
+      "sha256": "ca8bc40141ee3476e55cbc5938dee6051ba17c5344da7bb7768abcd950649992"
+    },
+    {
+      "path": "backend/mvnw",
+      "gitBlob": "bd8896bf2217b46faa0291585e01ac1a3441a958",
+      "bytes": 11790,
+      "sha256": "cae96cef89ebea3531221f4ae17c23cf8edf67d00eae8306d4186ae1bbed4d02"
+    },
+    {
+      "path": "backend/mvnw.cmd",
+      "gitBlob": "92450f93273470af42eeee491874afb2039b700a",
+      "bytes": 8292,
+      "sha256": "4a361e1374a3e5ad6d03e18e9adc0cf181ac5058ac6203b76f0ba3b456b56481"
+    },
+    {
+      "path": "backend/pom.xml",
+      "gitBlob": "128f94a525d02ccf8b79d4ac42b4300f4f09684f",
+      "bytes": 3311,
+      "sha256": "a54f94feb1fa6c0728fead72b276fcd7816c21db19fb2d5665de0d9f1b0a7e83"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/PersonalityApplication.java",
+      "gitBlob": "29316c75894115ccb533d3149d2129c0f566f442",
+      "bytes": 1220,
+      "sha256": "8c02c613f66f1fae060ecfc37c2e4fcb0da76a0db2f748426f9d37aaff5ad35a"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/AiBudgetStore.java",
+      "gitBlob": "7872dc2fabd673eda393e84c345da7ca35fdc04a",
+      "bytes": 2095,
+      "sha256": "7537e827313ad0e412fc5b222441eff07162e0bfe3008776508ea73d392982c0"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/AiCallGuard.java",
+      "gitBlob": "4af0b038bd0c8d554653dbd9ba452b9ba5b0cfaf",
+      "bytes": 3474,
+      "sha256": "4bc477095f95ed42d3df62d2f934992573fe93a817ba667782f9a57c0aff948c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/AiCredentials.java",
+      "gitBlob": "ee412fe03d435ec6b45bc9f8ad751e7e97ebc2c7",
+      "bytes": 3318,
+      "sha256": "e7b239e47b432de66ae918ea8b96f2dcb04e9f17efa43c239a51439fc419eeae"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/AiCredentialsResolver.java",
+      "gitBlob": "f3735372d12754339de559ec47c460a72cc62a82",
+      "bytes": 5522,
+      "sha256": "8dcd2affbb3c3f9357966011efd50ebc79145911b79c791f89377bf079c5591e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/AiPromptBuilder.java",
+      "gitBlob": "a7fcc94225da345b3fd5960bf1d8b0c1c53e1555",
+      "bytes": 5228,
+      "sha256": "95f42613e47e850f2edfc407e66063d4e077b50f177fbea1e211b519a0617a44"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/AiProvider.java",
+      "gitBlob": "b6e1e7a08226ce07d9d2fa0ce75c98722ed29246",
+      "bytes": 4237,
+      "sha256": "bc19bc177cfc3063001e11b817f7e9c2dadaf970dedeb6917f9918c16038857e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/AiReportGenerator.java",
+      "gitBlob": "5001854060f1515ce2d6dc80424e688b6bfc034f",
+      "bytes": 1400,
+      "sha256": "094389fa037fc38e24f6c42b76b19e5f90ad08c5bd1bf25aa4dddffc55a499da"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/DeepSeekAiReportGenerator.java",
+      "gitBlob": "d42038165a9e711133e24049c57773a95e5e7933",
+      "bytes": 2037,
+      "sha256": "fb711b93a9ac30c224cf0586b946d3f47f5c7d47d382f7f168562d094c073693"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/DeepSeekChatClient.java",
+      "gitBlob": "f950d7df610c7268c557c247a5536f1503414bfb",
+      "bytes": 16527,
+      "sha256": "2571e5d9d1406f8743d4f05c890352cd371227f9f04a09fc20e42fd218196b1b"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/DeepSeekTextFeedbackGenerator.java",
+      "gitBlob": "f12a17b33f6dfc65583383704ac428414c01e93c",
+      "bytes": 12923,
+      "sha256": "12be4984c43c8cbe7c586db254c8080043022a7a859dc1d3c89416838f3ce36a"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/DeepSeekTextIntentGenerator.java",
+      "gitBlob": "a018109c75e5f9aa037fa87159aee4ab5f47d403",
+      "bytes": 15868,
+      "sha256": "aa2b0f4504c8e28dbb56abecdd7ab41b752513a504906147ff4ea55970e592a6"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/DeepSeekTravelReasonGenerator.java",
+      "gitBlob": "c7e6c0992e6da30387c4c577373d9669206c387b",
+      "bytes": 4177,
+      "sha256": "8d5aae1d57a21aba034b634e135e0a4e00fadee318dc5501459ff2e54148d6c3"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/FeedbackPromptContext.java",
+      "gitBlob": "8b3c0fc5147c6486441c279a3b29aea7f6ef6360",
+      "bytes": 582,
+      "sha256": "95e536f472834ea3c25ab4301dea01049ae55a84dd07545f96ae078da7b4aab2"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TextFeedbackGenerator.java",
+      "gitBlob": "91b2f42308c82f759ebbb1fd8fc9e4864c4daa49",
+      "bytes": 247,
+      "sha256": "4f8b399591cf954c5a01e73c617fa1d7b144c0844d11b4b9d7bd2e262f96f606"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TextFeedbackPromptBuilder.java",
+      "gitBlob": "d4a0a88a23565b39c2b8900ef5fa81eea219187e",
+      "bytes": 3767,
+      "sha256": "dfa2b9d4a960e60bd4766f287ebb2ac18d540a4b2391b770d6955406d7e1631e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TextFeedbackResult.java",
+      "gitBlob": "7d34440f5ba01192bd7e702e89f98750909d5cbc",
+      "bytes": 781,
+      "sha256": "3feee6bfc4f891f27b5590edef62c269999ba0d2a62e63ce0050140bf75d5365"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TextIntentGenerator.java",
+      "gitBlob": "35c72cbbe32596dd575e23cc4a01e834bde02eec",
+      "bytes": 963,
+      "sha256": "f2d6b64a5e2e05998841feff6180637c432562e879cd267b6e3fcc0a4c80a7ac"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TextIntentPromptBuilder.java",
+      "gitBlob": "df4f7066612442d7d971dc9ad32c5e38474d7c43",
+      "bytes": 8249,
+      "sha256": "aff3d275fa3fdc4a5b756980fb5f59cdca1061a58b24b254589ceb4a6405678e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TextIntentResult.java",
+      "gitBlob": "555807bd8fa68b0df5e8fcbcf199f03549512f23",
+      "bytes": 3509,
+      "sha256": "119200075f51a4c62a9f5e1a40cc76228c8dfc5bbfbed88db4cd65d171f201e2"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TravelFeedbackKind.java",
+      "gitBlob": "835629780e88837cf443fe56d6e6a8eae51e924d",
+      "bytes": 211,
+      "sha256": "8604c28e787710d6864406fe8b28d7316dd5aca6417760ca9920ba2f5428a88e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TravelFeedbackSignal.java",
+      "gitBlob": "2a16dee2e643c95dba2e792dcce1027f35ce1984",
+      "bytes": 318,
+      "sha256": "31ceacfd06914e102f90df81cd576cec9f7d32b0c0810f06f734b9428e2e565c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TravelIntentOperation.java",
+      "gitBlob": "2bada80ef1f38968131e1197032745e146320e93",
+      "bytes": 2819,
+      "sha256": "328b25a5d5e8916741a42b05c2915e2b5e9b52620f2333fb01d637bd3131eeec"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TravelReasonEvidence.java",
+      "gitBlob": "0b1a2cdd515f28f876b65d2466602e7443ba62ca",
+      "bytes": 13187,
+      "sha256": "13733041b5ff438f60b634aa14715a314bfe252ba32d1be7b2913f6bf4dfacd1"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TravelReasonGenerator.java",
+      "gitBlob": "2e0e9bcae46221d59c6fe84e221cd8cfa209a499",
+      "bytes": 2319,
+      "sha256": "e2fc2f339901c459c1ec04101aa71b5e5fc110a96103e66ba771df0e705e4c31"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TravelReasonInput.java",
+      "gitBlob": "ecc10e8a9741ed3a8b7d01bc08ddaca58580378d",
+      "bytes": 5689,
+      "sha256": "db9faac9f496bfb9b30c2693e0fc0db60bb5ebfafb12d3ba3cab601cf79e5903"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/ai/TravelReasonPromptBuilder.java",
+      "gitBlob": "09b926251a39de31f94cf0f0de33e48aebe17c5c",
+      "bytes": 2210,
+      "sha256": "7249f50bfa25076cf31c5f616ddc82f6622f0f664be9800fc1a6eb5beabc16b9"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/amap/AmapClient.java",
+      "gitBlob": "379acbb893e1c55271d694a7cf35d30487d82366",
+      "bytes": 6997,
+      "sha256": "b004b9d353b844ad38062f9ba2fbbae67232a9e1f92af6a818d8edaf09398af2"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/amap/AmapCoordinateConverter.java",
+      "gitBlob": "43cb2a37fc801345affc36662570dc2d1132da8b",
+      "bytes": 2219,
+      "sha256": "267e9a91242cfdd63a0f47bf27070a8e4b220aab466fdf2017d0600e8f0fd1af"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/amap/AmapLocationResolver.java",
+      "gitBlob": "f31e8dc5a35c4403eebfd966f37a2aabb34085fe",
+      "bytes": 4265,
+      "sha256": "abaadb763de7e954f0b64e0cb75fc942a2bc8987286d83353d60f47d43e0ade9"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/amap/AmapWeatherProvider.java",
+      "gitBlob": "9d88f9cfcc3864df2f9eca51a6b0e7a69107a31e",
+      "bytes": 4471,
+      "sha256": "45bd08a64bbaaf90f25d56f834c66dc0ec4c5b2439bbe73ed62fd4e56558541f"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/amap/LocationResolver.java",
+      "gitBlob": "a921a79f5f32fd9bbcdade33994d1a84c8d203a3",
+      "bytes": 1129,
+      "sha256": "c2c39d2cca0bd96fa8d01877015cf001970e69dd6e9e1565faaa7b16787e993d"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/amap/RestaurantParser.java",
+      "gitBlob": "52e96ebfb8d731473730d17eb947fdce9f700e4a",
+      "bytes": 2932,
+      "sha256": "9cf9348288e23c577a6323fd03f55203fd4f820a8c7f6b95d1f3d40d219a7c9f"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/amap/StubLocationResolver.java",
+      "gitBlob": "f791d50ae40f5c0bf93655f072554452c4890dca",
+      "bytes": 1484,
+      "sha256": "bdc0d980de149aae62d95b7c10ff33085cba327d3aa138eea6534c6b2925c439"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/amap/StubWeatherProvider.java",
+      "gitBlob": "9ffe4135b733c7c86353b3222966d5ae9f40c151",
+      "bytes": 1224,
+      "sha256": "5e73210847f7edfbca7160769c67c1eb6c515a03cee7fa50cf4f8510021a07cf"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/amap/WeatherProvider.java",
+      "gitBlob": "1372899f7aaab32cba7ecdc00de6d21961535301",
+      "bytes": 1178,
+      "sha256": "a82fe7ee60f40f30838c801a01eab44884eb6d67d7b3408e7168bb00fcbfb105"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/config/AiProperties.java",
+      "gitBlob": "93c60a33b11451a922f8d95fc0966806b7c0a939",
+      "bytes": 6082,
+      "sha256": "37a561fc38f658cac102fd03e32b7ae3cb31e10ff9da36afb53b448c7a5ec34b"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/config/AiSafetyProperties.java",
+      "gitBlob": "44e3fb3caa690f197dae3c2ab78db305eb505ea6",
+      "bytes": 976,
+      "sha256": "e7c96084f0889e3d47717a2f495f35ca0b2673bb852dd638daef83fee0502505"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/config/AmapProperties.java",
+      "gitBlob": "f14ef5a70a4341f8b002d7b6563d82b4cd598958",
+      "bytes": 4627,
+      "sha256": "818d0bdca41e4306f058da9a44f8d29ebd605be999db90b673ffbfbc22379f33"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/config/BehaviorRetentionPolicy.java",
+      "gitBlob": "99839eb4bed2452e15d93836ab1a36a3a057884b",
+      "bytes": 860,
+      "sha256": "c7ddc4d55cc64a816bc78b8b260cbab3516eadc43966b512c8a83ac42d2901e1"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/config/BehaviorRetentionScheduling.java",
+      "gitBlob": "dd4eb70a4a8c4ce88bb982e266274fbcd2aaa478",
+      "bytes": 1301,
+      "sha256": "8c802df827953cd89797df10e5863c5869f670ec6a8c30791ebc879e3a3a3555"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/config/ClockConfig.java",
+      "gitBlob": "c4876ff875025ec3a4a8696aa4c9c0c4e06b70de",
+      "bytes": 1719,
+      "sha256": "f36eac5a72779fe70e56bd6e84ffe0f870e1ed110f651768924d8de23b770524"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/config/CorsConfig.java",
+      "gitBlob": "f94584e0fd55102ce181d2d02d640680b7218dff",
+      "bytes": 2941,
+      "sha256": "14a707974b544d7771b03f350d142ab3f1941c35a3df41cbcbac6a01b627fc15"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/config/SecurityConfig.java",
+      "gitBlob": "508cad8e5d32cce86ad62062f09f8f1e33c8bc8c",
+      "bytes": 14349,
+      "sha256": "f9ed038d9d452faf161e2b11fe9333db44ca77dfc533bcfac7438eb183d29f9a"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/config/SpaCsrfTokenRequestHandler.java",
+      "gitBlob": "50c2505886d1b435b666cdfe27159ff8f8ab4165",
+      "bytes": 2805,
+      "sha256": "83e9378124bec22e514a9553d83089b333210dddb9e90c8067e667c091579f3d"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/AiReportController.java",
+      "gitBlob": "814d6fdd1db4ec6c6b18c9afd8ef15098cfa537b",
+      "bytes": 4140,
+      "sha256": "2ae8b372a9423bdb3656051dc33b451291d680950f2e3997ce7f131a2e541bad"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/AuthController.java",
+      "gitBlob": "4c1b84c152d9b2c9181902fb5e54d017544f41b3",
+      "bytes": 10233,
+      "sha256": "456ec7b1563d155ca8cd4bff9400e4da524e1b4a93e1940cb034cc40ae67de81"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/BehaviorEventController.java",
+      "gitBlob": "7d8183136aa55e0cacf43046a457a69689125af3",
+      "bytes": 2411,
+      "sha256": "970127c0361a16d09a446574bcb96b8d5c58622fc3ec1b6b2a51f420288517a0"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/HealthController.java",
+      "gitBlob": "36356a049660cb6f827abd2228ff3745dcef4d15",
+      "bytes": 3662,
+      "sha256": "c6f0a5c0de6d5b6130f175c5b2fcff7aa90a6cc4ec7b9094592ec0f02c62794d"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/HistoryController.java",
+      "gitBlob": "d52f7e630ca24d51ba11a1fdb11476114841aab6",
+      "bytes": 2333,
+      "sha256": "0591620d884a30b7f9afaa9d88827791b813fcaa7755c9a385a2ee0047501d8f"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/LocationSearchController.java",
+      "gitBlob": "3556d22fe2dcedfb3e66f1b9343f9a621ee2312b",
+      "bytes": 1525,
+      "sha256": "68316963be20782be33bbe7c894f98f90a8a9baaf5663f70810b8012779ae3e3"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/QuestionController.java",
+      "gitBlob": "40a04177ae3fd580e0dd16afe0d316761982b125",
+      "bytes": 2431,
+      "sha256": "bedcd5d3d9205cab5de929a5b5b33318970b644740e48b470300bea282f11b77"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/RestaurantController.java",
+      "gitBlob": "33b9b064191d2645a099550df6421830819596f2",
+      "bytes": 1441,
+      "sha256": "b8c7716204774cb8a60fcdb8216440daa25d4121bedb7b066abe0ae2c6aed637"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/TestSessionController.java",
+      "gitBlob": "0223507c628458f7fb5d7c5845669a052f0db268",
+      "bytes": 7582,
+      "sha256": "a0743e52699caf707cf05857759df9547786b62008b9f38e85f0e5f09e0b8068"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/controller/TravelController.java",
+      "gitBlob": "d398deb650dd8f7de1a8243163bc180c35cb2995",
+      "bytes": 24882,
+      "sha256": "3d807dcdf486c34cb9dfa040ec2fa068953101e23546615362d0f6bccd9c0496"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/AccessScope.java",
+      "gitBlob": "94492158f410d2a73ccb9af79797f4f2e4cdb1ad",
+      "bytes": 192,
+      "sha256": "7f7c8183bb68365f912e686ad387c1869f599a833784a7f57754a8185996b194"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/AmbientContext.java",
+      "gitBlob": "15d51d80f2d960e88e0acf870f98e6e2c5c60597",
+      "bytes": 1998,
+      "sha256": "3948d53abb7c687fe929f525de1b66243eadf821ec4007d93413cc9ce642c73a"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/BehaviorAction.java",
+      "gitBlob": "820207f6cb5ae163086337e3e36b9a809ca6465c",
+      "bytes": 153,
+      "sha256": "f65604a97607a4d0fdb97ceabdf89d5ca5b5f635d2551d62c5c89efee20fe4bf"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/BehaviorEventCommand.java",
+      "gitBlob": "c466387f253f6dbb553ef83f4b9b7570ce15b9a8",
+      "bytes": 4041,
+      "sha256": "175746da75bbcc7db82830183af5a5d0b554ecacd3ec327d0e193bdde286d12d"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/BehaviorMetadata.java",
+      "gitBlob": "bc89a19415020c99b8e93bf00aa07891cc85d058",
+      "bytes": 1239,
+      "sha256": "e5107bd1ccb0a3eaebc06c48a00b35bdfe3f3f2fc625262403be32dd620743c1"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/BehaviorProvider.java",
+      "gitBlob": "9171c1efb2709d6bfbdcce7517ce47e7dc18a5d5",
+      "bytes": 85,
+      "sha256": "37fb2b12cd1c6d6cad094936c7ae458df20d614ef34fa6de40643414c70db514"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/BehaviorSource.java",
+      "gitBlob": "305851db89f0bf0291ac87824b1bf2dd4288df33",
+      "bytes": 261,
+      "sha256": "363b6cf31980d486318755f3a510828a49977d8036f7ee3bb65024a8ee2fc66b"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/BehaviorTargetType.java",
+      "gitBlob": "ecdfb7691859fec5f7b8c73cc557130c3de68d30",
+      "bytes": 181,
+      "sha256": "b0ce60a33273b8abbae1517c3ca3e7568cc1f741155993cc115847e1db549032"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/CoordinateSystem.java",
+      "gitBlob": "d68c7fa56f1a17aae9282f0f5459d158cc7005cb",
+      "bytes": 179,
+      "sha256": "4d410c627e00925455de9844e74a9fba354478ffabe668734326edcacb420081"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/Dimension.java",
+      "gitBlob": "f728a9cc2bb35ae60814b3173f16eaffb7e3b7d7",
+      "bytes": 1149,
+      "sha256": "295e134a1965b4099f2acd7041b255f1fc6f9ed784fcd39b2d62648b390e93b4"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/DimensionScore.java",
+      "gitBlob": "6c47fc9db3b3ca4cec4f2b5eb706ef68e11049cf",
+      "bytes": 1087,
+      "sha256": "668270e3fcda98728cf18864ab4f6d8639d3245b6d5e3dbe726f9eb95fd374d5"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/GeoCoordinate.java",
+      "gitBlob": "8fb5e756db1af97e488f921f18c2eca9b4f020b4",
+      "bytes": 790,
+      "sha256": "be295726ea7df4a1735e82b8a405310a85537ac47ae2f58a20855974b9b8ae8e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/Level.java",
+      "gitBlob": "8a850633dc182f7ba0977d9dd4d0dc431018266a",
+      "bytes": 1347,
+      "sha256": "4d80daf94e9faeb58811039ff2aa0079191c43486806020033b39fb0b772dd12"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/LocationInfo.java",
+      "gitBlob": "3fe1c3ec9be4c5cddb370781d5a899977fbc4012",
+      "bytes": 3864,
+      "sha256": "03503fd259db2edddc0ac4df2e6657aa86317b07fbdf23905bf2817fa4209ca8"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/PlaceCandidate.java",
+      "gitBlob": "f69548253ec9a5ff221a572947516cbe12d570d3",
+      "bytes": 2787,
+      "sha256": "3148b5e011793108830b4317ef1716c2f0eea4e5d33cbf8a4b4e582ce6ffe985"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/PlaceTraits.java",
+      "gitBlob": "e3b0d6e6325e4ed1f49c5d70f109f86a6999edf6",
+      "bytes": 1880,
+      "sha256": "8a6654e40b7171736fba27513da2eec18e4a23702f4ee5494e427056224f8913"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/RecommendationContext.java",
+      "gitBlob": "8e13d7dbf3b6d94342b181bbc271f80b08748b98",
+      "bytes": 8345,
+      "sha256": "e02c5149b2bd6cbe76ddb3ca3d9b0fdc799344c3ba73e0f1a4cb3f12621e2d51"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/ScaleDimension.java",
+      "gitBlob": "ce1ab000da2d551726250a6db6257cb6116a359d",
+      "bytes": 2110,
+      "sha256": "24fbe7f28aaa783cdc17cf1f9503c1141bd2adc01c5e685b8c403544db0064e3"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/ScoredItem.java",
+      "gitBlob": "0ef2e356d3b96c7cf714063647f9696de29d41d4",
+      "bytes": 1748,
+      "sha256": "595a44039815e82cfef78289bd70572dd4e70203030ec4d292efa49f29700bd4"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/ScoredPlace.java",
+      "gitBlob": "3b391ae11676d85c0984f9ee724e48ab98c2b168",
+      "bytes": 2425,
+      "sha256": "2870b2ddb75447880acd78bb62b3a98020069e98eb3cf9aff1f39a34af890320"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/TravelDimension.java",
+      "gitBlob": "a15aaf4d24eecc34178a3aedab4703327d969046",
+      "bytes": 3668,
+      "sha256": "09ef63db267cd9d80481ac7ed7f0878d0be555de0baa9cd9fd5f5ffeb5d34914"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/TravelState.java",
+      "gitBlob": "38a8c26ee506a192cbebd73d4b817dad27215f04",
+      "bytes": 6560,
+      "sha256": "b5a1c9b2a7f1ffdf8c8e7caf6760b154a10c951845fef49def2fd90189347d7c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/Weather.java",
+      "gitBlob": "5d2c5aad9932ab315f9cae0bebbddebaac3a71d6",
+      "bytes": 4529,
+      "sha256": "d97444a4707e3fef77a4e72c06d206a6e67a78d132091188ab7b9c444bf2376e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/domain/WeatherKind.java",
+      "gitBlob": "2aee2df55543dc9f155a2458b7f5caca40c6c165",
+      "bytes": 5631,
+      "sha256": "f5766bd2cdb3223c57fd777ffddfebb22792ea3a10e3cbb1d3e10fe8e54b10bd"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/AiReportResponse.java",
+      "gitBlob": "d80fbd646be02da24ecdac2856becee14abb1d06",
+      "bytes": 1051,
+      "sha256": "25ac22379721ed7442736815a6f2d4cc6f8a4e3d3de2920d18b8e844fa3f27b9"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/AnswerSubmission.java",
+      "gitBlob": "4007682199ed69b2e646c04659dc208ff54d9acc",
+      "bytes": 1126,
+      "sha256": "4e2c176745dc1619c798eb199e9ed357dc9ef9709842b781c8acb69c62a7a51f"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/AnswersSavedResponse.java",
+      "gitBlob": "c3ef4f356c914ba58313716b8c96803aadaaef3c",
+      "bytes": 263,
+      "sha256": "a918453adfad8918c0704011b9af017eae030acbc7c6a04af30fc60b9556d39e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/ApiErrorResponse.java",
+      "gitBlob": "00840a20d41f98116f48b9d52a83ed0c0ad8a904",
+      "bytes": 1985,
+      "sha256": "1c91f11a3e9cb6a4d465bc55284c29c594ccae3873a12cc27e369930a6e7a6da"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/AppliedContext.java",
+      "gitBlob": "7a638ccab18b28da62f7fe57515feb81ca37f3a0",
+      "bytes": 3849,
+      "sha256": "772b237dfe3ba56fc6ed2ee79ca354bfac80b14bcbaf9a7754f748914b43daae"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/BehaviorReceipt.java",
+      "gitBlob": "d0d624199b7d9659ecd84dffbc5524de615097d9",
+      "bytes": 126,
+      "sha256": "301505ae32e08cca4dd282b12391233a8db0e3edf49c9ed8dc35b4b7ace720e8"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/CleanupCounts.java",
+      "gitBlob": "4821d036861f77cfcfaf83020429c9e57d81ab93",
+      "bytes": 105,
+      "sha256": "279455748fc1d3037a67e01d14f7b239b4c9a929810a436f386206b2540a55b5"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/DimensionResult.java",
+      "gitBlob": "5f6d2aa530b8e4c5af8302e819801048331ba9d9",
+      "bytes": 1258,
+      "sha256": "669724910be4adf8006677b0c14bebc613d474aadcfc88d394144f3b20e58f8c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/FeedbackEventRequest.java",
+      "gitBlob": "5c12175d87aff40bd7a93fbb94e88de74bff0fef",
+      "bytes": 966,
+      "sha256": "5ee6bd6fcbbf4f2def3d06faddf7a93b1e0352b5e9e56ee38f7d335192675966"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/FeedbackEventResponse.java",
+      "gitBlob": "5c222b5693b31d2d6c295956e79498c540712c86",
+      "bytes": 1111,
+      "sha256": "d8a8c64f272e959950ac97e899e44dc785e59faa6b1906571aa8da897cf60aee"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/FeedbackRequest.java",
+      "gitBlob": "cc653ab0bc4e1115008938b58292170f6eeca8db",
+      "bytes": 1090,
+      "sha256": "0a3c271e23badd1afa0309f1f101b3eeedcd8baca5e56fcd9654f02fa5420f97"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/FeedbackResponse.java",
+      "gitBlob": "9a75198cae5d27a5a22ef48b850f052fd6208e23",
+      "bytes": 2090,
+      "sha256": "6954a4bcbdcaa5bedef478da7916a3c62b535d69d1a7fb7d960fbc6d1f0635dc"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/FeedbackState.java",
+      "gitBlob": "d2f24d57b27fe59acb99f33b766c9c446e3342e5",
+      "bytes": 203,
+      "sha256": "4c946aa96eaf78d9c76114beb4a0f79be76a97e89a4d5acbc86c238c5a5da2b1"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/InterpretRequest.java",
+      "gitBlob": "e4eb1d80eb0e500bbb79df98f314d6401372dc04",
+      "bytes": 1058,
+      "sha256": "d2554d627b41bd2506d02365523167524fc40d9891efd82d198b4f7d0c79adb6"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/InterpretResponse.java",
+      "gitBlob": "25e7889003b7631e6cc255455a957e2abbc3fa36",
+      "bytes": 2500,
+      "sha256": "52118b3ea38bb2df3a6840170ac7ad4c00cfadc38c28e4a11838b06e07d9ce18"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/LocationCandidate.java",
+      "gitBlob": "984ec0ce69c5ef89531dc09e006bcb8752dfeeb9",
+      "bytes": 426,
+      "sha256": "c8fb6a4ac5af0762eac8cd374a52ab7d88c9813b41f83ec7fe6d533074f50e78"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/LocationSearchRequest.java",
+      "gitBlob": "4f1d623c4431e5091d3041d77df48387c54b4ad6",
+      "bytes": 306,
+      "sha256": "c0f9d1c044d33f6d1d60f8f8c939b4fa067ef49680eaa95a4d2ce2a7025d4c68"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/LocationSearchResponse.java",
+      "gitBlob": "600e1b9d8593b4369f10811491ae1b3f355109fb",
+      "bytes": 139,
+      "sha256": "d2fd6cf54392eb24498698678f3b437f16b09095aa65caf652784c27fc66ee24"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/LoginRequest.java",
+      "gitBlob": "23e9156bd6480c60e7e335c8430fc732f68b5d21",
+      "bytes": 679,
+      "sha256": "c3121c52417b266a68baed9806b8ff32f49e913b9398962d18a5607eb127692d"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/MatchReason.java",
+      "gitBlob": "552ce80e367ab8c144f9758f2be5da9a62c80270",
+      "bytes": 1580,
+      "sha256": "3be73ca62756e61c1fb6f53379f5fc5b800c3850fedfe1011130b284bdd4ab92"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/QuestionResponse.java",
+      "gitBlob": "fa97f7e036bd664fc7581333fa6f57b906c563ca",
+      "bytes": 1461,
+      "sha256": "395b94e3b89fe364e8a1fbb0c5e6208d1f502d3993484aeb9aca7fc61e58625b"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/QuestionsResponse.java",
+      "gitBlob": "f026f5f97f07da66be284141908058e71a886096",
+      "bytes": 404,
+      "sha256": "9377f7e2ab13d8aa1fd02d096f96ba544d91eade929900655b9cb6f1ece9fbbb"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/RecommendationRequest.java",
+      "gitBlob": "a029bfac423a876f84f9516648df373a027649ad",
+      "bytes": 6317,
+      "sha256": "bd65be5756ced8ce0715f4d7166d91f4bb59cd1f89686111dd6cc1017b453c82"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/RecommendationResponse.java",
+      "gitBlob": "2cb541459bacff1387e93ed5c03ef6d8d9ccd953",
+      "bytes": 2378,
+      "sha256": "f7f8987c86c4b79831c71e2b0b93c8d2ce949c63cd289daf4fffffe6cdaff3f4"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/RecommendedPlace.java",
+      "gitBlob": "42c68f6635c5ecf0d36522ff4ac7c96467d1b806",
+      "bytes": 2957,
+      "sha256": "450edeceb42676d89b40df1a3b39d51e7688c702a26b7e9316f09478663b1cda"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/RegisterRequest.java",
+      "gitBlob": "47b7797fdae2da9c52358a5c195d7317d188c598",
+      "bytes": 1507,
+      "sha256": "c7d50ac344e9482a320e720be3075ff6a496cc72ba8bf0e73a798405cb251246"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/Restaurant.java",
+      "gitBlob": "dd108439a8abe29fff0267f464d103e2982d3f56",
+      "bytes": 459,
+      "sha256": "be8019bb4635c0bb43f00f39aaeb879645a4daff7ce800f5d6cabc853a99a341"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/RestaurantAction.java",
+      "gitBlob": "dd79971a92a8974ad7e29b8e6c9cf229196941ca",
+      "bytes": 367,
+      "sha256": "39f35c1a455930810186b7e33b849bceabb33162d74db60a12edf3845b72434d"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/RestaurantSearchRequest.java",
+      "gitBlob": "f1912917949785c8d7e54ae62a78704d15e125a7",
+      "bytes": 1231,
+      "sha256": "105be4d8d2976dcaa8c6c737ba51f7e04ded31759421577d96852b4e190d8539"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/RestaurantSearchResponse.java",
+      "gitBlob": "ec8d2d8bef2b653e1e76aa55860a438164a60ca4",
+      "bytes": 1071,
+      "sha256": "47ce0265070181f6b1ea423b6d7f00fe01ff0e2bd5ea8562461c2cdf2d41d77e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/ScaleOption.java",
+      "gitBlob": "5b8cfc7670858fcb9700213db656db8dc174fd9b",
+      "bytes": 358,
+      "sha256": "0ee3a43fa9b7faf2f9c7633ebd2edd5a8b404ff6bc6c6262232660dadb910117"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/ScoreBreakdown.java",
+      "gitBlob": "a77a89f234da3d0c1fa40b8b99d74ef81e62685b",
+      "bytes": 2857,
+      "sha256": "cd5c2aa6530d1d5ff88d4a0b48f72a272c880c914660376fe759855cc994c090"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/SessionResponse.java",
+      "gitBlob": "2d98a5dbcf3cb8b4c1ac4cad29a6a2a9f1a16eed",
+      "bytes": 1359,
+      "sha256": "a9c6ab512350e73adc91be9f4979f90027d10d3f4e36c14a7bc4cb10c1520f5c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/SessionResultResponse.java",
+      "gitBlob": "9ca4cf8790f2104322bc185c55dc40e0b77a9363",
+      "bytes": 1079,
+      "sha256": "c40ba0d078b117282626288824f81337860f9523bd201b34c1344f546c559b77"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/SessionSummaryResponse.java",
+      "gitBlob": "49c9f9d422988e859f628a718043d71254d6de9d",
+      "bytes": 1490,
+      "sha256": "1335cf70f926d72f7ade0207002e1c5c026bd21c959280937ddd9d51321faf73"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/SubmitAnswersRequest.java",
+      "gitBlob": "4ef89b5df0efabce1e24dac0c2104644b7441aa5",
+      "bytes": 673,
+      "sha256": "15cbea77d045e0593d996fd733d8a2154f4b55120f27e9b36431674a001e2cfc"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/TravelOperationMapper.java",
+      "gitBlob": "bd9d0fd83148b6bf164810623fd595bbbe505b0f",
+      "bytes": 1958,
+      "sha256": "ddc686e622482e7ef2fa87b50ce8404082acad08bbce5558389277c792758f08"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/TravelProfileResponse.java",
+      "gitBlob": "0b45ba8d38d689744a5f97091f95d6858a5e18c6",
+      "bytes": 1950,
+      "sha256": "98301ac9abcc25683241a8fc88f297010c8876f0b95c68e1af7164ab73b75b93"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/TravelQuerySnapshot.java",
+      "gitBlob": "a3a739db422fb46503b1f9a22ee3548a054866bd",
+      "bytes": 969,
+      "sha256": "ee9977bd0e54051c18f30e7e5b2b5597183d2871ccc4b443440738e6f94b40b2"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/TravelReasonResponse.java",
+      "gitBlob": "0e185c496ce647e253c682379a20b8bf324af632",
+      "bytes": 2161,
+      "sha256": "b6dcc18a538796d1de509759e4cba93c2fae23a1eded77fb2028eeab4cd80fb0"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/dto/UserResponse.java",
+      "gitBlob": "92d85d6ba8685aefc66f74bec61498c16bc6b3dc",
+      "bytes": 940,
+      "sha256": "f22243e24555e27d2f2cf72e22c1ae5d16b51866a4ad15722384bfd3c75bc55b"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/AiReport.java",
+      "gitBlob": "4afeb1161e4de399ca7fab0bd5b023954d5331bd",
+      "bytes": 3112,
+      "sha256": "fea3793eac3566a380dc749ae596593d99fc0f0c7a6f9c53cd992c7c780dfa1c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/Answer.java",
+      "gitBlob": "17dfa6fdd81d8dc9c3f0546aa785c88f82e042ed",
+      "bytes": 2312,
+      "sha256": "4e90237a20ae4d62279feab914f4d2c502f9207a0634a18489c128fc9e3819c7"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/PersonalityProfile.java",
+      "gitBlob": "4d05c1e9df00b66128e12f3e1517fd85175f5fcd",
+      "bytes": 4582,
+      "sha256": "654a51d562885ea0ccf62bd1f7b8e41266f0b2970973c0780fea1da92b04e1cf"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/Place.java",
+      "gitBlob": "69fc504225693f02c24cf8bf14eeb573d652a8df",
+      "bytes": 4803,
+      "sha256": "50387d46fe2d161d066590d08577639c941a53756e3e3c35fa1283c2791217c0"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/Question.java",
+      "gitBlob": "f30e0309d38004388bcbdb9ee76fd881611a5176",
+      "bytes": 4966,
+      "sha256": "84f6ec78d43e805719eb39133cad95959fca419921be41813ba7222945c04bbe"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/QuestionScale.java",
+      "gitBlob": "6d963a9e73aee89e726edb083146917bd9747047",
+      "bytes": 883,
+      "sha256": "affd0a57a67a0e3a5b477ae33e972367e88e58b8f5ee07436c337555607ccadc"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/Recommendation.java",
+      "gitBlob": "65e74dda65ca4bfd9bbd62e05206cc166f3c5012",
+      "bytes": 7163,
+      "sha256": "0bd0de76abd2e0ae2b74833307938b49126cee78a569d5e2688f22f2818ceb6f"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/RecommendationBatch.java",
+      "gitBlob": "19e3fe46c5d2174a629eb607d0dbb534ad2ace23",
+      "bytes": 11772,
+      "sha256": "25b2841d214c3e183ce3a607a5579ce59edd68356acbc6888373531cf9cb3d4b"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/RecommendationFeedback.java",
+      "gitBlob": "af8d254879396d77c6e11ba2a73fcbe3ed26788e",
+      "bytes": 2812,
+      "sha256": "888f6f14dbe6329c6b0902d92e93d7dcec7f9ec9ef793bf7b3f438ec0c479ea0"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/RecommendationFeedbackEvent.java",
+      "gitBlob": "ac10c9d650cefcb073536eed35c81047efa2ade7",
+      "bytes": 4795,
+      "sha256": "de629421bfac92d34685bbeb63975c615885c11ae8fa64b716daef871f0656b2"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/SessionStatus.java",
+      "gitBlob": "e571ee800f1bbdbcb1e2a560048c131af5f17784",
+      "bytes": 696,
+      "sha256": "f935dfe3a27c3523790c45c1c3461d721f359e9265734888f57905341449737c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/TestSession.java",
+      "gitBlob": "4d2364739931846ad8df0bfca4b3a7228ef91717",
+      "bytes": 5764,
+      "sha256": "9089c164757368cdc773a093f79baccc1fe0958f95e8ace6e10c4ec17dd66cd9"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/TravelProfile.java",
+      "gitBlob": "bf8b46e4e0e07e16646a50b4a6f9cde7bd55250d",
+      "bytes": 6393,
+      "sha256": "3b69e67067769dc37314ffe8fa58893750e01736b6cee0ddac06c6222cc0af71"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/entity/User.java",
+      "gitBlob": "6989afe15b03ecbdc6ec6ff5affb5535cec0fa4f",
+      "bytes": 2312,
+      "sha256": "fdf5919bf51f4b4968cb771e110dc1bde4a3e5a77894f52676b3124c8e66accf"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/AiRequestRejectedException.java",
+      "gitBlob": "4b10b520977c2c9754cf0aa01b225ea90de73aff",
+      "bytes": 389,
+      "sha256": "43e5385afa0542cc1f0ee857ad459b734998c0b2e9d5e670b22321e7f794d80c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/AiServiceException.java",
+      "gitBlob": "f16606d708b50ff199cfb42ff9d6d7aa6997469e",
+      "bytes": 1007,
+      "sha256": "0b0d878111255ca07b57ee43c2ade6ffd9b66846efa35ec66bb181a6c7d62105"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/AmapRequestException.java",
+      "gitBlob": "be288269418bf098dff518dbd62f46c7cb74e1af",
+      "bytes": 966,
+      "sha256": "c65e37ed3f64302c5301eea20a04631c75ab1b03170170a0bae8c93382018e35"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/BehaviorRequestException.java",
+      "gitBlob": "c61501b92daa53e1ba81731ce4e7d9070abbc101",
+      "bytes": 1123,
+      "sha256": "581644f3db09116a35433d6ee95cddecb648b5114b243b9bb59324a497f3b4b7"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/BusinessException.java",
+      "gitBlob": "618d97773e09aab48d088bdb55bbaedbea467c9c",
+      "bytes": 1824,
+      "sha256": "93cbdbb98d5126ad4541029dafd5bbfd84f81287e79ab6a487cebb53a7910261"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/ConflictException.java",
+      "gitBlob": "0618eadc20b03ff54ab2719c563aa433740ca008",
+      "bytes": 494,
+      "sha256": "df569256cd1b103cc0f3f6039984eaacf230bf8327468f699b95597272ae1829"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/CoordinateConversionException.java",
+      "gitBlob": "95e832c801b16ff3c807cb7a6360b5b8fd3b1f3e",
+      "bytes": 715,
+      "sha256": "7f655d55b87141024020b385a45aa2808c554405198520971d697dc3ebeacb7e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/GlobalExceptionHandler.java",
+      "gitBlob": "9a0028e23bc645a686b90cb90d59c8a13382ffc3",
+      "bytes": 13378,
+      "sha256": "e0c8686fb1165eac2c33c2cccca8e51ccf804827f22018de3d4fbd8ba9b8854c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/InvalidAiCredentialsException.java",
+      "gitBlob": "e9b8b38ca3f5a041b4447a0ca2c8a07a0a4ef7e1",
+      "bytes": 1047,
+      "sha256": "5228ac2f6dc89f135a511ad02820593303500224fc2bba96cb93141df23a746a"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/InvalidAnswersException.java",
+      "gitBlob": "daa94f05d87560a0ab3062a504dac7e4038c3129",
+      "bytes": 439,
+      "sha256": "4aac0cf3d4982bc6ca6a8dbf2e504d83abbdb32da3460a8734f7e2eaf34a55d2"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/InvalidFeedbackRequestException.java",
+      "gitBlob": "a3fc03ad2112a8a4506e9363480d023651bb2386",
+      "bytes": 538,
+      "sha256": "2d245d932d5e39e961e40773d6008c647a4d9540b3e3829f68631a5c7521eae1"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/NotImplementedException.java",
+      "gitBlob": "ca6cc3f27065fbb048ac89322dc89a7f9f2c6d38",
+      "bytes": 533,
+      "sha256": "024c36d3a4e63f56dc9e48747c9b788a69c678c91a76e6e628c4ae01d1d33747"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/RateLimitExceededException.java",
+      "gitBlob": "140e2dacbad312b7b7dd556bc040dd7ce8cdffcc",
+      "bytes": 1147,
+      "sha256": "a873a309891b9432395847d0d18ed3b5b7f32abcd094f0cbabee538844932dcf"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/ResourceNotFoundException.java",
+      "gitBlob": "df4f7f7700a99b122ce6e2bd76da7458c7022422",
+      "bytes": 371,
+      "sha256": "d62ea4c608b90cd0d254b0b4bd186e6f587e1a76feb69126e0008d3fd10dfdde"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/TravelProfileRequiredException.java",
+      "gitBlob": "f857357b5d4749a59a376a34130d31634f176f9c",
+      "bytes": 449,
+      "sha256": "5b8d18b42bbb0915cb499efe4e3f533ef5c606ff919d8c0304600012753fc2cc"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/UnsupportedFeedbackMediaTypeException.java",
+      "gitBlob": "5dcb28d088f8499f7a7814527380f3b74d541131",
+      "bytes": 371,
+      "sha256": "c028232e91186a157613b42f3873bd1c3107399fdf3692c790893e49a0042d8f"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/exception/UsernameTakenException.java",
+      "gitBlob": "991dccf38aa2091cc54c89bbebdef660b191e544",
+      "bytes": 613,
+      "sha256": "025525b7da390b3cc9cf24e9dc228e22b4a0dcd8c46d68700500f1e4ea763393"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/AiReportRepository.java",
+      "gitBlob": "d2c0844b150a2507ebbf81c0d20e2628d3c65115",
+      "bytes": 1286,
+      "sha256": "5f115ac686c4a60053763dcf79445cee913e0a16532b4630b6406a9ca5895347"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/AnswerRepository.java",
+      "gitBlob": "606751ed9d71bed9a094984923f40637750f2dfc",
+      "bytes": 870,
+      "sha256": "fcc8df9504f965cb3d657516154b4747057cc3b231704e6202758c6d7c09957f"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/PersonalityProfileRepository.java",
+      "gitBlob": "0547eafd7d30d1c36cde47e0982085d8c7bfc8b1",
+      "bytes": 2868,
+      "sha256": "3181d1cd6a2ff1a4ac51ad51f6c68d8df6601bcdbba62fa28e5f6866296b8b05"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/PlaceRepository.java",
+      "gitBlob": "3648ad42f7d3de67c4753d4484be1d942b13fec8",
+      "bytes": 970,
+      "sha256": "f855b3861159bb903b89ad3ca8b097568cf8b8dcf4c5ab1b4d4a3249ef33c478"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/QuestionRepository.java",
+      "gitBlob": "3ebec0318afe9dedf9d5e9a238c2f1eb4f5d1b5c",
+      "bytes": 2798,
+      "sha256": "2fe25f01f2023fd34cb983f24659c020b6a8ea422051490aa98e1af5ae6dc3c4"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/RecommendationBatchRepository.java",
+      "gitBlob": "050c8f8f620aed6600394a2887d5dcaf924fd1da",
+      "bytes": 2103,
+      "sha256": "f704bc820ecc1aaf6ba0b713d6af3564a2df43ef3027ade5148fade04fa41a46"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/RecommendationFeedbackEventRepository.java",
+      "gitBlob": "b0de04a0fccb639b007a0599d42bfaf064e9e1aa",
+      "bytes": 539,
+      "sha256": "540e2ef480297223cee8a64622bf596ce720b328ff2ec79b0f23774a3f3d98db"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/RecommendationFeedbackRepository.java",
+      "gitBlob": "6ea5e1cf11d33936b4ca8b32a7bbd64168097003",
+      "bytes": 1100,
+      "sha256": "f860197e1c87646713f2415e04c3b6f800fc62773bf5def94b4af7b764e090e2"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/RecommendationRepository.java",
+      "gitBlob": "e4b23761d75e8134022769a05998efeecf56c0d2",
+      "bytes": 3095,
+      "sha256": "c8fe5536b0e9dcaa9bc262655430fd282b7e14f3009c6db21e49e560ee1fe0a1"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/TestSessionRepository.java",
+      "gitBlob": "9d9851fdc8947ac9e87acbd1d1638a19dc07bc3e",
+      "bytes": 3052,
+      "sha256": "6634f510f8a8c5fa2c174b71d4052e166b443166611392b5e8cafb75d16f4355"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/TravelProfileRepository.java",
+      "gitBlob": "ae9c5a72b3f7455d32f8374dfba48051bf815481",
+      "bytes": 857,
+      "sha256": "d97e0caea6dedcaecb374306b722237e08e8476b55bb288d723c13b0e325ea02"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/repository/UserRepository.java",
+      "gitBlob": "a1bb58f45caa3a8683bd3a98eb0dcdf1c56dfe77",
+      "bytes": 1084,
+      "sha256": "a786eb60287ed6f51a01356e3d7558fcc0af9f0cc16d8562be5f010750a70e8a"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/security/AppUserPrincipal.java",
+      "gitBlob": "7f5be09dff33752201c61985cf3d1602ccfaa4a3",
+      "bytes": 3780,
+      "sha256": "263d5ba0222b9a5a7e215bfb7ad39b0a8456abfb81a0fb3632c2f010ea08e524"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/security/LoginRateLimiter.java",
+      "gitBlob": "c1d629e1754249de76c6e88e1cbc81ac77fc4585",
+      "bytes": 11544,
+      "sha256": "59033975d085669acfe9be227e95ed0a6b17330120f7e055f689f1eea1b9d957"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/security/SessionAccessGuard.java",
+      "gitBlob": "909f0fab8253baed094ba9e4bda76e40cadce312",
+      "bytes": 5416,
+      "sha256": "0df2692b115ff2bcb42df0b77c0bdd071c10c834ba4a7ea8d9416f69512d0426"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/AMapLocationSearchService.java",
+      "gitBlob": "fdd3796697b91bdf97a0577a446a8174f665c5da",
+      "bytes": 2715,
+      "sha256": "ddafa66a278e72465e3895edb8d0a2dadb3b3b69aae95861cbcffc368abb8cca"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/AMapRestaurantSearchService.java",
+      "gitBlob": "b08a196c2f545fb547513246400f376b34ee99c1",
+      "bytes": 2782,
+      "sha256": "aa3e06d8f992d57523b1d40f87e0de1fcf2d81da87688663c316f10b4800ea5e"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/AiReportService.java",
+      "gitBlob": "61be748150b1bff0f1b6ea4d565e791d5b1f2281",
+      "bytes": 5525,
+      "sha256": "3224a1f8e9169d1cb63a9acddf9c2426205764ddbdb7c09bfaa25fa196ce0ec2"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/AmbientService.java",
+      "gitBlob": "faa8180174aaa6c44885cde396fffe843e804d1d",
+      "bytes": 6216,
+      "sha256": "a9698a42ba3873894db23d0ed919faa6f15582fe32d7ecd1463864105aa2b3c3"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/AppUserDetailsService.java",
+      "gitBlob": "b0347ec0512deadd231bf9eef38821af9f5402c7",
+      "bytes": 3184,
+      "sha256": "32b6c396fec5e73720addbb6e9b94662593fcafd160f94e8a24c25356e44027c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/BehaviorAccessService.java",
+      "gitBlob": "e8266123b9c82adbea7339b0cb330ce3a89ca546",
+      "bytes": 1009,
+      "sha256": "1361eac3017a3bbf9290db09b82c5f7e247d669fa83a68b22e73faffd491d4bc"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/BehaviorEventService.java",
+      "gitBlob": "dfaebb8f024134658d695eb6be817acb1bf19269",
+      "bytes": 1672,
+      "sha256": "c3ac035b7889deb43bf98dfc34ed62e6e243438a7758602f287c499d7dcdf418"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/BehaviorEventStore.java",
+      "gitBlob": "e5a6c4ecc560d975aa22e0c1396e93a30e5dce2d",
+      "bytes": 3424,
+      "sha256": "43bee6a80bf300c5471862734b0b093c425770ec83b8ebff79bd4f0c6927c100"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/BehaviorRetentionService.java",
+      "gitBlob": "0bb03481e7290dbb9d04b9c788b050f506794b53",
+      "bytes": 3627,
+      "sha256": "ac5d95170f65663b7534f42db02bf366a37b832fd6706c2cd078dff41f8189aa"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/BehaviorTargetValidator.java",
+      "gitBlob": "d4c336a494051106556b47995e5346506e9bd34a",
+      "bytes": 3776,
+      "sha256": "fbb10fe7161fd64152ba79fbacc382cc0eaeac6ecacb7f8aaaef56228f8666b0"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/ContextInferrer.java",
+      "gitBlob": "42e31e8c9d1dce802817d713697eb592f10e6f6c",
+      "bytes": 4323,
+      "sha256": "20cbf761fc2e2380ca284ff35dc97ea948b60f750d8900cd09dc5e1761358e12"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/FeedbackConstraintPolicy.java",
+      "gitBlob": "496d21ca0a31d77186a195fe390ca461221b5f1b",
+      "bytes": 2449,
+      "sha256": "e86df751b0d7f335879f53f956cd9a23e0854e9a2be9accfbbaac96aa2db57b7"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/FeedbackTargetContext.java",
+      "gitBlob": "5630c22673ec50f0b8e95b46c0487169dacd63d7",
+      "bytes": 339,
+      "sha256": "5a2e312df3af62c8e9605a1d9377d392bde27fd73da2e7dbe3a8619025abc90f"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/HistoryService.java",
+      "gitBlob": "26801dcf74dad22fb8c3c6bbdc0e2c859a5ebd12",
+      "bytes": 5564,
+      "sha256": "f1c9da82baea113dc271980617e8cf2a24c1f931bb15bb2e57510d3cbb58b0f1"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/ProfileQueryService.java",
+      "gitBlob": "c9083f82b536fe0c721c9fecba56cc8ee8ae5823",
+      "bytes": 9705,
+      "sha256": "87cd1135ec7d32f44ed31f7a7769e9365df500cc7aae7646f63ec09a415d3260"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/QuestionService.java",
+      "gitBlob": "e6bc4bc7eb2514c9cad176d2d56774f00e3a4df0",
+      "bytes": 3632,
+      "sha256": "a3163751f6be5699946aba448703de7125b303f66e64e633f0631d6850545a6f"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/RecommendationEngine.java",
+      "gitBlob": "6139105bfbf27a20b666316b5f2e5ed1ab5803a4",
+      "bytes": 21501,
+      "sha256": "d46a79e11b63c863057dbb4d8c08d5a8c7754e16bddb1960c25c47fcfa902012"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/RecommendationReactionService.java",
+      "gitBlob": "889e51cc0138945eb9d6b11fd8ec2776e5df349e",
+      "bytes": 3149,
+      "sha256": "f3a2f32a818af037b80cdc67cab9a5c3b845eac0042ad893926481d7b5923a9a"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/RecommendationService.java",
+      "gitBlob": "a4d487ca5743e9f27be06aa5b54952eb0c32da44",
+      "bytes": 43011,
+      "sha256": "843c4943378ef706e1ac7a9a17529514a5373ed6344ee83ea17c39e05b02d20d"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/RestaurantSearchContextRegistry.java",
+      "gitBlob": "5cd31cbead2f89bc2dde86b0c87f4a53380c8d5e",
+      "bytes": 2871,
+      "sha256": "1dd18cb94b8280f4402c03590715f3001434bbe23d76d61a83aad364487db4e8"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/RestaurantSearchOrchestrator.java",
+      "gitBlob": "c83a03f7a36473f330521a590e118cf8d7a32ccb",
+      "bytes": 1469,
+      "sha256": "8f0628779d10fc09970c4af61c5898319a5add7a8af580e6382616e02ccde635"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/RestaurantSearchPersistence.java",
+      "gitBlob": "ac67cf25ba74e54822ef3fb9a58d66dff454ab02",
+      "bytes": 2779,
+      "sha256": "cb7a2d5ebd4318f56c61b0f8486fda83899eb45b52e6068a3192b317c804bfdf"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/SaveFeedbackEventCommand.java",
+      "gitBlob": "df459c73fb6289269e0b5d5f3e04d81d2fb63262",
+      "bytes": 549,
+      "sha256": "d12694de3fdb61cf616b44ace6db3272f13c1765a05bd95825a54c747f091312"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/SavedFeedbackEvent.java",
+      "gitBlob": "862457d56ac500457f5e7e41aac28f31c5c98f99",
+      "bytes": 391,
+      "sha256": "e07422b1fb7940a9ed8d5b6f3f799bc56ca66f25377d6743c00145e2b48fbb0c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/ScoringService.java",
+      "gitBlob": "c186721369b004b56009055932f88a66b03f7bae",
+      "bytes": 10331,
+      "sha256": "7eb7055602f3d0a1f844cd88784cd7c2e12e17eb7a2add8f73f87814373fc0b0"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/TestSessionService.java",
+      "gitBlob": "0a05c04fad541db2e4abb9da5b1fc4ee49877d22",
+      "bytes": 18464,
+      "sha256": "8dd6a7bb368112cab94d1d3b0c6393b8eb225a5c9682a2432724e43a1a602b00"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/TravelFeedbackEventService.java",
+      "gitBlob": "854e0e5473b495e716e07a3c715b758905af612f",
+      "bytes": 3408,
+      "sha256": "8611d093e655417d06c6982ab30230d31aeccd8dd33e830732308c4d2f5a8245"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/TravelFeedbackPersistence.java",
+      "gitBlob": "3aa341c32c01fae784812e36da519800e2146de5",
+      "bytes": 10967,
+      "sha256": "2d9fc1df6e9eef16715e3ff39b95821eb0f24c164f4ba505d7170e7573186b84"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/TravelIntentService.java",
+      "gitBlob": "963b90ed9ccb1b107a98e9c7c8a7c25f48b39d1a",
+      "bytes": 3541,
+      "sha256": "8d1584b4eb5309e18a57501d632a28ce06e892d505236f16c615a156fee3adde"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/TravelPreferenceAdjuster.java",
+      "gitBlob": "d76d13c6ea9c11dd1785a83d1ddf701d0d9e62a6",
+      "bytes": 7454,
+      "sha256": "0e354cc87ca7363f6f9fe9f975d32677576a498a1c30e1cb6902933cce8251d5"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/TravelProfileService.java",
+      "gitBlob": "b654f3ab95f79d16a03d2cd7cf10381b2de8e46b",
+      "bytes": 6897,
+      "sha256": "6d22f4115ecb137a3ab0f3ac54e87cbb78f3bbdd1c3f7a3890ea8f0200129555"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/TravelReasonService.java",
+      "gitBlob": "7d3f92f485b0e8027060a842b1ca75bda5df92f8",
+      "bytes": 8934,
+      "sha256": "ec0b984dc06f1740da206cb890374a07183ff33801f7deee27ed04475ffecbe3"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/UserService.java",
+      "gitBlob": "fac8ade91cb8ac6bdad27033718872774347e507",
+      "bytes": 3348,
+      "sha256": "286011399f996a34e9eacb7caba08fa74c7cfad723df587ab6869ce2f988d14c"
+    },
+    {
+      "path": "backend/src/main/java/com/example/personality/service/WeatherService.java",
+      "gitBlob": "42d4cc31ddd2750230e67273a80e5802330b99d5",
+      "bytes": 5627,
+      "sha256": "993cfa100cb5551665b0d72f1f1c2ec7f70d1acc0801c53c71eed720e3d8519e"
+    },
+    {
+      "path": "backend/src/main/resources/application-prod.yml",
+      "gitBlob": "a5e9de089178c65f60a6e7cd6840f68b2f3cf900",
+      "bytes": 1367,
+      "sha256": "dfb9dbb1c0e114fe719a1f036fd0784829534829735917b9615ff10fae5b0ba9"
+    },
+    {
+      "path": "backend/src/main/resources/application.yml",
+      "gitBlob": "ea5e7df672843f07dba1a7e23d6d4cd8542183dd",
+      "bytes": 13030,
+      "sha256": "ef1397324f50d6d1029bb9482bf7c92fbb7b0a8ce7d3e27a93ffcd76cc806fb6"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V10__add_place_indoor.sql",
+      "gitBlob": "af9ee780da733d449a79b6ef08f4516074b4531d",
+      "bytes": 9755,
+      "sha256": "1ca62c140ec1aeb144f61b1ecaa68433f960a97307137db6eb8b8fb134ed4129"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V11__persist_decision_factors_and_batch_context.sql",
+      "gitBlob": "816d2cf416e84c930d7ed2a19d6d5c648978d10e",
+      "bytes": 6896,
+      "sha256": "374ce2fd4fb6925d181fa767c98e675171aafd2db6f22e444ebbb80c3e8ae9dd"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V12__add_batch_custom_biases.sql",
+      "gitBlob": "b58705edb361854a8a0c192123c6c2d9208e0724",
+      "bytes": 3209,
+      "sha256": "dc9f53d3eb549e3dbf25c33e9261f100ebad7c6e4596ecd59528d7d37627e2a6"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V13__add_recommendation_feedback_events.sql",
+      "gitBlob": "6dc7a2125f827175e2c92b57276e251101e499ae",
+      "bytes": 1781,
+      "sha256": "44e8114f11047fa07980be0ffba3f46ec565b88015e9653de9f2649c997bc465"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V14__add_pingdingshan_places.sql",
+      "gitBlob": "894b254d7f6f45e2daff7f8aabd53a9597b50a0c",
+      "bytes": 6872,
+      "sha256": "ee50c8222df477c2a7cee850d5facbdac6e6a5766485f805b6fda78fde1af0cf"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V15__add_behavior_events_and_restaurant_sources.sql",
+      "gitBlob": "821062ef7bf4c91c991fad0e0b17e5db5b2eaaa2",
+      "bytes": 3293,
+      "sha256": "2ac07ed8f677302ddf94a04e4373f120cf90aa1083fa40623a73a6e420614a1b"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V16__add_feedback_revision.sql",
+      "gitBlob": "3358bf865947fe1ff3475702c325cd8232334dbe",
+      "bytes": 217,
+      "sha256": "f1080cdde4cb5846c62efb673ce9867783007aff147f1b756a1654c73acfbb8e"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V17__add_ai_usage_budget.sql",
+      "gitBlob": "8001b83dfaf92891c8138b6f64c4dad8140f5c28",
+      "bytes": 615,
+      "sha256": "d4c2ec9dd0e23dcc93efd35f033be08a043fda0c1de171f5c8a9c0884ea15b89"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V1__init_schema.sql",
+      "gitBlob": "ec98dac92525bf09902ce2776ba9f786aedea9d7",
+      "bytes": 5751,
+      "sha256": "34b6adc3cf43dbe158f20af577aa884e2ffdd781f5032124bfcba5fc74ed9b8c"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V2__seed_questions.sql",
+      "gitBlob": "9334c360de77a322c35587b83506e8f4cdc7feb4",
+      "bytes": 3950,
+      "sha256": "a13de5fa2417b801e3fc5893f9304e2fa179eca4b17b6ce1ea3451d612a3f531"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V3__add_ai_report_provider.sql",
+      "gitBlob": "10885777692b7740a59af1091a72fb655ff8b9b8",
+      "bytes": 1714,
+      "sha256": "c3afee25fe04696053b5958346872ab1e10d718afa420d4aab8edded864c3cdf"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V4__add_user_password.sql",
+      "gitBlob": "e24bcf65d23bfe26fccf7afdcb644cf51b565b01",
+      "bytes": 1636,
+      "sha256": "33c64c1cdff8fa82ff0c0094ca13ef503f21e03f328e9b567d3040ad29203093"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V5__add_session_access_token.sql",
+      "gitBlob": "18d371a964e62b32306562fda0a646570565620c",
+      "bytes": 2732,
+      "sha256": "55063c5edf627fc3ece68f8e994407dec131c4843ad602cf467852380dc0cd28"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V6__add_travel_preference_scale.sql",
+      "gitBlob": "402d02493496a3238f62dc26a0716dc06629089a",
+      "bytes": 5292,
+      "sha256": "b2e10b2294a351240a6ec43f653adb16b8a13d52fb8e9495547eccc1c8014f16"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V7__add_places.sql",
+      "gitBlob": "adc96c11dabb4e19ac4b6d581898f028f6a7f369",
+      "bytes": 15201,
+      "sha256": "ce990783e3aa982577e837936171df3ca3329024c13356622c36d6369a7df801"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V8__add_session_scale.sql",
+      "gitBlob": "1c7cfd32d1719602850d7f1783469df95a7afee8",
+      "bytes": 1614,
+      "sha256": "e6f95630dda82b75f389047efc2cdaec9cab970fd10ac2e88e126e5d23e447af"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V9__add_travel_profile_and_recommendations.sql",
+      "gitBlob": "77460cd3f7308c9031fdfb7bfa5a715550cf5662",
+      "bytes": 8315,
+      "sha256": "23f2a40f8bf7de5f321684e61446a7c2a3d86024a9d2d62c9e98e7379cd411f8"
+    },
+    {
+      "path": "backend/src/main/resources/static/index.html",
+      "gitBlob": "01b330b1ec0afb50c328ef709b3b1625f16e85f9",
+      "bytes": 36930,
+      "sha256": "38d5e9d2f0acb75a4a2b9b1eb74710148ca82b6319ae818209e7d5cdefbb218d"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/AiBudgetIntegrationTest.java",
+      "gitBlob": "bb68f565c324bbf6632bb67b327ad05d30a226d4",
+      "bytes": 4003,
+      "sha256": "21490dcfc6be318c1a95a817030bc7c3f46794e635366b7a2c5eb450081402c1"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/AuthIntegrationTest.java",
+      "gitBlob": "314dc8a38759dd3492a8d179d8e6492906293594",
+      "bytes": 12867,
+      "sha256": "1bc19b51b944c8fe89081a35728d126b5b93960375d850e4ec5adf699010e86e"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/BehaviorClockIntegrationTest.java",
+      "gitBlob": "54742721f9b9ee8bf79af979f928ccc7296a8493",
+      "bytes": 1262,
+      "sha256": "c7c695afe27916156ae026f6dbb2bef773c6aa75105e587e027d741a132c5e10"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/BehaviorEventConcurrencyTest.java",
+      "gitBlob": "a02c163e5644df4c31b1e310612da4096b72b38b",
+      "bytes": 2751,
+      "sha256": "2afce75bfe1ddcb3f225499f54690260efc4ada2a02a8abe0637e6ac194cb3d9"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/BehaviorEventContractTest.java",
+      "gitBlob": "99b2bd2381f45ff38c5051e437a724e6c41d2e64",
+      "bytes": 2497,
+      "sha256": "6fc14c3be31261118b1b733e4d7368afae23eaa7bea97b26212f3c42c2032d53"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/BehaviorEventIntegrationTest.java",
+      "gitBlob": "30ed1e9a3f5d196f73a47f4175912f6beca2c542",
+      "bytes": 9496,
+      "sha256": "308a954b511a5c5b806ca8bc168b9d6e359489ca8e3bcaf7ff5c1d3b64e66892"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/BehaviorMaintenanceConcurrencyTest.java",
+      "gitBlob": "501c2d525f2a911d87748408b3123327593480d7",
+      "bytes": 4020,
+      "sha256": "40e6f625c3d636fc15b4c12dca2405d995ad749471d80d488c0649cf585ca78c"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/BehaviorRecommendationIsolationTest.java",
+      "gitBlob": "ac824bfd36e567822543f05ce268b20ad68de678",
+      "bytes": 4409,
+      "sha256": "d3794ad4f26d0d0517e67704ce800d161917cb4463f4ad22fac74913e933e703"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/BehaviorRetentionServiceIntegrationTest.java",
+      "gitBlob": "a5f5f1a42456d39425300bb869313ebf821b726c",
+      "bytes": 8734,
+      "sha256": "6d78605a7033cf03564c0a7969254240d98900f0c312477fd2f2dc621f025524"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/BehaviorRetentionTransactionTest.java",
+      "gitBlob": "10077bad27aef263dc9f2a4c9526d4c41867a720",
+      "bytes": 1594,
+      "sha256": "82ef5fe58ed0eeb91ffc832eb051e8d7702ff9ccef8c84efc8620963822225c9"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/BehaviorTestFixtures.java",
+      "gitBlob": "cfc95bed834c6c63aa77696e1ce4c1c5b4666d1d",
+      "bytes": 1346,
+      "sha256": "70911438d6e6986b390f9c2c1e475e2c8655cc5b68f1503e2a9dd04941a438f4"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/FeedbackOrderingIntegrationTest.java",
+      "gitBlob": "4461ee7012994e4b9a23a2a6769c51cc43098db6",
+      "bytes": 9308,
+      "sha256": "85e77de3b7d8919e9f246f1ec29738c9f6c5903232553e6df8a1399d5a4cbf12"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/HistoryIntegrationTest.java",
+      "gitBlob": "a5c3238549a4a6a38615ba3aec1cf8b58c24f483",
+      "bytes": 10184,
+      "sha256": "a8566767dccf3a014839430b86484ce5597e123fc50b928ccc43ade726adeb22"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/IntegrationTestBase.java",
+      "gitBlob": "587e167e6e0cf5cfb8b1b694bddb03a117053239",
+      "bytes": 11719,
+      "sha256": "24fa8bc0a35bd700fd930dbad1dd4b977cb9dc7fa7ff0a72629fed2006b76b7b"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/LocationSearchAccessIntegrationTest.java",
+      "gitBlob": "aa33a815983cdc141bf99ae204bd20438c8f73de",
+      "bytes": 2628,
+      "sha256": "1cdacc04dac12294e094cd8834c8b9c7a21c669485dacdcda97f8f837608834d"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/RateLimitIntegrationTest.java",
+      "gitBlob": "8bb6891b0eefdd3359b3f8a2b2704b85005f4bca",
+      "bytes": 12287,
+      "sha256": "13d1f6815ecba19898b6efbcd4f40155b675cbd61459b6e00b23119ed6e4cfef"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/RecommendationReactionBehaviorIntegrationTest.java",
+      "gitBlob": "04aef0c020c547c48ab05fa63c1c7d37efe77564",
+      "bytes": 4227,
+      "sha256": "ca5e7a09f3f2f4107ef4de8caf145342e3acb75f60f4e958567fbcba2c9cee62"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/RecommendationReactionConcurrencyTest.java",
+      "gitBlob": "ff9b2c5626fa388534ae379e29da7374473bfe40",
+      "bytes": 2989,
+      "sha256": "020d0818d79610da5ff2b3853e198c1e55d4227534c3809dccc14a5a5235a02e"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/RecommendationReactionTransactionTest.java",
+      "gitBlob": "e7881d2714013f30c44c5a3139668a1e8eb7eb6e",
+      "bytes": 1728,
+      "sha256": "6fdbb033e22953a8e86d899886f5be8b8cbc6bd28a9d070d20561e8bba8e4ce0"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/RestaurantAccessIntegrationTest.java",
+      "gitBlob": "537f2409c308f877819cc56c81efd46d1ea2092d",
+      "bytes": 2530,
+      "sha256": "19189deb264e2c2be09904d241e1502ea393a51797af28c903015d866a0744c2"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/RestaurantSearchProvenanceIntegrationTest.java",
+      "gitBlob": "8063246db24f127d7fbb705836f781239607b213",
+      "bytes": 6525,
+      "sha256": "1547ab537e2be335dec42c64c89ce7b2c28b7c4b6094c0cb19b4fe193cc94456"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ScenicBatchProvenanceIntegrationTest.java",
+      "gitBlob": "3ab51aba40322c625d5d700bdb7d4c2d0d181ea5",
+      "bytes": 3469,
+      "sha256": "71e3900157d50effb5fcde316069357c71db5bd3fba551a9b524b6cb04be30b1"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/SessionAccessControlIntegrationTest.java",
+      "gitBlob": "d88f694517eff5d1afb9214b70fc202611778f20",
+      "bytes": 15551,
+      "sha256": "231ae1600c6f085e1b928baf086c75b036d8e25141354dbcfb91a4b98865e2d9"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/SetupSmokeTest.java",
+      "gitBlob": "de14a2473366975450ba1e913d7df56021d46a76",
+      "bytes": 3133,
+      "sha256": "2147b10a3459a21fe93ea5dd4f98d5719c0051b381337f2ec6ade54fa01388f8"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TestSessionFlowIntegrationTest.java",
+      "gitBlob": "75bcf9ef02328f3685bff21a24c8043b167d1f2a",
+      "bytes": 16475,
+      "sha256": "6bc2b2575e6d399b83cf1b45ecee06427ba78f0d686204ee199582f618e5c135"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelAutoInferIntegrationTest.java",
+      "gitBlob": "351fda5a08fbe14f28e59e757194e3ee8bb3e9f4",
+      "bytes": 7894,
+      "sha256": "f68187676ebb75b9c8e49a7dd5ea745a9b2af152405fc7bc437a229de4667744"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelFeedbackEventIntegrationTest.java",
+      "gitBlob": "1a0fe268537c8c155bce9829c26c0519afe74779",
+      "bytes": 23975,
+      "sha256": "4ccd5afda9335c42a441d56c51d611ecb2d1ba6b054993c30961c17112022ec6"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelFeedbackIntegrationTest.java",
+      "gitBlob": "696cf14a03bd2137e4a028fd58fd5b8b77281854",
+      "bytes": 20820,
+      "sha256": "6b9281059392b720f1bd54fae7f0b4d4d45149bac94f814de448551c12c84aa4"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelFeedbackLockOrderIntegrationTest.java",
+      "gitBlob": "2b52a72ef2e25bc775aab460588b499bb85fde13",
+      "bytes": 6361,
+      "sha256": "48bc82f8f39fd93b08a007e215b9084e621a9cb8eba3f8c565a582965de7f460"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelFeedbackTask4PersistenceIntegrationTest.java",
+      "gitBlob": "392f006dd02c379b765c09b35c2cfea01bc24f59",
+      "bytes": 7265,
+      "sha256": "42e3d34bb4b7e71968f8836e89141f6d62bba6104ddf5dfe4cc7be166b40a85c"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelFlowIntegrationTest.java",
+      "gitBlob": "74786e887f67e216f4106d83fa57045bb12ce595",
+      "bytes": 25212,
+      "sha256": "c567cf8788a16720d240018e392d1ebca8e47cce901b4ed9d4ccecdbfc66f263"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelIntentIntegrationTest.java",
+      "gitBlob": "a0e9a84e30b49d23f0e3f7627e110d297287c14f",
+      "bytes": 13239,
+      "sha256": "f82bc61ffac293a0ae58130e6ff2513fffe344b2e8cfd0652395cfeda03bdcfe"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelProfileReuseIntegrationTest.java",
+      "gitBlob": "ceb6664804d561c304c22385588dbb0c616141d4",
+      "bytes": 10333,
+      "sha256": "5a355fc2c31b6c9dde18ff1a9feef6da21a83512743c163dd15072dd7e04c818"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelReasonBatchTrustIntegrationTest.java",
+      "gitBlob": "f5d79d1716c52e2f8d9da4266305fb9dfc4b6349",
+      "bytes": 9665,
+      "sha256": "98532c3c491b2f0ddb8a798ff06d3764276d358ed908328dbf383e68de51863c"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelReasonIntegrationTest.java",
+      "gitBlob": "8e03fdb4a02a81939d7a093392804fde73205772",
+      "bytes": 19950,
+      "sha256": "e5feeaf25a3e4a58d5b28ed2976df502ab3fbd2e4edb4b493ef651b4a4c4ceb7"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/TravelWeatherIntegrationTest.java",
+      "gitBlob": "258731f8039768b5fdb98009d3d0ad538208ea90",
+      "bytes": 15082,
+      "sha256": "7bf9eedd1469e80b87ce3db6dd4f983348bba080ce731cd72998d8b4bb00bc45"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/AiCallGuardTest.java",
+      "gitBlob": "cd75d6d13121d3d39d9e6e8fcd647b012158d2ff",
+      "bytes": 2960,
+      "sha256": "f0435eadd79d428150cae500e236d8e0fcd8d147617c4f15d25c9437ab20131b"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/AiCredentialsResolverTest.java",
+      "gitBlob": "f2b814c8e87d423c244e659bc2e62b21a473a57f",
+      "bytes": 10689,
+      "sha256": "1cac3326bb906d20dc4adc822d843ca8cbadc73c5c83a0269d2ab53c3eaab5c9"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/AiExplanationSafetyTest.java",
+      "gitBlob": "71b5fcc5faf6e55d360f4256d6b802ad18cc0c58",
+      "bytes": 4539,
+      "sha256": "981568839ceb344ca053a0754b699fb83eb07c7bb10a59c5327825fb523ac743"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/AiOperationSafetyTest.java",
+      "gitBlob": "5f51d91c223ca9673a54285e415b59d58d77b91c",
+      "bytes": 1769,
+      "sha256": "c09f1bd42632e8c952d53e851b90606eabe59f5e076bae63116e078a6af281fe"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/AiPromptBuilderTest.java",
+      "gitBlob": "ea7b4564a95ca1b7151321360191221d351a74be",
+      "bytes": 6647,
+      "sha256": "0ca06276ebceb12ca327fb115da45036a058418ae53e9723f3f7fca3ef88eb84"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/DeepSeekChatSafetyTest.java",
+      "gitBlob": "8aef87d12b1eba1ac2f673d91ea5751b4ea2b910",
+      "bytes": 4954,
+      "sha256": "fc9cca10203c0702851f65efc693b04b980af87126d1bb43cc5dc31d22184307"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/DeepSeekCompatibilityTest.java",
+      "gitBlob": "fb1ac82b64eb297e9d2fb685ba49c7d988c05fa2",
+      "bytes": 14382,
+      "sha256": "4efdacf9e1db0173ac2b4187d5633ccdd1d99d892ecc8e8c32decb08494fb23f"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/DeepSeekTextFeedbackGeneratorTest.java",
+      "gitBlob": "5c1540b5d16ab2edbab069b778e16c4055aa47bf",
+      "bytes": 8944,
+      "sha256": "5ba6163e22f53d5fad1339690d6912abf406de000324d49ae741bbf80173023a"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/DeepSeekTextIntentGeneratorTest.java",
+      "gitBlob": "6ed22fea54d7f73455a579f4e718fe2ecb818ecd",
+      "bytes": 12801,
+      "sha256": "a946da14a8521374ffeae057a286e0842e7352b665d8fe78dccc44698b69530c"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/DeepSeekTravelReasonGeneratorTest.java",
+      "gitBlob": "8b4c044d7b8700111a1e75c9e8874e07e3d2556d",
+      "bytes": 5142,
+      "sha256": "de9c4270ce7d529862317d74c66e78710ee7c85d046fbdbc9d7f3f801790d5e2"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/TextFeedbackPromptBuilderTest.java",
+      "gitBlob": "836568e05da8f5ea16c2f10eaf4086935a8a6111",
+      "bytes": 967,
+      "sha256": "b77a7809e24fa980803dcc45b29c768106e953442beccbe082ba638108c917b4"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/TextIntentPromptBuilderTest.java",
+      "gitBlob": "2e3084a2e2787cd0079f0577fca2d325b9593614",
+      "bytes": 6591,
+      "sha256": "d65ca40ba02486430e2721ae20fc63754f2a4cdaffbca5a34d4a4dbc48146de1"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/TravelReasonEvidenceTest.java",
+      "gitBlob": "c12c6c524ee51ef5c6332b703ce634dae622d6d9",
+      "bytes": 12262,
+      "sha256": "00da8ebc910d126ad8682b8ce0acf85eca0fec4f7356097dd62da5d0f47c2819"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/TravelReasonPromptBuilderTest.java",
+      "gitBlob": "bc6a1bee72f3a552a4d414b7fa92ecc97e94d380",
+      "bytes": 2273,
+      "sha256": "b77e9ec260bf046c0e25f12f6bbc6cd276918a4c37548028f73ac18bd30bdb22"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/ai/TravelReasonTrustRegressionTest.java",
+      "gitBlob": "3676334a7833aac59858a0551a9e6c9c87c33994",
+      "bytes": 3647,
+      "sha256": "bd641d1526621a25ebcd2edb2f1a2422c82053ceec2c0309e76f4ea3793db73b"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/amap/AMapLocationHttpTest.java",
+      "gitBlob": "54200ba96f667885851c6afe37a896925f312cde",
+      "bytes": 3824,
+      "sha256": "73ef1c86ff263e3ac38bbf4cece4ab3d5506e91f409b0db41ab298e943a4078d"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/amap/AmapCoordinateConverterTest.java",
+      "gitBlob": "e78eb1008606cf81ff70bce1d0a9cf6349896ada",
+      "bytes": 4059,
+      "sha256": "ef343e64646fd81e254dbfdfa19acc0f5d7f1e74f1bd42621295c265668acfee"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/amap/AmapLocationResolverTest.java",
+      "gitBlob": "1af2e5c9a0da3e5589d5577df5fff0495c401a44",
+      "bytes": 6420,
+      "sha256": "f7a1d8d06a400dbcd9613a22072d7ef0252472d6f35d81328f22a42abdc1c2b0"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/amap/AmapRequiredClientTest.java",
+      "gitBlob": "63684b1e3fbc1169f93268c463e5863cef4c7c8e",
+      "bytes": 4126,
+      "sha256": "5d2fc0ac69f82ea731322db46ba598e837890432013e546cda0916b8aac6771b"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/amap/AmapWeatherProviderTest.java",
+      "gitBlob": "196de9037414366e472d1a092032a5dc7fdc5566",
+      "bytes": 5610,
+      "sha256": "72c891d25501ab7d48cdbf573e8dd8c4ffab1f507e3e089dbaaace1f1a6b1146"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/amap/RestaurantParserTest.java",
+      "gitBlob": "7992d8fbbd8c4c303b3ffab96b07838b21039540",
+      "bytes": 2581,
+      "sha256": "daf015549498bc9cbdb68684c6ea49790dc38ae2fdfdf85e6b978fe24504578b"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/controller/AiAccessSafetyTest.java",
+      "gitBlob": "cf793d7b3e21f2f2eade77c075f43ed62ef05922",
+      "bytes": 3096,
+      "sha256": "adeb40330ce0499fb81db10ebede2b01e38fa4b8010987e614af0da7d2d5c44b"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/controller/LocationSearchControllerTest.java",
+      "gitBlob": "dc664beede109a2a870176cebfd2e83d094097f0",
+      "bytes": 5904,
+      "sha256": "ba63353157e51764d8a218bdb8c1e7bc34256e0f67876617db3ba02696cde19e"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/controller/RestaurantControllerTest.java",
+      "gitBlob": "21095936bf1f92ca7761e998116472591bcd44ca",
+      "bytes": 5491,
+      "sha256": "556f595ceba14adb9788d36eb5d37ccbd9cf746dd98fff13fd706248d48ccb58"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineEvidenceReadiness.java",
+      "gitBlob": "1ed420276ea868bc2e7b4c0d11d48a117c098c0a",
+      "bytes": 20671,
+      "sha256": "ffd893f825fdd5735a0f8d69a6d9fc560e04a2309909b447b2e1afeda1b58ca2"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineEvidenceReadinessMain.java",
+      "gitBlob": "4576384808317ce8c785db42e1c7fdc1432ec8da",
+      "bytes": 7556,
+      "sha256": "acd3d3c8c04e8d20e4aa29412de64cde82bb16afa237e95805f3e204a987826b"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineEvidenceReadinessMainTest.java",
+      "gitBlob": "9f045de4d03b61c8994cbe2b33b55fe4986eddb0",
+      "bytes": 5506,
+      "sha256": "04426f9f63dd8239ff143c3699f8a26ecbba419faa4c66842ef081080e70c587"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineEvidenceReadinessTest.java",
+      "gitBlob": "be3cad8dadc68b939ad883d5e90dc1f02078ef66",
+      "bytes": 12468,
+      "sha256": "a646f94f96acc46a70fc54fc7a23d41b3a0afdb138ccb47fa3386a11f999a46d"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineExperimentInput.java",
+      "gitBlob": "f36ba45c23253f1658487f3855e848299c10a7c9",
+      "bytes": 6087,
+      "sha256": "0258465d69c1551e9196b9ea87a1c707caeb5464b7d7e62c3975e303cc365818"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineExperimentMain.java",
+      "gitBlob": "0b5d72f6f1e94e7ad515e2b703615a30b3637ecb",
+      "bytes": 6706,
+      "sha256": "095da6d9b6dc5c05337e980af67f1238c0cfec1f6e41a60b6d740fbc5290dd8e"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineExperimentMainTest.java",
+      "gitBlob": "c692d19138776d94b62009f2004cff590cc0f7da",
+      "bytes": 6359,
+      "sha256": "e3ac04e6886a74fa6069e607d42ab9d62dd20eb9d9b49cc60823e0da754554e6"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineExposureMetrics.java",
+      "gitBlob": "97aa9eb7807ddf2991f607c2ed4a32c79f8d63e7",
+      "bytes": 2612,
+      "sha256": "d6c1f7fc6f36302616af39a74062d17d955141e82930128043812b50fce73d5a"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineExposureMetricsTest.java",
+      "gitBlob": "dd45313d29dd00bcab7c64016051a494de8a7fbe",
+      "bytes": 2378,
+      "sha256": "505bedd03125ebe72e2f581007c3e27f0c8a60f36a874ff993b55f5e9b0b503a"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineFairnessExperiment.java",
+      "gitBlob": "cf8caf761edbbbeacbb5196c03ab5bfed73f8533",
+      "bytes": 7047,
+      "sha256": "ed8e852a689fa2d42c7c4a26d56f0cc542591644bded013eafdf0c672c339058"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineFairnessExperimentTest.java",
+      "gitBlob": "08515a427fb4ee5a8ba839b7846c54d1040e9667",
+      "bytes": 9539,
+      "sha256": "9154c98a2359e75bf1422a7264d052a4d4b5b6b1e10f49bbe69589616de7d97d"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineRanking.java",
+      "gitBlob": "08d25e53f3c95c5680e10defad70b0c2e3ef533e",
+      "bytes": 2794,
+      "sha256": "10f3b58eb16e3f9d6287f42b5349cd4d9c5db664304cdb41fdfc1cada60726ee"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineRankingTest.java",
+      "gitBlob": "8cde983832f4f133956b302d8dbcf168796a559a",
+      "bytes": 3589,
+      "sha256": "a42dc1fc9c0f6e117cfec8b520995a1dc026be90f18b7346532024f09da5b46c"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineRobustnessExperiment.java",
+      "gitBlob": "aa2dcc5f8171673678948f684ee2431d14a309d3",
+      "bytes": 8368,
+      "sha256": "b167f48b222024f0d9925a461dca8d8546b88ca04c31b2fe576f7cb2a160ddd0"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineRobustnessExperimentTest.java",
+      "gitBlob": "be3dcff2ab78055aaa775f01cf4a2b1e6c1ba5a9",
+      "bytes": 8503,
+      "sha256": "ab68b0b1c845e16ca328c883c4314ad8d7f04e52015fa1ed5338a38ccb245c7a"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineRobustnessMain.java",
+      "gitBlob": "16b4e43a09407c51eec97000ec7376cd26c2b58d",
+      "bytes": 8358,
+      "sha256": "c54c36974499cd967a8c0015ce5f9979dc2344e82ac030671e3dd2bc545d4600"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/experiment/OfflineRobustnessMainTest.java",
+      "gitBlob": "5dc0589681f9bf524c36d27b6e2940a8a0bb6fee",
+      "bytes": 5875,
+      "sha256": "013c1697e8db82a87187afe33ff32a19804076fc0525210f66fc38e909e32efa"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/AMapLocationSearchServiceTest.java",
+      "gitBlob": "57fa29486a7796f33fcc64c1655f500410ad22c1",
+      "bytes": 3504,
+      "sha256": "59c46be82b265ef687ceb8d6212daf5e1765af69700f3b2178d2c2091d36825d"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/AMapRestaurantSearchServiceTest.java",
+      "gitBlob": "f8e9993708767bc315701e3f3ec602eb04129e00",
+      "bytes": 5023,
+      "sha256": "28199ca212595dd57fb794000ae501f9e087c61c0d3d267fce0a443094d78d50"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/ContextInferrerTest.java",
+      "gitBlob": "83f457e9a7a0383c231ef3c7d9e28f9f02d836a9",
+      "bytes": 4165,
+      "sha256": "2283b0fdefc3efc3e8761c4ed83d7f59578f90599fbee08ba26392a399b520d9"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/RecommendationEngineTest.java",
+      "gitBlob": "25f15ba08dc0407682147ddd894ee8a2a70eca8e",
+      "bytes": 42174,
+      "sha256": "5570bc76bac295230722c951ced48e02d5cdd7e30f0122c740f863c7fe9e50e3"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/RestaurantSearchContextRegistryTest.java",
+      "gitBlob": "ee2505018588c59f8f6743f39412b7aa3558b04d",
+      "bytes": 2228,
+      "sha256": "570cb79c1be7047cd9ec796a8bb7da0756e758c89482abf8afd55e8aec5459d7"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/ScoringServiceTest.java",
+      "gitBlob": "22d770464fb4778ca8184e79f787b3604426588c",
+      "bytes": 13723,
+      "sha256": "f504945e4b27158627bf5bcb809726daf1202490539c55468a7124f0ea84c79a"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/ScoringServiceTravelTest.java",
+      "gitBlob": "5bcca6ab8672ba3154c9e4ebb6586bf368dca78c",
+      "bytes": 10891,
+      "sha256": "15ade509d79bbcd44af4f873ba0dd78262bd39ac43186046722dcd400679bcaa"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/TravelFeedbackEventServiceTest.java",
+      "gitBlob": "555c71381ef0c84e7d3cdc0896749b4d63ceb63b",
+      "bytes": 4612,
+      "sha256": "9d1aaa336fbf23e45358c195fe8275f17a94bf38212e7d8f0ea443c513d22f3a"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/TravelPreferenceAdjusterTest.java",
+      "gitBlob": "01bba3cb03f760f6a6833a0d2a08278ff13220c2",
+      "bytes": 9011,
+      "sha256": "c323b1ac0a125ba5f3a5df11fbe46a8a4f65043a4f8e95faebdcc65eeaeabdbe"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/TravelReasonCacheTrustTest.java",
+      "gitBlob": "f910149737398b53788f49272b2ca1c47aa30f5d",
+      "bytes": 5395,
+      "sha256": "a307f7d23b80ea1e1b2a7f96777b11822c11f663ca386fd9986e63b7a1622ab9"
+    },
+    {
+      "path": "backend/src/test/java/com/example/personality/service/WeatherServiceTest.java",
+      "gitBlob": "e2edf3994a9d25dd90500cf89fad5b34821ad74d",
+      "bytes": 7843,
+      "sha256": "fab16c832e38694555eeec0c3aaa98146bd0097043d14f40746d248873145ef6"
+    },
+    {
+      "path": "backend/src/test/resources/application-test.yml",
+      "gitBlob": "a8b3953ba7f8e7912b56f00f2c185453fa80a102",
+      "bytes": 2332,
+      "sha256": "a0b733215cf7598057d35aa99a26b6d136360619e418294603fbf4a87cd6a47a"
+    },
+    {
+      "path": "backend/src/test/resources/experiments/synthetic-cultural-nodes-v1.json",
+      "gitBlob": "95be32470dd5c1bd872de31aae3b77abbe4cf2bb",
+      "bytes": 13657,
+      "sha256": "ad7f9022217e6e806e580d2e52415991a6be8304e3b6110e15de2cb5d4d5dc11"
+    },
+    {
+      "path": "backend/src/test/resources/experiments/synthetic-robustness-plan-v1.json",
+      "gitBlob": "628cd1dfe6ac69ddb2ae27f6d2b54ef9886afd5f",
+      "bytes": 278,
+      "sha256": "2afcc571f105d9b43cf5f8d535ef6a8fd595a6facb8d89ab2f10782f18231325"
+    },
+    {
+      "path": "deploy/.env.example",
+      "gitBlob": "f04d24b2f04c78438e99f1b0ce3c94f00cfe368c",
+      "bytes": 1003,
+      "sha256": "a862295a232853620aaed1b1d262152f91f55260d342a1f6c234e3c3b6d8e0c5"
+    },
+    {
+      "path": "deploy/Caddyfile",
+      "gitBlob": "891f1f9c955dad6608329f19e5448d656a21deb9",
+      "bytes": 1039,
+      "sha256": "9eb6e17ce736a3da8516705bee5c2ad341bb0c316e25aa4b550786720e32958f"
+    },
+    {
+      "path": "deploy/compose.production.yml",
+      "gitBlob": "ab5048000ff12bd6e21c97452efdc06f446e5a4b",
+      "bytes": 4618,
+      "sha256": "808a38661504478bb2c6bede899d6ce14b7ab3084ff09bd545879d8a9adf4dae"
+    },
+    {
+      "path": "deploy/postgres/10-app-user.sh",
+      "gitBlob": "c35077d5723a1e29fff5fb81eaf564035c886ef4",
+      "bytes": 693,
+      "sha256": "2e48e01709d8e69e56165e03b4a22e95f91cd655e9e20fe4a68572dc492dd567"
+    },
+    {
+      "path": "deploy/scripts/backup-db.sh",
+      "gitBlob": "31261f75377ae158820c4706c461c3d60be1d5f0",
+      "bytes": 840,
+      "sha256": "4ae902452226fcb3a64d9e8e932e49239763d9d1f38183f2da086b0caafae256"
+    },
+    {
+      "path": "deploy/scripts/restore-db.sh",
+      "gitBlob": "ac7d5edbc2553f57a8f0ec2a575d25973ceef983",
+      "bytes": 1376,
+      "sha256": "c63a63f1c54b87e700530c3d085084064756ac8bab69b5bd57a1272e026dc75d"
+    },
+    {
+      "path": "deploy/tests/compose.smoke.yml",
+      "gitBlob": "1778ca791030bcdc01e983a5ecab44dcf6140808",
+      "bytes": 223,
+      "sha256": "f69b7cd30980ee7426b54cd272713fcdcaaabebab4f3a0a8ffda6ef2af7b339d"
+    },
+    {
+      "path": "deploy/tests/database.test.mjs",
+      "gitBlob": "6e880ba35b750fd3e0376b938b0d937f6f2e421d",
+      "bytes": 4886,
+      "sha256": "c1c60ffd2b3b90ffe5436a12089a8b22c3418ce5e33ff1ca864cccc257c17e99"
+    },
+    {
+      "path": "deploy/tests/https.test.mjs",
+      "gitBlob": "766613ab97db83d391b7567caf7867f52e142d77",
+      "bytes": 9973,
+      "sha256": "1b866d811013cc277d790cda4e1c8e335b2a8d0703e2c369f272c70c2bd3a8f2"
+    },
+    {
+      "path": "deploy/tests/production.test.mjs",
+      "gitBlob": "c5af22de11dd3488a46d0d830aea1c8fa0c6180a",
+      "bytes": 4819,
+      "sha256": "2ba279d0f0c1b804867e8884340963175c563d9c11be941b45ac8b70920d18c0"
+    },
+    {
+      "path": "docker-compose.yml",
+      "gitBlob": "63aee79e7920aad61cc58a84ef11aca81093ce78",
+      "bytes": 4443,
+      "sha256": "7d731e66ad5aadd37d94617ac25108e3f69474e5a3251fe3b95c3d874a89c204"
+    },
+    {
+      "path": "docs/CODE_GUIDE.md",
+      "gitBlob": "76a62e7d3afe9bba920cf932b1a2913c662007e6",
+      "bytes": 38749,
+      "sha256": "f0edc38903a91c4af6e93bd728d24253fed1dda5e52b77140904afedb75759f2"
+    },
+    {
+      "path": "docs/FRONTEND_GUIDE.md",
+      "gitBlob": "fbecfa1f26a3500d3c7f13a1b8ab702b459dfa35",
+      "bytes": 9556,
+      "sha256": "d503b9b5cfa66b419a427e79c6869116704a7a3eb022fade38ebb0f24f0621e0"
+    },
+    {
+      "path": "docs/MOBILE_TESTING.md",
+      "gitBlob": "f171f3cbedb8d13dff6d1f25117beec1dcbcf034",
+      "bytes": 4996,
+      "sha256": "884bccff0105179235a19fcfcb8b8ebaf5d7772fe863a56084f81bbc71ef00c7"
+    },
+    {
+      "path": "docs/MVP.md",
+      "gitBlob": "7c20b6f12c9592154ec5bc7cc0ed884950267b72",
+      "bytes": 6237,
+      "sha256": "17bafe4ebd1e15c81559fb4a81c967baeab2aa0aff5e40f3bcf070bcf4357356"
+    },
+    {
+      "path": "docs/RESTAURANT_API.md",
+      "gitBlob": "45c220343d49aabae60d22781c84185790733560",
+      "bytes": 7237,
+      "sha256": "57d8da3778cec459bb29f79bef5c417162ddb0ac5be6f30a348fe57d91d2349d"
+    },
+    {
+      "path": "docs/RESTAURANT_FRONTEND_ACCEPTANCE.md",
+      "gitBlob": "35dcfdb932d6ea590a8959b48c8aea791668030a",
+      "bytes": 5230,
+      "sha256": "397e7ebfb0cc1a4f2cd6defe543efe8b1961ebf492fb1df5842b9e78d3a3c547"
+    },
+    {
+      "path": "docs/RESTAURANT_LIVE_ACCEPTANCE.md",
+      "gitBlob": "3a64b49cef841183cef82d03615231e564bf3709",
+      "bytes": 5052,
+      "sha256": "540c28703c6594801025201c8d2ccd559a460dbb35bf289ed5127d12add12321"
+    },
+    {
+      "path": "docs/RESTAURANT_STAGE35_ACCEPTANCE.md",
+      "gitBlob": "dac734a81b7af6381f18e1d522e027aacb6a97f0",
+      "bytes": 7032,
+      "sha256": "3fe9af7403b40ddc72283024d303b689af9fe4cda544a619d7db038b76354111"
+    },
+    {
+      "path": "docs/TRAVELMIND.md",
+      "gitBlob": "3365f40ef77ef7ea27221a133bdc9352d83b1c91",
+      "bytes": 12496,
+      "sha256": "401bd80f63125901d4ba812044892f7c25fe3d12b68c78471d9ea5f94b58bcb0"
+    },
+    {
+      "path": "docs/api.md",
+      "gitBlob": "14cd546ca287e1e8f164e2b3267c74c671a6319c",
+      "bytes": 54162,
+      "sha256": "18214d6f8db555873a0f8272e1a3fbe1b5b9db1f8fb59edcf985e9b51886bea0"
+    },
+    {
+      "path": "docs/deployment/gcp.md",
+      "gitBlob": "61ea0ae77e0445ae0d1e56d0c009ca4908e628af",
+      "bytes": 15455,
+      "sha256": "fd6ffb34e77fe30c513107ac4af5679b4afab481ed95bbbde488c71c49c46359"
+    },
+    {
+      "path": "docs/deployment/上线验收清单.md",
+      "gitBlob": "0c39d361dfd3a443188ceb03e990319611f20433",
+      "bytes": 2062,
+      "sha256": "2e369d9819129217b4b890f2a6302e6925770a682981c3ebe2f500770df663e7"
+    },
+    {
+      "path": "docs/experiments/data/pingdingshan-cultural-evidence-v1.json",
+      "gitBlob": "f63cfa9c697fd50a2fabc4d80b3c5b74b6d13ae5",
+      "bytes": 25178,
+      "sha256": "2764b786623f8c59ff2e906483b6eb83f5eb6dddf835660d3322ea497568d476"
+    },
+    {
+      "path": "docs/experiments/data/pingdingshan-cultural-evidence-v1.sha256.json",
+      "gitBlob": "b2482f7cdcb897a4a0b48bff431b811277074ab7",
+      "bytes": 618,
+      "sha256": "355ec7308ec7475330bb7f4cf186d7566f10b1feb24591efa141829bd4c79e4c"
+    },
+    {
+      "path": "docs/experiments/data/yexian-pilot-evidence-v1.json",
+      "gitBlob": "1dd2bb72bc97cf086b314a7857b8e07b9e2564fb",
+      "bytes": 15535,
+      "sha256": "7663cf760ef12388a4375521dfad45a11eee1bcd56f4b6f964d18641dfc9c226"
+    },
+    {
+      "path": "docs/experiments/data/yexian-pilot-evidence-v1.sha256.json",
+      "gitBlob": "c426aca9b839ddf5c8dbdcb82ec59839be6c79ef",
+      "bytes": 656,
+      "sha256": "805048a96eb84cd64a8c061fe67e253e77d7b43e59fb7a037e2f952cb94157e5"
+    },
+    {
+      "path": "docs/experiments/evidence-readiness.md",
+      "gitBlob": "a027d64cd0e6529001aa22a75d4a5fd029d6093f",
+      "bytes": 7416,
+      "sha256": "1d91cf0e722ec06fb19dd17a8e37bfb98b9d31097a8e72395eebfae09900cf88"
+    },
+    {
+      "path": "docs/experiments/offline-fairness.md",
+      "gitBlob": "880b22bc27fbb077e78e8c3b74b02ea6e71aad53",
+      "bytes": 8183,
+      "sha256": "9df2f6114c18b04c7646c9c0db9d7c145894f9d6dc6f490eb09cb412bf824fdb"
+    },
+    {
+      "path": "docs/experiments/offline-robustness.md",
+      "gitBlob": "bc4d83f53fdb17f7cfe569e4baf267ba4370b7e2",
+      "bytes": 7029,
+      "sha256": "99bb3bf9e5da999261f37aa1a69a269a48583c84ae7baca2e0a00c4d95746d9d"
+    },
+    {
+      "path": "docs/experiments/pingdingshan-cultural-annotation-v1.md",
+      "gitBlob": "b99ae86f70085feb543ce95cf82e9b2c7e25e6b6",
+      "bytes": 6722,
+      "sha256": "4af0beb93f7656556f233f84261d82242884865add9b56fe1e3ab960f1fcd159"
+    },
+    {
+      "path": "docs/experiments/pingdingshan-cultural-data-readiness.md",
+      "gitBlob": "03b65e1d5856d9fad4953979d7ac70574ba374ce",
+      "bytes": 8617,
+      "sha256": "5cbd66e5846a61ab7e2765bad760f10e14ffc0bd6599844469c72088a350f857"
+    },
+    {
+      "path": "docs/experiments/yexian-pilot-field-checklist.md",
+      "gitBlob": "05109dca8c0d11dd48b6539af9b795cf421d4754",
+      "bytes": 10974,
+      "sha256": "f9fb40857b4f4bec70d30725ce4106e6ce337f5df06e88487b07fe7988aea383"
+    },
+    {
+      "path": "docs/release/source-checkpoint-20261111.md",
+      "gitBlob": "0a8baafcf7251fd2a02a155eeb73089941719541",
+      "bytes": 2746,
+      "sha256": "96faa66e5b23a44d95e9d8f0b7e030d427a38db23a9fc3426639d41f0e53202f"
+    },
+    {
+      "path": "frontend/.dockerignore",
+      "gitBlob": "d1a68562beda355d8e413fae892b16e4603fe1cd",
+      "bytes": 296,
+      "sha256": "4e10c860d7e70c4d4369d5fb72be22475693445bbfbc5d9bcd3ca3c02785ad09"
+    },
+    {
+      "path": "frontend/.gitignore",
+      "gitBlob": "5dd2b1ad264c045f5f687b72fbce973c4531ae2b",
+      "bytes": 296,
+      "sha256": "9b5cac57f05c7b97dd0c0cb475e7eb6a46cb98f33d5b0779692f7aefa6cb5529"
+    },
+    {
+      "path": "frontend/Dockerfile",
+      "gitBlob": "0a24f88035ea7469d9c2a05ae7cce2bbd2f42967",
+      "bytes": 2508,
+      "sha256": "9768255f5865b3d24bade8c740c29c271f9137dcfe7c3a33ee3eb8b088f42e00"
+    },
+    {
+      "path": "frontend/Dockerfile.production",
+      "gitBlob": "caa74e38b28e5298bd80df65a19f2891177f7f93",
+      "bytes": 273,
+      "sha256": "b3393e180ccc87cb899f0eadf4bdaded024145b12bb20484a0730ce0d51eebbe"
+    },
+    {
+      "path": "frontend/Dockerfile.production.dockerignore",
+      "gitBlob": "fd2202104c43dab9c9f98a14b9786938ecb7f1fe",
+      "bytes": 65,
+      "sha256": "c4815d431f16123adbdf3d07e04d204a1eca2a50a155b80eb01bb39b372d29e0"
+    },
+    {
+      "path": "frontend/index.html",
+      "gitBlob": "69d53f6b226842b3b5140446d8fdebe11b1e0c93",
+      "bytes": 434,
+      "sha256": "5d5261b59a72391f6fa6efd43ed47e747bc96cb9f5f8a09019b753e0bcd6aa2f"
+    },
+    {
+      "path": "frontend/nginx.conf",
+      "gitBlob": "58d0723adb12bc9d0dc3b1f325729bcae0da75bc",
+      "bytes": 2701,
+      "sha256": "6e91f280abef97db6451a2c9d12916fddeb50b93ee937e8562ab0fc1ab3e3488"
+    },
+    {
+      "path": "frontend/nginx.production.conf",
+      "gitBlob": "f9cd452699be9163dc47e8924424e66fcb2f3fe3",
+      "bytes": 585,
+      "sha256": "322e017580e539753907d0cb11269f057de1e0d4c150eb47cefe15f9bf5bff64"
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "gitBlob": "d345624e8e92c07ff2639843d275791c85a58213",
+      "bytes": 76709,
+      "sha256": "70aafe8496ffb00c57f7aa60a52ed9f885512934a1fdcc0486002a33824980cc"
+    },
+    {
+      "path": "frontend/package.json",
+      "gitBlob": "cadfee1c5035baf807254c60a5ef166cfcf96f3f",
+      "bytes": 727,
+      "sha256": "153d53a16e2dd09594d2199e374617432c4bd21df7c41bfd61d24a020ad76839"
+    },
+    {
+      "path": "frontend/src/App.test.tsx",
+      "gitBlob": "2eb5aec74bd16db429c04f23a0388b65d69f1650",
+      "bytes": 12291,
+      "sha256": "01ccbc89e6f72379cf7a221c551de952232ee18de91a4bf95d1e243e6acb1a86"
+    },
+    {
+      "path": "frontend/src/App.tsx",
+      "gitBlob": "03e00491b63758d18e701ad2053638cb753cbd84",
+      "bytes": 16361,
+      "sha256": "18a90f3963cd2bc8dd299e4370fc9187ca196204d6aab2a7c2855246e43cf1a3"
+    },
+    {
+      "path": "frontend/src/aiSettings.ts",
+      "gitBlob": "96f844bfc852c1136c3bb0d2d14faad28654c23a",
+      "bytes": 3410,
+      "sha256": "b068890d7451a43156a4b7853ea0a5ebf533adee1761616bbb7656559623f0cd"
+    },
+    {
+      "path": "frontend/src/api.test.ts",
+      "gitBlob": "c153373dfcc839422075e147780032ae7a66231b",
+      "bytes": 8038,
+      "sha256": "f6fce73a109296af2ca41c617a2d6e44ba452c7a0980102dafd10a78c17dde20"
+    },
+    {
+      "path": "frontend/src/api.ts",
+      "gitBlob": "71e4acf748105320a730cb21835aeabdb3d45e6e",
+      "bytes": 18035,
+      "sha256": "30189be787114d25a65adde92261534e66c3d262b77a4ff832de7a80af9bc9b9"
+    },
+    {
+      "path": "frontend/src/components/AiKeyPanel.tsx",
+      "gitBlob": "f1bdd4ddb2b77b40cc52605baf7960f128581e7a",
+      "bytes": 4587,
+      "sha256": "11317585af9014870a1b85f94d65f1cc3df022bb51c979500792091f915de218"
+    },
+    {
+      "path": "frontend/src/components/AiPanel.tsx",
+      "gitBlob": "a1a614f06606ebb5201ea4d55dd70ee9ca2f8983",
+      "bytes": 5959,
+      "sha256": "e7afeb330067035fc51d7012087ce2d1f3a62264ed70ce7b1a98eb8b0000cb96"
+    },
+    {
+      "path": "frontend/src/components/AppShell.test.tsx",
+      "gitBlob": "5e39fed9dc0ac1e7e3abbd1def024ae36764bec7",
+      "bytes": 2723,
+      "sha256": "8dc19456b8de8f2d6aa863c97d430b3dde462baf61d1988729af2e34b5e93070"
+    },
+    {
+      "path": "frontend/src/components/AppShell.tsx",
+      "gitBlob": "1e92208807f02139517f86e2605823679d06eaa8",
+      "bytes": 5481,
+      "sha256": "1ba4c5e430b0a98c0dcb0719917c6c09fee5778fbc40a38696912008067db71b"
+    },
+    {
+      "path": "frontend/src/components/BarChart.tsx",
+      "gitBlob": "68771aca09de0e9fdf26f3a2bd3307c71286445d",
+      "bytes": 4038,
+      "sha256": "11f8b11427ad89a062c168b84b474592bce00256193f5cbfa94c7b50462f65c6"
+    },
+    {
+      "path": "frontend/src/components/DiningLocationPicker.test.tsx",
+      "gitBlob": "bb69cca5d1440018c3e53010069fef3a6f777b1d",
+      "bytes": 3864,
+      "sha256": "0e54c430a5a80134511789aea21064a7f6c2d06ff5a0091c67016fd4d63ef36d"
+    },
+    {
+      "path": "frontend/src/components/DiningLocationPicker.tsx",
+      "gitBlob": "7754830dbd6408f0d320ad7207eaca4c08e754dd",
+      "bytes": 4249,
+      "sha256": "beec703a7c54364f07b6aef1f2bee1f690bb2a535c4f72aaffeccdceabe3606d"
+    },
+    {
+      "path": "frontend/src/components/RestaurantCard.test.tsx",
+      "gitBlob": "325eb2074e7f526df23e306631eea7a4acdc4dff",
+      "bytes": 2898,
+      "sha256": "647c70af4a4ae69fdddad06f3050f4c2d9ef7561512f1f217aec0118ab2ad03d"
+    },
+    {
+      "path": "frontend/src/components/RestaurantCard.tsx",
+      "gitBlob": "69f19580aabdc2427ca1c04281471bc3eb0bf255",
+      "bytes": 1837,
+      "sha256": "261616b9e3585d79f084b2aa769a23724fe4e8272073882e647fd9665eb610af"
+    },
+    {
+      "path": "frontend/src/components/RestaurantResults.tsx",
+      "gitBlob": "8577f4951bf65da9feb0dfc260d5b378c172b121",
+      "bytes": 1555,
+      "sha256": "905ba69e11d3e35157540fb2008dfb829e9949146a70acaff6ed7c6f9c571425"
+    },
+    {
+      "path": "frontend/src/components/Status.tsx",
+      "gitBlob": "5e00c87cfa91e33c66b66d039d5208fbdebef40a",
+      "bytes": 937,
+      "sha256": "47c92ae8ef6addc400af65f3d47d1c381a785839d7c644435099985ef802009a"
+    },
+    {
+      "path": "frontend/src/components/ThemeToggle.tsx",
+      "gitBlob": "8fa93c6c50e3fdb9f82e93b3755bf04600b92f0a",
+      "bytes": 1417,
+      "sha256": "1d924d6464079402405979a1e0fce1a025ed00c0a12f9f1277107e2c27821ee5"
+    },
+    {
+      "path": "frontend/src/components/TravelConversationWelcome.tsx",
+      "gitBlob": "f5a8343a8d3411696da79ac39e4bef17907dfd29",
+      "bytes": 3768,
+      "sha256": "3419d50e6bdca9fd0cc0e0a40e9ca3c9a65c7de5b5d2cbc08b43fdeb528efc76"
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "gitBlob": "a4dd5eb914a4c44b12c2cf3b41ddb7d97a45cd7a",
+      "bytes": 929,
+      "sha256": "3680cef209df14e76c94fc51a84eb5df4c34b408e6c551d39089f7a43451bb03"
+    },
+    {
+      "path": "frontend/src/screens/AuthScreen.tsx",
+      "gitBlob": "d6e8d00e03454a7e2cdd37aa291b7302e2fc04b3",
+      "bytes": 3750,
+      "sha256": "51f80cbab38511a0b3dfae24c23578c698d706177c969b62735b56b48cfea5ea"
+    },
+    {
+      "path": "frontend/src/screens/HistoryScreen.tsx",
+      "gitBlob": "e068360a2f24fac3dcd208aa4bb52e8e8a5e02ba",
+      "bytes": 4041,
+      "sha256": "54e80a10bc74538f0ff0479b9138c99196941cbdf974f3cf5ad3aa08e981eef5"
+    },
+    {
+      "path": "frontend/src/screens/HomeScreen.tsx",
+      "gitBlob": "136ec93571166a53df02dd66fe02aa67564ffed0",
+      "bytes": 3296,
+      "sha256": "f1b424a73cbeca78da4bad970a09035f0cc53062d4aeafdb81058dab90793944"
+    },
+    {
+      "path": "frontend/src/screens/ResultScreen.tsx",
+      "gitBlob": "40dbc4902a1b6cd246b3ba5ef9484e69f92837d3",
+      "bytes": 2827,
+      "sha256": "34a2a3df999806113672c8b86224830ab2d09fb120234720c2c752ea48adc247"
+    },
+    {
+      "path": "frontend/src/screens/TestScreen.test.tsx",
+      "gitBlob": "e57efc2bf8fb9936d8b166df01dd598ead69ed94",
+      "bytes": 946,
+      "sha256": "1c240a91247942c4ffa3b9e22417200b8410476b1bf69fb6cab786a6ad517e3f"
+    },
+    {
+      "path": "frontend/src/screens/TestScreen.tsx",
+      "gitBlob": "19a619c7ba634085a14b91cbe22c6092c0662753",
+      "bytes": 8902,
+      "sha256": "dcab3dd9ba29e6308a4d0b93e92fce8066bd1c79a6ebb5c3f110a3ab339b7d64"
+    },
+    {
+      "path": "frontend/src/screens/TravelResultScreen.feedback.test.tsx",
+      "gitBlob": "5c299a5aca8f073c55e41d701300cfafa0c405d4",
+      "bytes": 42628,
+      "sha256": "3b8619a18e242f98075375cd8e587d449c1f134262415796226e92df446902cb"
+    },
+    {
+      "path": "frontend/src/screens/TravelResultScreen.location.test.tsx",
+      "gitBlob": "27cf2652546c80c6ae31d3081d2bdf9979ecb955",
+      "bytes": 10017,
+      "sha256": "ba2fbcafb5e69b9f3e744352e42261d9a3ab6f1e1081f069bd726be153a0b06b"
+    },
+    {
+      "path": "frontend/src/screens/TravelResultScreen.tsx",
+      "gitBlob": "b104700afec1076a11d75c592e54388da9c2aa6b",
+      "bytes": 70929,
+      "sha256": "6d2313a004fd866ad8a233007eb41ff5ccc5d4fd2fb1ad8d2631d025a53fd756"
+    },
+    {
+      "path": "frontend/src/styles.css",
+      "gitBlob": "9583bd34cdc9f41154e25c76e5013a4b26fad0c6",
+      "bytes": 60516,
+      "sha256": "ae9c40de8bc07f890e6f4c99299cce46f419b0c765e48603fee215ffdde8f5bd"
+    },
+    {
+      "path": "frontend/src/travel/behaviorEvents.test.ts",
+      "gitBlob": "9bd265da112fd8ae720466fe9a249323e1781f88",
+      "bytes": 4549,
+      "sha256": "0bd2f61a574903b3d443196fe1fc4caad4563f3f1ef83997e9846990df52976f"
+    },
+    {
+      "path": "frontend/src/travel/behaviorEvents.ts",
+      "gitBlob": "bafe10bd1da723446876a69d524fc924508ae9b5",
+      "bytes": 2579,
+      "sha256": "e31c5e62f97c41ecbb5b4c07f9b7d446522f5b95a24a3a211ef4adf739e7c8ac"
+    },
+    {
+      "path": "frontend/src/travel/behaviorTypes.ts",
+      "gitBlob": "b52cb704796081ca0ceac0efd580dca446bb5379",
+      "bytes": 862,
+      "sha256": "dcb1bc06450096af8ce5df60a5e547433dc4c6e9eea72f84509c36b4781a1e73"
+    },
+    {
+      "path": "frontend/src/travel/locationSearch.ts",
+      "gitBlob": "51ed4ce5842317c374328f4c9d04b1964f6efe3e",
+      "bytes": 1014,
+      "sha256": "f9d413fd09d69624cd9ba097f50a43e135231b9576c8517aa3504420209043c4"
+    },
+    {
+      "path": "frontend/src/travel/restaurantSearch.provenance.test.ts",
+      "gitBlob": "8903680b879acc367f8f98ada43afff4109a2911",
+      "bytes": 3189,
+      "sha256": "f5230c284ed248ebd78b2f26f2b38472bffa47b4c41062be4161fc2888578605"
+    },
+    {
+      "path": "frontend/src/travel/restaurantSearch.test.ts",
+      "gitBlob": "04add6eda0665780584981a9a1eea727a8c2cdb5",
+      "bytes": 5194,
+      "sha256": "600ad65363d2fea8898d3be0566291a3da7ca199a65249c3df0e138aff071d51"
+    },
+    {
+      "path": "frontend/src/travel/restaurantSearch.ts",
+      "gitBlob": "f2e46de1871f038c52f4f4e620d2d9297fadd058",
+      "bytes": 5732,
+      "sha256": "f8bb3c5d3871c1d59fda11361239cee92c242f73490ffac21c6d4bf9723ba64c"
+    },
+    {
+      "path": "frontend/src/travel/travelFeedbackState.test.ts",
+      "gitBlob": "340776379124162bab01a9c11983418f6a474b66",
+      "bytes": 6423,
+      "sha256": "a7a1f3b2e2d2b26a58a1045c67b77b1bb950813648b5caa0f44a6080a9e045c1"
+    },
+    {
+      "path": "frontend/src/travel/travelFeedbackState.ts",
+      "gitBlob": "a35555c24fe329187eef89837042da260073f36c",
+      "bytes": 1453,
+      "sha256": "0a5f5f402d260e85b3612abda47c15f639d2350c89e71a8aa82acb32a7df0952"
+    },
+    {
+      "path": "frontend/src/travel/travelLocation.test.ts",
+      "gitBlob": "27c029888af9f763bbc4ef5080db2ddc79b95b84",
+      "bytes": 682,
+      "sha256": "0e8fbe8c5d39fffd285568597d89177509de7180266c1ba7a29cc727e6768ddb"
+    },
+    {
+      "path": "frontend/src/travel/travelLocation.ts",
+      "gitBlob": "b8abfb0f1980df5fffdd1d7dbc470bdac449e70b",
+      "bytes": 769,
+      "sha256": "473e3a767003909ce73f351f5befc2566ef14047fc21f5e7d68fe063a9690c70"
+    },
+    {
+      "path": "frontend/src/travel/travelQueryState.test.ts",
+      "gitBlob": "f77595a8ef6f39a6db1d0857e74a4f1aa460624a",
+      "bytes": 7503,
+      "sha256": "dfacfc05c4f761483f053e186dadab9285e730459a2f892a79626e553c2113c4"
+    },
+    {
+      "path": "frontend/src/travel/travelQueryState.ts",
+      "gitBlob": "ff90f1a31d52c410fcd17c26c14f392840641131",
+      "bytes": 14415,
+      "sha256": "487cdd203bf5314c7e8056cc2a242f7409f68aac3f7c70c24a3f15fb839c7add"
+    },
+    {
+      "path": "frontend/src/travel/travelRequestState.test.ts",
+      "gitBlob": "6609548ad45279ade031c6f638b38fc6995a3360",
+      "bytes": 1480,
+      "sha256": "f56b86c1ce8e93fee0ede04bef851b6e3a89e25d43a5294e87baf4aca01e6139"
+    },
+    {
+      "path": "frontend/src/travel/travelRequestState.ts",
+      "gitBlob": "12622027d9c6bcdece1050ae100fc9787a8b55a6",
+      "bytes": 1687,
+      "sha256": "64c504fda5d804fac23bc319643664aa9ff7510c32a514aa8002f3317c4d86af"
+    },
+    {
+      "path": "frontend/src/types.ts",
+      "gitBlob": "e00c635435f10f6ca9355e7ccc883885d1a52b9b",
+      "bytes": 18111,
+      "sha256": "1c23f05192c8cfd810f14a1ba9094b57b38b367b71286891e862a32aee009dc4"
+    },
+    {
+      "path": "frontend/src/vite-env.d.ts",
+      "gitBlob": "dca8d27fb456bb6997d640f6c323164391144767",
+      "bytes": 519,
+      "sha256": "550de62db2844df4d0244760b0cea4aee13707d99ffe16eaa7f86252b39343ac"
+    },
+    {
+      "path": "frontend/src/viteProxy.test.ts",
+      "gitBlob": "6b2700761022152a4ef98e9ecd901e2a9dd05960",
+      "bytes": 1195,
+      "sha256": "49da278ca4d4a6a3d026826d0e4fb48b8688658225db7383c35cb097c1cc732b"
+    },
+    {
+      "path": "frontend/tsconfig.json",
+      "gitBlob": "577d5bd5e81843dd0be053b2143b1a8a3ef0c2df",
+      "bytes": 1070,
+      "sha256": "63584789a2966eef31a7e7a93117c2382996b7104089a60fbdc23415075ed35e"
+    },
+    {
+      "path": "frontend/vite.config.ts",
+      "gitBlob": "1ec3f500731b5718337ca60fdcf2064cebab47a2",
+      "bytes": 2148,
+      "sha256": "d7492dee9aacc74427bc69d6f08eb4ff64c12f7a938dd1a9f824c8082f1ca187"
+    },
+    {
+      "path": "research/web-demo/README.md",
+      "gitBlob": "aa6fab90e828b50e19e9cbd524ef18a2aff8c2fc",
+      "bytes": 12433,
+      "sha256": "adf2f76ff872fc834fe4356abedcbefb97eee135957cba7b371048569d08df8c"
+    },
+    {
+      "path": "research/web-demo/Start-Lab.ps1",
+      "gitBlob": "c2efcf1db9fbfbc52ffe534d83ecb89a1017e960",
+      "bytes": 1928,
+      "sha256": "0bd44f0c334499ee556e34560f1900b1de180350566d2e6a442756ec89a82543"
+    },
+    {
+      "path": "research/web-demo/build.mjs",
+      "gitBlob": "3b6f2ece5641907d1f9bd2cf1a93115b88899e85",
+      "bytes": 5194,
+      "sha256": "d4786feb5323eba8f93b0c0fa4e159f54eb7e726b4407e5f753d072c2d1832fd"
+    },
+    {
+      "path": "research/web-demo/check-lab.mjs",
+      "gitBlob": "5ee48a6b7484263aa9f25deee2242c1a4501ae75",
+      "bytes": 3143,
+      "sha256": "361119afc5f0b58aa96163d632a7458a1b91ef77fc8b4706efd151deb9068d34"
+    },
+    {
+      "path": "research/web-demo/demo-model.mjs",
+      "gitBlob": "7e857c7e8eac32bab39fb7d284da7b575337b77c",
+      "bytes": 4133,
+      "sha256": "e7dc7534dd4b56c3624427f14dcbb23b977150baf0413d069a864a515e47d5a0"
+    },
+    {
+      "path": "research/web-demo/demo-model.test.mjs",
+      "gitBlob": "af52ccf2ebc9979f21eac1f9e0e2f32b7ff43880",
+      "bytes": 2753,
+      "sha256": "dfc7d613c2117ccbe6dc4b04967a082f4abe7a5c545124ec7a97e5ae95c33d98"
+    },
+    {
+      "path": "research/web-demo/fieldwork-fixture.mjs",
+      "gitBlob": "4fb130110927e85c123f0ad8560c430f628e0a1a",
+      "bytes": 1429,
+      "sha256": "00b9da42eadfc05435abb2336f01fd27faa1d828d389eaae318880c42c8d80ee"
+    },
+    {
+      "path": "research/web-demo/fieldwork-model.mjs",
+      "gitBlob": "11d0e1b292dd83566b0b3320f008aafe4945b1b2",
+      "bytes": 7712,
+      "sha256": "5b0e26a93b818f92a837fa351efcfaa143dda84dc748a27005658324903a40b1"
+    },
+    {
+      "path": "research/web-demo/fieldwork-model.test.mjs",
+      "gitBlob": "7ae820172e40cc060dcb3e755ad863cd94661eba",
+      "bytes": 4234,
+      "sha256": "8b7c07372a38d196dd9df2a5c0c0a18c5ceb396fb65e675fe4c1b69a722d5f04"
+    },
+    {
+      "path": "research/web-demo/fieldwork-ui.js",
+      "gitBlob": "47b5678f301d94a7a215bfa0b4fb1910fe781a8f",
+      "bytes": 5695,
+      "sha256": "a2afe4a49fca8206c39f8d0c665635119370503d092b8b24be093cba3ba5d6df"
+    },
+    {
+      "path": "research/web-demo/fieldwork-ui.test.mjs",
+      "gitBlob": "4b7b48624fc5fa735e5f56a519ea22b7067c7d14",
+      "bytes": 4494,
+      "sha256": "e170e3f75c4528349a98a12fc5625bbd027a5cef1ffc3798c019656152ede61d"
+    },
+    {
+      "path": "research/web-demo/fixtures/baseline/input.json",
+      "gitBlob": "95be32470dd5c1bd872de31aae3b77abbe4cf2bb",
+      "bytes": 13657,
+      "sha256": "ad7f9022217e6e806e580d2e52415991a6be8304e3b6110e15de2cb5d4d5dc11"
+    },
+    {
+      "path": "research/web-demo/fixtures/baseline/manifest.json",
+      "gitBlob": "ef2db296660dbaa8e4178892c727fc410baf5dff",
+      "bytes": 12974,
+      "sha256": "f754da65dc88fa4f58f35f9c8d37ecc8d9f168d4a4df19324ad619427a45c8ac"
+    },
+    {
+      "path": "research/web-demo/fixtures/baseline/report.json",
+      "gitBlob": "767f72c97547b01a9f040d462ba3c4c8e69aae73",
+      "bytes": 107991,
+      "sha256": "dddf1a665b5e6b1dd2c1dfb8ee6d3549452f66cb4d1c1e79871850e8e35712d6"
+    },
+    {
+      "path": "research/web-demo/fixtures/empty/time-restricted.json",
+      "gitBlob": "5bd36647c185d8e5db79730eeddd60775caf770c",
+      "bytes": 2019,
+      "sha256": "97fd6319dc38086fdc827f4809993cf152d643a997257ed9b8c870ad7113d6e3"
+    },
+    {
+      "path": "research/web-demo/fixtures/empty/time-restricted/report.json",
+      "gitBlob": "6cf77d88318b3625bc61409bf50d838d71b43d7c",
+      "bytes": 3994,
+      "sha256": "0e3d4d7600e56739ccabec35532c7f99411474c5d326f8eb705864458ada2ffb"
+    },
+    {
+      "path": "research/web-demo/fixtures/fieldwork-empty-review.json",
+      "gitBlob": "bebbbdeaf1b6f92e3c736dc45141624879734ffd",
+      "bytes": 6268,
+      "sha256": "442a4fb280d810649cd531e75b7b5e5f2fc970cfa5ffb47da35377b8b6ddb47b"
+    },
+    {
+      "path": "research/web-demo/fixtures/readiness.json",
+      "gitBlob": "18b8f5d193b906073e540d83deb538a8730c6b49",
+      "bytes": 9073,
+      "sha256": "2c9e5571051b7b432bc55e129d6098a6f308f1f345493c3be2faf2ed8cd52f9e"
+    },
+    {
+      "path": "research/web-demo/fixtures/robustness/input.json",
+      "gitBlob": "95be32470dd5c1bd872de31aae3b77abbe4cf2bb",
+      "bytes": 13657,
+      "sha256": "ad7f9022217e6e806e580d2e52415991a6be8304e3b6110e15de2cb5d4d5dc11"
+    },
+    {
+      "path": "research/web-demo/fixtures/robustness/manifest.json",
+      "gitBlob": "740a31d9992f12749a098f63ac354e5b066ab4b4",
+      "bytes": 15730,
+      "sha256": "483fc1d26f463cf41fe41c45434832d02f7b8efbbe4b7224be7325608814922f"
+    },
+    {
+      "path": "research/web-demo/fixtures/robustness/plan.json",
+      "gitBlob": "628cd1dfe6ac69ddb2ae27f6d2b54ef9886afd5f",
+      "bytes": 278,
+      "sha256": "2afcc571f105d9b43cf5f8d535ef6a8fd595a6facb8d89ab2f10782f18231325"
+    },
+    {
+      "path": "research/web-demo/fixtures/robustness/report.json",
+      "gitBlob": "e5619358388484d23a3a21c26deba5f60b868990",
+      "bytes": 6157845,
+      "sha256": "841ebc0f010cb6304ad2c72d69254ca4ed1c09b714c4afeed37d84f1dac71468"
+    },
+    {
+      "path": "research/web-demo/index.html",
+      "gitBlob": "41bb97162a29e8f84a206bb680b716bebd1d5c87",
+      "bytes": 3826424,
+      "sha256": "eb5efd4655a2450727f8972016f80c5f86ff1d441222a59756752622d7c7958a"
+    },
+    {
+      "path": "research/web-demo/lab-build.mjs",
+      "gitBlob": "618d114798fb0a0e2ba6c35a1826dcf234acbf12",
+      "bytes": 4072,
+      "sha256": "5a27a3a81a1606fa08c3988d46aa4b73ba70a2380389476293c895b57dccbf01"
+    },
+    {
+      "path": "research/web-demo/lab-model.mjs",
+      "gitBlob": "1f9af881af20438c3bdbbd10c0d35cc31e02c365",
+      "bytes": 1141,
+      "sha256": "7bfb4d5201514b2bfc406bac609e7ab8eadbe7317fe5ad5941654453c3d94627"
+    },
+    {
+      "path": "research/web-demo/lab-model.test.mjs",
+      "gitBlob": "7732f3e0d708af8c5eb6b2b14ba73c051bf8bfd4",
+      "bytes": 2066,
+      "sha256": "72d5f98e15e4c6bc7cecd75055a4c8788cfb9a35ebfc2c01f4de02513243a2e0"
+    },
+    {
+      "path": "research/web-demo/lab-output.mjs",
+      "gitBlob": "a9d66d0775c11dcd7d04eb9bd4dcb31e3210c567",
+      "bytes": 1606,
+      "sha256": "1f525bbe17510da90999cefdfe347af4a52b88d707801f1015e255765303fcda"
+    },
+    {
+      "path": "research/web-demo/lab-output.test.mjs",
+      "gitBlob": "74d42e49bef7be3f0af315ec8ad325e567032c0d",
+      "bytes": 2802,
+      "sha256": "c036e20171644928f2ccbc530a784592e17c137745fc623da08cd85ab4b30681"
+    },
+    {
+      "path": "research/web-demo/lab-runtime.mjs",
+      "gitBlob": "294586415ffd9b9347a101ecd8632cc72ab5a74d",
+      "bytes": 3979,
+      "sha256": "06b22f721dbdc9734abcf94ec213642937ac4237c147613bbc46c8de9fa0a02a"
+    },
+    {
+      "path": "research/web-demo/lab-runtime.test.mjs",
+      "gitBlob": "f3639f8310ea69d9ca738f5397d3b8bfbc53d44f",
+      "bytes": 3230,
+      "sha256": "00ced6dd5cdae5fcd1f85d1e34ae8a5211dfa156badfb03e9cf2033960995418"
+    },
+    {
+      "path": "research/web-demo/lab-server.mjs",
+      "gitBlob": "f8c67b223d7abd68a6b326eb4f872d3ef90f68fe",
+      "bytes": 1810,
+      "sha256": "bdfc08f10b6239e2ab22be912445e8cbedc7f09339235db0433528b3e145e9b7"
+    },
+    {
+      "path": "research/web-demo/lab-server.test.mjs",
+      "gitBlob": "154ec3c6e66387a36e462f2b3b6dc7dcd6bebcb2",
+      "bytes": 2741,
+      "sha256": "9e91cff8ee831ca5dc357e675af4861aef2ad70d15c83b8b6f4161df3df73ae8"
+    },
+    {
+      "path": "research/web-demo/lab-ui.js",
+      "gitBlob": "872f948c41d8d15d5e6949b62a52cc31190d89e8",
+      "bytes": 6801,
+      "sha256": "4fbac5a067f4e8b856409c0bff4bfc84eefe533e10ac6784b3b92d9c4f5ea468"
+    },
+    {
+      "path": "research/web-demo/lab-ui.test.mjs",
+      "gitBlob": "5be7110fde87e6e958ead087fb8403818976def8",
+      "bytes": 6290,
+      "sha256": "f427268a418892f12cff6523da4ef24e5255b71b2052689671bb0fbd40e3167d"
+    },
+    {
+      "path": "research/web-demo/manifest.json",
+      "gitBlob": "93450eddf6912d17fe33221b8bc68a4c42140d3a",
+      "bytes": 1574,
+      "sha256": "647cd97805513338ef2ea489de933588c0117af4ac8b882b3f99e9f8df451202"
+    },
+    {
+      "path": "research/web-demo/page-contract.test.mjs",
+      "gitBlob": "292a5f62192ce2001b9f84845d7392c5b6453405",
+      "bytes": 2888,
+      "sha256": "02fda7eaa84793455d10e390cf8d4a79848f5189eba86b6a7b2c57dc1c3ee74b"
+    },
+    {
+      "path": "research/web-demo/page.html",
+      "gitBlob": "006bf6a3d1c781dc30eaad6b750dbc40893b3467",
+      "bytes": 35484,
+      "sha256": "7ca544248c988d33e08c5bce843967935ae766f7dc80b829627bbfe748af2172"
+    },
+    {
+      "path": "research/web-demo/portability.test.mjs",
+      "gitBlob": "5a87633824ecd83bc9cdde8a47fe8762ac9d29d9",
+      "bytes": 968,
+      "sha256": "b8b19c7ded830b365e00be0833137a2e1d8a03de92da0ca26e0f79a351ecded9"
+    },
+    {
+      "path": "research/web-demo/ranking-evidence-ui.js",
+      "gitBlob": "d9200f95571b746776866dcbd622f2b8d312a03d",
+      "bytes": 6955,
+      "sha256": "7ecbbf8c6c403e4cc68955e3264f6b9c19df28c52d54a9a7504595c4e3507d7c"
+    },
+    {
+      "path": "research/web-demo/ranking-evidence-ui.test.mjs",
+      "gitBlob": "05196aeb13327ac252974d62a8dba5b897e92441",
+      "bytes": 7179,
+      "sha256": "e817e16add708282b8f6cc54a2e7b81d544f0de31d09ac3e7f02f881dbe36c23"
+    },
+    {
+      "path": "research/web-demo/ranking-evidence.mjs",
+      "gitBlob": "4414f9fc8198b3b3f86ef84d395f5a1b7737396b",
+      "bytes": 5391,
+      "sha256": "b244b6e4ef99e0500dabd92135fc8e017b6d85c8cdc7d22527af6114a1538071"
+    },
+    {
+      "path": "research/web-demo/ranking-evidence.test.mjs",
+      "gitBlob": "260a1f6cfda7e4a71ba37b2f6151d387d1ef36d5",
+      "bytes": 6041,
+      "sha256": "61880c1da123b8ee6dde112d5595f170a6710d1a2efa790c7b65e6dca5c842e1"
+    },
+    {
+      "path": "research/web-demo/result-view-fixture.mjs",
+      "gitBlob": "bf0e0e51478167c1fe739ca2f708d27a8f78ac4d",
+      "bytes": 1844,
+      "sha256": "0376c5e3d41b065c5f1de2c657c33f3447f13037a5cca9dd1f3a303703c19165"
+    },
+    {
+      "path": "research/web-demo/result-view-model.mjs",
+      "gitBlob": "976197a10ce94908ad3bb715292a536f3ef05250",
+      "bytes": 12962,
+      "sha256": "80412c9574ff4f5ffea9ef4afec17da6d202fe3aa35ec6a6a53a67a721ef1d98"
+    },
+    {
+      "path": "research/web-demo/result-view-model.test.mjs",
+      "gitBlob": "df335e70b1c90ed33b3d0900594b0937df79301d",
+      "bytes": 4996,
+      "sha256": "3a1ea0255f03cd68264bee738216307d6b9ec12dfe3a7c4a5f186d1717acd1bc"
+    },
+    {
+      "path": "research/web-demo/result-view-ui.js",
+      "gitBlob": "5d34fbd6f5d757be1df17299eae1be1b8ec6a383",
+      "bytes": 7253,
+      "sha256": "b7a3e0e7d9841a7787f8fd24e78321700d8d4e2dfedf17bccba4673eac1b8c4d"
+    },
+    {
+      "path": "research/web-demo/result-view-ui.test.mjs",
+      "gitBlob": "ded44c9322f607c66a420a95d8de41d526d9fc27",
+      "bytes": 6578,
+      "sha256": "0ea374ae72646b7ae0c30a3a720abc6bc33d3193efb767c859ba52a671c9e5e7"
+    },
+    {
+      "path": "research/web-demo/robustness-model.test.mjs",
+      "gitBlob": "eb24b485ba1b419d00ea46e31bf0a520f7c3b236",
+      "bytes": 6034,
+      "sha256": "1f8d3050aea33a31f606c68bb29ce68a494ec108ba594daf814abd979834e232"
+    },
+    {
+      "path": "research/web-demo/robustness-ui.js",
+      "gitBlob": "248c3945143c9dd75cd24878567f56fb0b9a25b0",
+      "bytes": 5539,
+      "sha256": "42e99e84ec33b20eed7046e58254dd210ab493adec4340f4603d6c499abf4887"
+    },
+    {
+      "path": "research/web-demo/server.mjs",
+      "gitBlob": "ecc4acc00904ffc6215abb7edc0353396d50681e",
+      "bytes": 426,
+      "sha256": "bc36a27d4bc871e8d3868821ea37567008852479ec1e432c9a3be7b63c323be0"
+    },
+    {
+      "path": "research/web-demo/ui-flow.test.mjs",
+      "gitBlob": "64df3974ae313b87677820ca5ea583f32fb5c15b",
+      "bytes": 3216,
+      "sha256": "fdd7e5c8c97b73fd07b10e23b23d2c0d008bb86c0835e66996f122ec62df7b49"
+    },
+    {
+      "path": "research/web-demo/启动本地实验台.cmd",
+      "gitBlob": "76460940003a580d97a5ea8a48f8090eab37c5d7",
+      "bytes": 85,
+      "sha256": "fccc0efecbc4e996c483719d1a9069a11444920a54566b4e66dc9bb6e564007e"
+    },
+    {
+      "path": "research/web-demo/检查演示环境.cmd",
+      "gitBlob": "aea9e1d55cfd1211b966565e3d5c8260042a477e",
+      "bytes": 58,
+      "sha256": "f51f274ae31756568643a9d595ac876c67bea268092b8fb262773fd28c4fb96b"
+    },
+    {
+      "path": "scripts/check-offline-evidence.ps1",
+      "gitBlob": "9f5b4bbc784afa97ff6d0571c730f4e082fb03ff",
+      "bytes": 2070,
+      "sha256": "80ed8c2b69af2da7d425dcc38c25eeb6682e2d16f112a5ae6cc7c090fa59d187"
+    },
+    {
+      "path": "scripts/run-offline-fairness.ps1",
+      "gitBlob": "a64f6ff8ef837f6f90fcc3b9a77d8ddc3d0313fe",
+      "bytes": 1987,
+      "sha256": "471525c22b75f31253de667b56e2a8ace4fa599c9729035453163f2715a0a823"
+    },
+    {
+      "path": "scripts/run-offline-robustness.ps1",
+      "gitBlob": "3fc7c9cac52143e1634311c5327c630bd797f16e",
+      "bytes": 2156,
+      "sha256": "1afdb16a3492c98b2d9b57cfc3a96be1a2944b4b935a88ab16ac178627e5f8eb"
+    }
+  ]
+}
